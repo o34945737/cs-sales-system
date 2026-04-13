@@ -34,8 +34,12 @@ class ComplaintController extends Controller
         $query->orderBy($sortField, $sortOrder);
 
         return Inertia::render('Complaints/Index', [
-            'complaints' => $query->paginate(15)->withQueryString(),
+            'complaints' => $query->paginate(20)->withQueryString(),
             'filters' => $request->only(['search', 'status', 'sort', 'order']),
+            // Tambahan data summary untuk sidebar kiri (Grouping by CS)
+            'cs_summary' => Complaint::select('cs_name', \DB::raw('count(*) as total'))
+                                ->groupBy('cs_name')
+                                ->get()
         ]);
     }
 
