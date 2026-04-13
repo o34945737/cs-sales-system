@@ -10,36 +10,119 @@ class ComplaintController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Complaint::query();
+        $allowedSortFields = [
+            'created_at',
+            'tanggal_complaint',
+            'tanggal_order',
+            'order_id',
+            'username',
+            'brand',
+            'status',
+            'priority',
+            'sla',
+            'cs_name',
+        ];
 
-        // 1. Search Logic
-        if ($request->has('search')) {
-            $search = $request->search;
-            $query->where(function($q) use ($search) {
-                $q->where('order_id', 'like', "%{$search}%")
-                  ->orWhere('resi', 'like', "%{$search}%")
-                  ->orWhere('username', 'like', "%{$search}%")
-                  ->orWhere('brand', 'like', "%{$search}%");
-            });
+        $sortField = $request->get('sort', 'tanggal_complaint');
+        $sortField = in_array($sortField, $allowedSortFields, true) ? $sortField : 'tanggal_complaint';
+        $sortOrder = $request->get('order', 'desc') === 'asc' ? 'asc' : 'desc';
+
+        $applySearch = function ($query) use ($request) {
+            if ($request->filled('search')) {
+                $search = trim((string) $request->search);
+
+                $query->where(function ($q) use ($search) {
+                    $q->where('order_id', 'like', "%{$search}%")
+                        ->orWhere('resi', 'like', "%{$search}%")
+                        ->orWhere('username', 'like', "%{$search}%")
+                        ->orWhere('brand', 'like', "%{$search}%")
+                        ->orWhere('platform', 'like', "%{$search}%")
+                        ->orWhere('summary_case', 'like', "%{$search}%")
+                        ->orWhere('cs_name', 'like', "%{$search}%");
+                });
+            }
+
+            return $query;
+        };
+
+        $applyStatus = function ($query) use ($request) {
+            if ($request->filled('status') && $request->status !== 'All') {
+                $query->where('status', $request->status);
+            }
+
+            return $query;
+        };
+
+        $applyCsFilter = function ($query) use ($request) {
+            if ($request->filled('cs_name')) {
+                $query->where('cs_name', $request->cs_name);
+            }
+
+            return $query;
+        };
+
+        $listQuery = Complaint::query();
+        $applySearch($listQuery);
+        $applyStatus($listQuery);
+        $applyCsFilter($listQuery);
+
+        if ($sortField === 'sla') {
+            $listQuery->orderByRaw('COALESCE(DATEDIFF(COALESCE(tanggal_update, CURRENT_DATE), tanggal_complaint), 0) ' . $sortOrder);
+        } else {
+            $listQuery->orderBy($sortField, $sortOrder);
         }
 
-        // 2. Filter by Status
-        if ($request->has('status') && $request->status !== 'All') {
-            $query->where('status', $request->status);
-        }
+        $statusSummaryQuery = Complaint::query();
+        $applySearch($statusSummaryQuery);
+        $applyCsFilter($statusSummaryQuery);
 
-        // 3. Sorting (Default: Latest)
-        $sortField = $request->get('sort', 'created_at');
-        $sortOrder = $request->get('order', 'desc');
-        $query->orderBy($sortField, $sortOrder);
+        $csSummaryQuery = Complaint::query();
+        $applySearch($csSummaryQuery);
+        $applyStatus($csSummaryQuery);
+
+        $statusSummary = [
+            'all' => (clone $statusSummaryQuery)->count(),
+            'pending' => (clone $statusSummaryQuery)->where('status', 'Pending')->count(),
+            'solved' => (clone $statusSummaryQuery)->where('status', 'Solved')->count(),
+            'whitelist' => (clone $statusSummaryQuery)->where('status', 'Whitelist')->count(),
+        ];
+
+        $overviewQuery = Complaint::query();
+        $applySearch($overviewQuery);
+        $applyCsFilter($overviewQuery);
 
         return Inertia::render('Complaints/Index', [
-            'complaints' => $query->paginate(20)->withQueryString(),
-            'filters' => $request->only(['search', 'status', 'sort', 'order']),
-            // Tambahan data summary untuk sidebar kiri (Grouping by CS)
-            'cs_summary' => Complaint::select('cs_name', \DB::raw('count(*) as total'))
-                                ->groupBy('cs_name')
-                                ->get()
+            'complaints' => $listQuery->paginate(15)->withQueryString(),
+            'filters' => $request->only(['search', 'status', 'sort', 'order', 'cs_name']),
+            'cs_summary' => $csSummaryQuery
+                ->select('cs_name', \DB::raw('count(*) as total'))
+                ->groupBy('cs_name')
+                ->orderByDesc('total')
+                ->get(),
+            'status_summary' => $statusSummary,
+            'overview' => [
+                'total' => (clone $overviewQuery)->count(),
+                'pending' => (clone $overviewQuery)->where('status', 'Pending')->count(),
+                'solved' => (clone $overviewQuery)->where('status', 'Solved')->count(),
+                'whitelist' => (clone $overviewQuery)->where('status', 'Whitelist')->count(),
+                'agents' => Complaint::query()
+                    ->when($request->filled('search'), function ($query) use ($request) {
+                        $search = trim((string) $request->search);
+
+                        $query->where(function ($q) use ($search) {
+                            $q->where('order_id', 'like', "%{$search}%")
+                                ->orWhere('resi', 'like', "%{$search}%")
+                                ->orWhere('username', 'like', "%{$search}%")
+                                ->orWhere('brand', 'like', "%{$search}%")
+                                ->orWhere('platform', 'like', "%{$search}%")
+                                ->orWhere('summary_case', 'like', "%{$search}%")
+                                ->orWhere('cs_name', 'like', "%{$search}%");
+                        });
+                    })
+                    ->distinct('cs_name')
+                    ->whereNotNull('cs_name')
+                    ->count('cs_name'),
+            ],
         ]);
     }
 
