@@ -37,13 +37,44 @@ class HandleInertiaRequests extends Middleware
     public function share(Request $request): array
     {
         [$message, $author] = str(Inspiring::quotes()->random())->explode('-');
+        $user = $request->user();
 
         return array_merge(parent::share($request), [
-            ...parent::share($request),
             'name' => config('app.name'),
             'quote' => ['message' => trim($message), 'author' => trim($author)],
+            'flash' => [
+                'success' => fn () => $request->session()->get('success'),
+                'error' => fn () => $request->session()->get('error'),
+            ],
             'auth' => [
-                'user' => $request->user(),
+                'user' => $user ? [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'email_verified_at' => $user->email_verified_at,
+                    'created_at' => $user->created_at,
+                    'updated_at' => $user->updated_at,
+                    'is_active' => (bool) $user->is_active,
+                    'force_password_reset' => (bool) $user->force_password_reset,
+                    'last_login_at' => $user->last_login_at,
+                    'last_login_ip' => $user->last_login_ip,
+                    'last_login_user_agent' => $user->last_login_user_agent,
+                    'roles' => $user->getRoleNames()->values()->all(),
+                ] : null,
+                'can' => [
+                    'view_users' => $user?->can('view users') ?? false,
+                    'create_users' => $user?->can('create users') ?? false,
+                    'update_users' => $user?->can('update users') ?? false,
+                    'delete_users' => $user?->can('delete users') ?? false,
+                    'view_dashboard' => $user?->can('view dashboard') ?? false,
+                    'access_complaints' => $user?->can('access complaints') ?? false,
+                    'access_bad_reviews' => $user?->can('access bad reviews') ?? false,
+                    'access_order_trackings' => $user?->can('access order trackings') ?? false,
+                    'access_oos' => $user?->can('access oos') ?? false,
+                ],
+            ],
+            'features' => [
+                'public_registration' => false,
             ],
         ]);
     }

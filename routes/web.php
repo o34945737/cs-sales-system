@@ -1,30 +1,56 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-use Inertia\Inertia;
-
-use App\Http\Controllers\ComplaintController;
 use App\Http\Controllers\BadReviewController;
-use App\Http\Controllers\OrderTrackingController;
+use App\Http\Controllers\ComplaintController;
 use App\Http\Controllers\OosController;
+use App\Http\Controllers\OrderTrackingController;
+use App\Http\Controllers\UserManagementController;
+use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
-    return Inertia::render('Welcome');
+    return auth()->check()
+        ? redirect()->route('dashboard')
+        : redirect()->route('login');
 })->name('home');
 
-// Grup Route Backend (Hanya Bisa Diakses Jika User Login & Terverifikasi)
-Route::middleware(['auth', 'verified'])->group(function () {
-    
-    // Dasar Dashboard Bawaan
-    Route::get('dashboard', function () {
-        return Inertia::render('Dashboard');
-    })->name('dashboard');
+// Grup Route Backend internal. Cukup login, tanpa verifikasi email.
+Route::middleware(['auth', 'active', 'password.reset.required'])->group(function () {
+    Route::middleware('permission:view dashboard')->group(function () {
+        Route::get('dashboard', function () {
+            return \Inertia\Inertia::render('Dashboard');
+        })->name('dashboard');
+    });
 
-    // Fase 3: Customer Service & Modul Sales System API
-    Route::resource('complaints', ComplaintController::class);
-    Route::resource('bad-reviews', BadReviewController::class);
-    Route::resource('order-trackings', OrderTrackingController::class);
-    Route::resource('oos', OosController::class);
+    Route::middleware('permission:access complaints')->group(function () {
+        Route::resource('complaints', ComplaintController::class);
+    });
+
+    Route::middleware('permission:access bad reviews')->group(function () {
+        Route::resource('bad-reviews', BadReviewController::class);
+    });
+
+    Route::middleware('permission:access order trackings')->group(function () {
+        Route::resource('order-trackings', OrderTrackingController::class);
+    });
+
+    Route::middleware('permission:access oos')->group(function () {
+        Route::resource('oos', OosController::class);
+    });
+
+    Route::prefix('users')->name('users.')->group(function () {
+        Route::get('/', [UserManagementController::class, 'index'])
+            ->middleware('permission:view users')
+            ->name('index');
+        Route::post('/', [UserManagementController::class, 'store'])
+            ->middleware('permission:create users')
+            ->name('store');
+        Route::put('/{user}', [UserManagementController::class, 'update'])
+            ->middleware('permission:update users')
+            ->name('update');
+        Route::delete('/{user}', [UserManagementController::class, 'destroy'])
+            ->middleware('permission:delete users')
+            ->name('destroy');
+    });
 });
 
 require __DIR__.'/settings.php';

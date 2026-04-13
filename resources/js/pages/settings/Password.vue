@@ -14,9 +14,10 @@ import { type BreadcrumbItem } from '@/types';
 
 interface Props {
     className?: string;
+    requiresPasswordReset?: boolean;
 }
 
-defineProps<Props>();
+const props = defineProps<Props>();
 
 const breadcrumbItems: BreadcrumbItem[] = [
     {
@@ -65,6 +66,10 @@ const updatePassword = () => {
             <div class="space-y-6">
                 <HeadingSmall title="Update password" description="Ensure your account is using a long, random password to stay secure" />
 
+                <div v-if="props.requiresPasswordReset" class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                    Untuk keamanan akun, Anda wajib mengganti password sebelum mengakses halaman lain.
+                </div>
+
                 <form @submit.prevent="updatePassword" class="space-y-6">
                     <div class="grid gap-2">
                         <Label for="current_password">Current Password</Label>
@@ -76,6 +81,7 @@ const updatePassword = () => {
                             class="mt-1 block w-full"
                             autocomplete="current-password"
                             placeholder="Current password"
+                            :disabled="props.requiresPasswordReset"
                         />
                         <InputError :message="form.errors.current_password" />
                     </div>

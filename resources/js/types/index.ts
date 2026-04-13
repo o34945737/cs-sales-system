@@ -1,7 +1,18 @@
 import type { LucideIcon } from 'lucide-vue-next';
 
 export interface Auth {
-    user: User;
+    user: User | null;
+    can: {
+        view_users: boolean;
+        create_users: boolean;
+        update_users: boolean;
+        delete_users: boolean;
+        view_dashboard: boolean;
+        access_complaints: boolean;
+        access_bad_reviews: boolean;
+        access_order_trackings: boolean;
+        access_oos: boolean;
+    };
 }
 
 export interface BreadcrumbItem {
@@ -20,6 +31,13 @@ export interface SharedData {
     name: string;
     quote: { message: string; author: string };
     auth: Auth;
+    features: {
+        public_registration: boolean;
+    };
+    flash: {
+        success?: string;
+        error?: string;
+    };
     ziggy: {
         location: string;
         url: string;
@@ -34,6 +52,12 @@ export interface User {
     name: string;
     email: string;
     avatar?: string;
+    is_active: boolean;
+    force_password_reset: boolean;
+    last_login_at: string | null;
+    last_login_ip: string | null;
+    last_login_user_agent: string | null;
+    roles: string[];
     email_verified_at: string | null;
     created_at: string;
     updated_at: string;

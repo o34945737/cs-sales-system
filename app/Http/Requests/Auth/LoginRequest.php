@@ -2,9 +2,12 @@
 
 namespace App\Http\Requests\Auth;
 
+use App\Models\LoginActivity;
+use App\Models\User;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -41,7 +44,22 @@ class LoginRequest extends FormRequest
     {
         $this->ensureIsNotRateLimited();
 
-        if (! Auth::attempt($this->only('email', 'password'), $this->boolean('remember'))) {
+        $user = User::where('email', $this->string('email'))->first();
+
+        if ($user && ! $user->is_active && Hash::check($this->string('password'), $user->password)) {
+            $this->logFailedAttempt($user->email, 'inactive_account', $user->id);
+
+            throw ValidationException::withMessages([
+                'email' => 'Akun Anda sedang nonaktif. Hubungi administrator untuk mengaktifkannya kembali.',
+            ]);
+        }
+
+        if (! Auth::attempt([
+            'email' => $this->string('email')->toString(),
+            'password' => $this->string('password')->toString(),
+            'is_active' => true,
+        ], $this->boolean('remember'))) {
+            $this->logFailedAttempt($this->string('email')->toString(), 'invalid_credentials', $user?->id);
             RateLimiter::hit($this->throttleKey());
 
             throw ValidationException::withMessages([
@@ -50,6 +68,18 @@ class LoginRequest extends FormRequest
         }
 
         RateLimiter::clear($this->throttleKey());
+    }
+
+    private function logFailedAttempt(string $email, string $reason, ?int $userId = null): void
+    {
+        LoginActivity::create([
+            'user_id' => $userId,
+            'email' => $email,
+            'status' => 'failed',
+            'ip_address' => $this->ip(),
+            'user_agent' => $this->userAgent(),
+            'failure_reason' => $reason,
+        ]);
     }
 
     /**

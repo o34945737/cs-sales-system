@@ -1,0 +1,390 @@
+                 Requirement Customer Service After Sales System
+
+    Content :
+
+    1. Complaint
+    2. Bad Review
+    3. Order Tracking
+    4. OOS
+    5. Dashboard
+
+1. COMPLAINT
+
+A. (Input)
+
+              1. Source
+                         After Sales
+                         Pre Sales
+                         Brand
+                         KAE
+                         Socmed
+
+              2. Tanggal Complaint
+              3. Tanggal Order
+              4. Jam Customer Complaint
+              5. Brand
+              6. Platform
+              7. Order ID
+              8. Username
+              9. Resi
+              10. SKU
+              11. Value of product
+              12. Product Name
+              13. Sub Case
+
+                         Bad Quality Product
+                         Bad Service
+                         Change Mind
+                         Damaged Packaging
+                         Damaged Product
+                         Expired
+                         Fake Return
+                         Late Delivery
+                         Under Delivery Product
+                         Misunderstanding of the product
+                         No Reason
+                         Promotion
+                         Wrong Product
+          OOS
+          Refund DP
+          Lost Product
+14. Cause/By
+         ?
+          J&T
+          SAP EXPRESS
+          ANTERAJA
+          LEX
+          POS
+          NINJA
+          SICEPAT
+          KURIR REKOMENDASI
+          SPX
+          INDOPAKET
+          GTL
+          CUSTOM LOGISTICS
+          GRAB
+          JNE
+          GOJEK
+          CS
+          Chat++
+          STREAMER
+          KAE
+          WH
+          PART
+15. Update (Long text)
+16. Part of Bad
+17. CS Name
+18. Last Step
+          Claim Receive (10x shipping fee)
+          Claim Receive (Full)
+          Claim Reject
+          Complaint Canceled by buyer/No Respons
+          Follow Up Courier (MP Non aktif)
+          Analysis MP (Late Delivery)
+          Analysis MP (Non Late Delivery)
+          Kingdee Processing (Waiting AWB for replacement product)
+          On the way return & plan banding
+          On the way return & plan refund
+          On the way return & plan replace
+          Pending return & plan banding
+          Pending return & plan refund
+          Pending return & plan replace
+          Pending RGO & plan refund
+          Product has been delivered (Late Delivery)
+                         Refund has been transferred by finance (SPF)
+                         Refund processing by finance (SPF)
+                         Replacement product on the way
+                         Return Refund (Full)
+                         Return Refund (Partial)
+                         Seller Win
+                         The replacement product has been received by the buyer
+                         Follow Up to After Sales Team
+                         Waiting Claim
+                         Waiting Money Receive
+                         Waiting Data From Customer
+                         Follow Up KAE to Brand
+                         Follow Up WH
+                         Follow Up KAE to KAM
+                         Return not authorized
+                         Return follow-up (No further action)
+              19. Step CS selesai
+                         YES
+                         NO
+              20. Level Customer
+                         Hard Complaint
+                         Normal Complaint
+              21. Tanggal Step CS Selesai
+                   "hanya muncul jika kondisi Step CS Selesai = YES"
+              22. Tanggal Update
+              23. Video Unboxing (Type file/attach from storage PC)
+              24. Proof
+              25. Reason Whitelist (Conditional) hanya muncul jika last stepnya 3dalah "Claim Reject".
+                         No repacking indication
+                         Packing not proper
+                         Customer's evidence is stonger than us
+                         Our evidences are not strong (platform T&C)
+                         CCTV does not show receipt number
+                         Late Respons
+              26. Reason Late Respons (Conditional) hanya muncul jika Reason Whitelistnya 3dalah "Late
+                   Respons"
+                         CS
+                         KAE
+                         Finance
+                         WH
+                         PH
+
+B. (Automation)
+
+         1. Cycle ­ Auto fill
+                         >= 21:00:00 maka "Cycle 1 (21.00 ­ 15.00)"
+               <= 15:00:00 maka "Cycle 1 (21.00 ­ 15.00)"
+               >=15:00:00 maka Cycle 2 "(15.01 ­ 20.59)"
+               <=21:00:00 maka "Cycle 2 (15.01 ­ 20.59)"
+2. SKU ­ auto fill product name & qty
+3. Sub Cases ­ autofill
+
+                    Bad Quality Product atau Expired = "BRAND" (no editable)
+                    Misunderstanding of the product= "CUSTOMER"
+                    OOS= "KAE"
+                    Promotion = "PROMO"
+                    Change Mind = "CUSTOMER"
+                    di luar category tersebut isi manual dg pilihan "Cause/By"
+
+4. Status ­ auto fill dari last step
+
+               Claim Receive (10x shipping fee), Claim Receive (Full), Complaint Canceled by
+                   buyer/No Respons, Product has been delivered (Late Delivery), Refund has been
+                   transferred by finance (SPF), Return Refund (Full), Return Refund (Partial), Seller
+                   Win, The replacement product has been received by the buyer, or Return follow-
+                   up (No further action) = Solved
+
+               Claim Reject = Whitelist
+               Selain itu = Pending
+
+5. Priority
+
+              Claim Receive (10x shipping fee), Claim Receive (Full), Complaint Canceled by
+                 buyer/No Respons, Product has been delivered (Late Delivery), Refund has
+                 been transferred by finance (SPF), Return Refund (Full), Return Refund
+                 (Partial), atau Seller Win maka Cool
+
+              Claim Reject = Mines
+              Analysis MP (Non Late Delivery), Follow Up After Sales Team, atau Follow Up
+
+                 WH = P1
+              On the way return & plan banding, Follow Up KAE to KAM, atau Follow Up
+
+                 KAE/Brand = P2
+              FU Courier (MP Non aktif), On the way return & plan refund, Pending return
+
+                 & plan banding, Pending return & plan refund, Pending RGO & plan refund,
+                 atau Waiting Data From Customer = P3
+              On the way return & plan replace atau Pending return & plan replace maka
+                 P4
+              Analysis MP (Late Delivery) or Return not authorize = P5
+              Kingdee Processing (Waiting AWB for replacement product), Refund
+                 processing by finance (SPF), atau Replacement product on the way = P6
+              Waiting Claim atau Waiting Money Receive maka P7
+
+6. SLA ­ Auto fill dari tanggal complaint (-) tanggal berjalan, berhenti di tanggal updatejika
+    statusnya solved
+7. Category Customer ­ Autofill dari username
+                    Jika username tersebut complaint pertama kali, maka kosong
+                    Jika customer complaint ke dua kali maka "Customer ini complaint ke 2",
+                    Jika customernya complaint ketiga kali, maka labelnya ""Customer ini
+                        complaint ke 3x"
+                    Seterusnya ngikuti jumlah input username dg nama yang sama
+
+8. Riwayat OOS
+                    Jika nomor order di menu complaint merupakan duplicate dg no order yang
+                        diinput KAE di data OOS, maka beri label "Ada Riwayat OOS"
+                    Jika tidak ada biarkan kosong
+
+C. (Interface)
+
+                 Terdapat grup tab based on CS Name, Status, Angka, dan Priority
+                 Terdapat filter untuk CS kerjakan berdasarkan brand dan priority
+
+2. BAD REVIEW
+
+A. (Input)
+
+              1. Tanggal Review
+              2. Brand
+              3. Platform
+              4. Order ID
+              5. Username
+              6. Star 1/2/3
+              7. Product Name
+              8. SKU
+              9. Category Review (Sama dengan isian pada sub cases complaint)
+              10. By (Sama dengan isian pada sub cases complaint)
+              11. Review Notes (Long Text)
+              12. Progress
+
+                         Follow Up Customer
+                         Auto Reply
+              13. Tanggal Update
+              14. CS Name
+              15. Month = Rekap dari tanggal, misalnya tanggal Review 17/01/2026 maka di month January
+                   2026 (Untuk keperluan Report dan Dashboard)
+              16. Status = Pending & Solved
+
+B. (Automation)
+               By = Samakan dengan autofill pada complaint
+               Status : Jika Progress Follow Up Customer = Pending, Jika Auto Reply = Solved
+
+3. ORDER TRACKING
+
+A. (Input)
+
+                   1. Data Source
+                              WH
+                              Finance
+                              Reject Return
+
+                   2. Tanggal Input
+                   3. Tanggal Order
+                   4. Brand
+                   5. Platform
+                   6. Order ID
+                   7. Value
+                   8. Logistics
+                   9. AWB
+                   10. ERP Status
+                   11. Payment Method (COD/NON COD)
+                   12. WH Note (Long Text)
+                   13. CS Name
+                   14. Category = Sama dengan sub case pada complaint
+                   15. Last Step = Samakan dengan last step pada complaint
+                   16. Update
+                   17. Tanggal Update
+                   18. Value Receive
+                   19. Insurance Info (Y/N)
+                   20. Video Unboxing (Video from WH)
+                   21. BAP (Image from WH)
+                   22. Kolom untuk update dari WH
+                   23. Kolom untuk update dari Finance
+                   24. Status (Pending, Solved, Whitelist)
+                   25. Month (Sama dengan Bad Review)
+                   26. Automation Track (Autofill)
+                   27. Tanggal TTS (Autofill)
+                   28. Reason Whitelist = Sama dengan automation pada complaint
+                   29. Reason Late Respons = Sama dengan automation pada complaint
+
+B. (Automation)
+
+                   1. Status (Samakan dengan automation status pada complaint)
+                   2. Tanggal TTS [Order Date] + 24 days (Only Lazada)
+                   3. Automation Track
+
+                              Auto Fill "MERGER" jika Order ID ditemukan di daya COMPLAINT
+                              Auto Fill "Sudah diRGO" jika OrderID ditemukan di list RGO
+               Auto Fill "ADA DI JET TRACK ­ Dan mengisi otomatis KONDISI Barangnya..."
+                  jika AWB ditemukan di Apps Jet Track
+
+               Jika tidak memenuhi semua kondisi tersebut, Auto Track Kosong
+
+4. OOS
+A. (Input)
+
+              1. Tanggal Input
+              2. Brand
+              3. Platform
+              4. No Order
+              5. Product Name
+              6. SKU
+              7. Reason (Wrong Price, Stock Damage, OOS No Bugs, Bounce Back, Delay Inbound)
+              8. Solusi (Cancel, Perpanjang Masa Garansi, Tawarkan Varian Lain)
+              9. Note/ Detail Varian Yang Ditawarkan
+              10. Update CS (Done Blast, Cancel)
+              11. Tanggal Blast
+              12. Feedback Customers
+              13. Month (Sama dengan pengisian bad review)
+
+5. DASHBOARD
+
+              1. Total Pending Complaint Berjalan (Real Time)
+              2. Total Pending Order Tracking Berjalan (Real Time)
+              3. OOS Today
+              4. Total Dari Ketiga Di atas
+              5. Incoming New & Solved Complaint (Grafik per weekly)
+              6. Incoming Bad Review (Grafik per weekly)
+              7. Incoming OOS (Grafik per weekly)
+              8. Pending Complaint (Jumlah Pending Per "By)
+
+CONTOH
+        9. Pending Complaint (Jumlah Pending per Level Customer)
+        10. Pending Complaint (Jumlah Pending Per Sub Cases & Category SLA)
+
+CONTOH
+
+        11. Pending Complaint (Last Step External)
+             Analysis MP (Late Delivery)
+             Analysis MP (Non Late Delivery)
+             FU Courier (MP Non aktif)
+             On the way return & plan banding
+             On the way return & plan refund
+             On the way return & plan replace
+             Pending return & plan banding
+             Pending return & plan refund
+             Pending return & plan replace)
+             Pending RGO & plan refund
+             Waiting Claim
+             Waiting Data From Customer
+
+        12. Pending Complaint (Last Step Internal)
+             FU After Sales Team
+             FU KAE/Brand
+             Kingdee Processing (Waiting AWB for replacement product)
+             FU WH
+             Replacement product on the way
+CONTOH
+
+                   13. Jumlah Bad Review (Hanya pada bulan berjalan) Misalnya January 2026,
+                        February 2026 Berdasarkan Brand
+
+                   14. Jumlah Bad Review (Hanya pada bulan berjalan) Misalnya January 2026,
+                        February 2026 Berdasarkan Category
+
+CONTOH
+
+        15. Total Pending Order Tracking Berjalan (Real Time) Berdasarkan Brand
+        16. Total Pending Order Tracking Berjalan (Real Time) Berdasarkan Platform
+        17. Total Pending Order Tracking Berjalan (Real Time) Berdasarkan Logistics
+
+CONTOH
+        18. Total Pending Order Tracking Berjalan (Real Time) Berdasarkan Order Date
+        19. Total Pending Order Tracking Berjalan (Real Time) Berdasarkan Auto Track
+        20. Total Pending Order Tracking Berjalan (Real Time) Berdasarkan Data Source
+
+CONTOH
+
+        21. Total OOS yang masuk di D-Days dan -1 serta belum ada keterangan "Done
+            Blast"
+
+        22. Total OOS yang masuk di bulan berjalan berdasarkan brand
+
+CONTOH
+
+        23. Total Complaint, Bad Review, Order Tracking dan OOS Yang Didistribusi ke
+            Agent Di -Days (Real Time) Berdasarkan Setiap Agent
+
+        24. Total Complaint, Bad Review, Order Tracking dan OOS Dikerjakan/Dihandle
+            oleh Agent Di -Days (Real Time) Berdasarkan Setiap Agent
+
+        25. Total , Bad Review, Order Tracking Yang Ditandai Solved oleh Agent Di -Days
+            (Real Time) Berdasarkan Setiap Agent
+
+        26. Total Rekapan dari task yang didistribusi ke setiap agent & total productivity
+            harian per agent
+CONTOH
+                   27. Form untuk input productivity harian agent di end off duty
+
+A. CONTROLLER BRAND REAL TIME
+CONTOH
+
+B. INTERFACE AGENT
+                   28. Tersedia Total Solved Dari Hari ke Hari, Pending, dan Whitelist
+
+                   29. Agent menghandle berdasarkan Prioritas

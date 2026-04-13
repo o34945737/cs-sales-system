@@ -21,6 +21,7 @@ class PasswordController extends Controller
         return Inertia::render('settings/Password', [
             'mustVerifyEmail' => $request->user() instanceof MustVerifyEmail,
             'status' => $request->session()->get('status'),
+            'requiresPasswordReset' => (bool) $request->user()->force_password_reset,
         ]);
     }
 
@@ -29,15 +30,18 @@ class PasswordController extends Controller
      */
     public function update(Request $request): RedirectResponse
     {
+        $requiresPasswordReset = (bool) $request->user()->force_password_reset;
+
         $validated = $request->validate([
-            'current_password' => ['required', 'current_password'],
+            'current_password' => [$requiresPasswordReset ? 'nullable' : 'required', 'current_password'],
             'password' => ['required', Password::defaults(), 'confirmed'],
         ]);
 
         $request->user()->update([
             'password' => Hash::make($validated['password']),
+            'force_password_reset' => false,
         ]);
 
-        return back();
+        return back()->with('success', 'Password berhasil diperbarui.');
     }
 }

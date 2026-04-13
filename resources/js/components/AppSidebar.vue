@@ -3,38 +3,62 @@ import NavFooter from '@/components/NavFooter.vue';
 import NavMain from '@/components/NavMain.vue';
 import NavUser from '@/components/NavUser.vue';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
-import { type NavItem } from '@/types';
-import { Link } from '@inertiajs/vue3';
-import { BookOpen, Folder, LayoutGrid, MessageSquare, Star, Truck, Archive } from 'lucide-vue-next';
+import { type NavItem, type SharedData } from '@/types';
+import { Link, usePage } from '@inertiajs/vue3';
+import { Archive, BookOpen, Folder, LayoutGrid, MessageSquare, Star, Truck, Users } from 'lucide-vue-next';
 import AppLogo from './AppLogo.vue';
 
-const mainNavItems: NavItem[] = [
-    {
+const page = usePage<SharedData>();
+
+const mainNavItems: NavItem[] = [];
+
+if (page.props.auth.can.view_dashboard) {
+    mainNavItems.push({
         title: 'Dashboard',
         href: '/dashboard',
         icon: LayoutGrid,
-    },
-    {
+    });
+}
+
+if (page.props.auth.can.access_complaints) {
+    mainNavItems.push({
         title: 'Complaints',
         href: '/complaints',
         icon: MessageSquare,
-    },
-    {
+    });
+}
+
+if (page.props.auth.can.access_bad_reviews) {
+    mainNavItems.push({
         title: 'Bad Reviews',
         href: '/bad-reviews',
         icon: Star,
-    },
-    {
+    });
+}
+
+if (page.props.auth.can.access_order_trackings) {
+    mainNavItems.push({
         title: 'Order Tracking',
         href: '/order-trackings',
         icon: Truck,
-    },
-    {
+    });
+}
+
+if (page.props.auth.can.access_oos) {
+    mainNavItems.push({
         title: 'OOS Data',
         href: '/oos',
         icon: Archive,
-    },
-];
+    });
+}
+
+if (page.props.auth.can.view_users) {
+    mainNavItems.push({
+        title: 'Users',
+        href: '/users',
+        icon: Users,
+    });
+}
 
 const footerNavItems: NavItem[] = [
     {

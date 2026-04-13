@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\User;
 // use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Spatie\Permission\Models\Role;
 
 class DatabaseSeeder extends Seeder
 {
@@ -13,11 +14,36 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
+        $this->call(RoleSeeder::class);
+        $this->call(PermissionSeeder::class);
 
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-        ]);
+        $admin = User::query()->updateOrCreate(
+            ['email' => 'admin@example.com'],
+            [
+                'name' => 'Super Admin',
+                'password' => 'password',
+                'is_active' => true,
+            ]
+        );
+        $admin->assignRole(Role::findByName('Super Admin'));
+
+        $user = User::query()->updateOrCreate(
+            ['email' => 'test@example.com'],
+            [
+                'name' => 'Test User',
+                'password' => 'password',
+                'is_active' => true,
+            ]
+        );
+        $user->assignRole(Role::findByName('CS'));
+
+        User::query()
+            ->with('roles')
+            ->get()
+            ->filter(fn (User $existingUser) => $existingUser->roles->isEmpty())
+            ->each(function (User $existingUser): void {
+                $defaultRole = User::role('Super Admin')->exists() ? 'CS' : 'Super Admin';
+                $existingUser->assignRole(Role::findByName($defaultRole));
+            });
     }
 }
