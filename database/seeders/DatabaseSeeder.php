@@ -16,6 +16,11 @@ class DatabaseSeeder extends Seeder
     {
         $this->call(RoleSeeder::class);
         $this->call(PermissionSeeder::class);
+        $this->call(BrandSeeder::class);
+        $this->call(PlatformSeeder::class);
+        $this->call(LogisticSeeder::class);
+        $this->call(SubCaseSeeder::class);
+        $this->call(LastStepSeeder::class);
 
         $admin = User::query()->updateOrCreate(
             ['email' => 'admin@example.com'],

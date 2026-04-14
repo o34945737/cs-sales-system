@@ -28,6 +28,11 @@ const pageSubtitle = computed(() => {
     if (page.url.startsWith('/bad-reviews')) return 'Review recovery, escalation, and follow-up queue.';
     if (page.url.startsWith('/order-trackings')) return 'Shipment visibility and order handling progress.';
     if (page.url.startsWith('/oos')) return 'Stock issue monitoring and replenishment coordination.';
+    if (page.url.startsWith('/brands')) return 'Master data brand untuk menjaga opsi input tetap konsisten.';
+    if (page.url.startsWith('/platforms')) return 'Master data platform untuk menyatukan opsi marketplace di seluruh modul.';
+    if (page.url.startsWith('/logistics')) return 'Master data logistics untuk menjaga referensi kurir tetap konsisten di modul tracking.';
+    if (page.url.startsWith('/sub-cases')) return 'Master data sub case untuk menyiapkan pilihan complaint dan default cause by yang lebih terstruktur.';
+    if (page.url.startsWith('/last-steps')) return 'Master data last step untuk menjaga mapping status dan priority tetap konsisten.';
     if (page.url.startsWith('/users')) return 'Manage internal accounts, role access, and activation status.';
     if (page.url.startsWith('/settings')) return 'Profile, password, and security preferences.';
 

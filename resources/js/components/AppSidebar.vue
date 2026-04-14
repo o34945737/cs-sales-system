@@ -2,8 +2,8 @@
 import { useInitials } from '@/composables/useInitials';
 import { type NavItem, type SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/vue3';
-import { Archive, LayoutGrid, LogOut, MessageSquare, Settings, Star, Truck, Users, X } from 'lucide-vue-next';
-import { computed } from 'vue';
+import { Archive, ChevronDown, ClipboardList, LayoutGrid, ListChecks, LogOut, MessageSquare, MonitorSmartphone, Settings, Star, Tag, Tags, Truck, Users, X } from 'lucide-vue-next';
+import { computed, ref, watch } from 'vue';
 
 const props = withDefaults(
     defineProps<{
@@ -24,6 +24,7 @@ const { getInitials } = useInitials();
 const user = computed(() => page.props.auth.user);
 const primaryRole = computed(() => user.value?.roles?.[0] ?? 'Workspace');
 const workspaceName = computed(() => page.props.name || 'CS Sales System');
+const masterDataOpen = ref(false);
 
 const mainNavItems = computed<NavItem[]>(() => {
     const items: NavItem[] = [];
@@ -32,30 +33,37 @@ const mainNavItems = computed<NavItem[]>(() => {
         items.push({ title: 'Dashboard', href: '/dashboard', icon: LayoutGrid });
     }
 
-    if (page.props.auth.can.access_complaints) {
-        items.push({ title: 'Complaints', href: '/complaints', icon: MessageSquare });
+    return items;
+});
+
+const masterDataItems = computed<NavItem[]>(() => {
+    const items: NavItem[] = [];
+
+    if (page.props.auth.can.view_brands) {
+        items.push({ title: 'Brands', href: '/brands', icon: Tag });
     }
 
-    if (page.props.auth.can.access_bad_reviews) {
-        items.push({ title: 'Bad Reviews', href: '/bad-reviews', icon: Star });
+    if (page.props.auth.can.view_platforms) {
+        items.push({ title: 'Platforms', href: '/platforms', icon: MonitorSmartphone });
     }
 
-    if (page.props.auth.can.access_order_trackings) {
-        items.push({ title: 'Order Tracking', href: '/order-trackings', icon: Truck });
+    if (page.props.auth.can.view_logistics) {
+        items.push({ title: 'Logistics', href: '/logistics', icon: Truck });
     }
 
-    if (page.props.auth.can.access_oos) {
-        items.push({ title: 'OOS Data', href: '/oos', icon: Archive });
+    if (page.props.auth.can.view_sub_cases) {
+        items.push({ title: 'Sub Cases', href: '/sub-cases', icon: ClipboardList });
     }
 
-    if (page.props.auth.can.view_users) {
-        items.push({ title: 'Management Users', href: '/users', icon: Users });
+    if (page.props.auth.can.view_last_steps) {
+        items.push({ title: 'Last Steps', href: '/last-steps', icon: ListChecks });
     }
-
-    items.push({ title: 'Settings', href: '/settings/profile', icon: Settings });
 
     return items;
 });
+
+const hasMasterDataAccess = computed(() => masterDataItems.value.length > 0);
+const isMasterDataActive = computed(() => masterDataItems.value.some((item) => isActive(item.href)));
 
 const isActive = (href: string) => {
     if (href === '/dashboard') {
@@ -63,6 +71,20 @@ const isActive = (href: string) => {
     }
 
     return page.url === href || page.url.startsWith(`${href}/`);
+};
+
+watch(
+    () => page.url,
+    () => {
+        if (isMasterDataActive.value) {
+            masterDataOpen.value = true;
+        }
+    },
+    { immediate: true },
+);
+
+const toggleMasterData = () => {
+    masterDataOpen.value = !masterDataOpen.value;
 };
 
 const closeSidebar = () => emit('close');
@@ -123,6 +145,98 @@ const closeSidebar = () => emit('close');
                 >
                     <component :is="item.icon" class="h-5 w-5 shrink-0" />
                     <span class="truncate">{{ item.title }}</span>
+                </Link>
+
+                <div v-if="hasMasterDataAccess" class="space-y-1.5">
+                    <button
+                        type="button"
+                        class="flex w-full items-center gap-3 rounded-[18px] px-4 py-3 text-left text-sm font-semibold transition"
+                        :class="isMasterDataActive ? 'bg-[var(--app-primary-soft)] text-[var(--app-primary)]' : 'text-slate-600 hover:bg-[var(--app-primary-soft)] hover:text-[var(--app-primary)]'"
+                        @click="toggleMasterData"
+                    >
+                        <Tags class="h-5 w-5 shrink-0" />
+                        <span class="flex-1 truncate">Master Data</span>
+                        <ChevronDown class="h-4 w-4 shrink-0 transition" :class="masterDataOpen ? 'rotate-180' : ''" />
+                    </button>
+
+                    <div v-if="masterDataOpen" class="space-y-1 pl-4">
+                        <Link
+                            v-for="item in masterDataItems"
+                            :key="item.title"
+                            :href="item.href"
+                            class="group flex items-center gap-3 rounded-[16px] px-4 py-2.5 text-sm font-medium transition"
+                            :class="isActive(item.href) ? 'bg-[var(--app-primary)] text-white shadow-[0_12px_22px_rgba(53,103,232,0.22)]' : 'text-slate-500 hover:bg-[var(--app-primary-soft)] hover:text-[var(--app-primary)]'"
+                            @click="closeSidebar"
+                        >
+                            <component :is="item.icon" class="h-4 w-4 shrink-0" />
+                            <span class="truncate">{{ item.title }}</span>
+                        </Link>
+                    </div>
+                </div>
+
+                <Link
+                    v-if="page.props.auth.can.access_complaints"
+                    href="/complaints"
+                    class="group flex items-center gap-3 rounded-[18px] px-4 py-3 text-sm font-semibold transition"
+                    :class="isActive('/complaints') ? 'bg-[var(--app-primary)] text-white shadow-[0_14px_24px_rgba(53,103,232,0.24)]' : 'text-slate-600 hover:bg-[var(--app-primary-soft)] hover:text-[var(--app-primary)]'"
+                    @click="closeSidebar"
+                >
+                    <MessageSquare class="h-5 w-5 shrink-0" />
+                    <span class="truncate">Complaints</span>
+                </Link>
+
+                <Link
+                    v-if="page.props.auth.can.access_bad_reviews"
+                    href="/bad-reviews"
+                    class="group flex items-center gap-3 rounded-[18px] px-4 py-3 text-sm font-semibold transition"
+                    :class="isActive('/bad-reviews') ? 'bg-[var(--app-primary)] text-white shadow-[0_14px_24px_rgba(53,103,232,0.24)]' : 'text-slate-600 hover:bg-[var(--app-primary-soft)] hover:text-[var(--app-primary)]'"
+                    @click="closeSidebar"
+                >
+                    <Star class="h-5 w-5 shrink-0" />
+                    <span class="truncate">Bad Reviews</span>
+                </Link>
+
+                <Link
+                    v-if="page.props.auth.can.access_order_trackings"
+                    href="/order-trackings"
+                    class="group flex items-center gap-3 rounded-[18px] px-4 py-3 text-sm font-semibold transition"
+                    :class="isActive('/order-trackings') ? 'bg-[var(--app-primary)] text-white shadow-[0_14px_24px_rgba(53,103,232,0.24)]' : 'text-slate-600 hover:bg-[var(--app-primary-soft)] hover:text-[var(--app-primary)]'"
+                    @click="closeSidebar"
+                >
+                    <Truck class="h-5 w-5 shrink-0" />
+                    <span class="truncate">Order Tracking</span>
+                </Link>
+
+                <Link
+                    v-if="page.props.auth.can.access_oos"
+                    href="/oos"
+                    class="group flex items-center gap-3 rounded-[18px] px-4 py-3 text-sm font-semibold transition"
+                    :class="isActive('/oos') ? 'bg-[var(--app-primary)] text-white shadow-[0_14px_24px_rgba(53,103,232,0.24)]' : 'text-slate-600 hover:bg-[var(--app-primary-soft)] hover:text-[var(--app-primary)]'"
+                    @click="closeSidebar"
+                >
+                    <Archive class="h-5 w-5 shrink-0" />
+                    <span class="truncate">OOS Data</span>
+                </Link>
+
+                <Link
+                    v-if="page.props.auth.can.view_users"
+                    href="/users"
+                    class="group flex items-center gap-3 rounded-[18px] px-4 py-3 text-sm font-semibold transition"
+                    :class="isActive('/users') ? 'bg-[var(--app-primary)] text-white shadow-[0_14px_24px_rgba(53,103,232,0.24)]' : 'text-slate-600 hover:bg-[var(--app-primary-soft)] hover:text-[var(--app-primary)]'"
+                    @click="closeSidebar"
+                >
+                    <Users class="h-5 w-5 shrink-0" />
+                    <span class="truncate">Management Users</span>
+                </Link>
+
+                <Link
+                    href="/settings/profile"
+                    class="group flex items-center gap-3 rounded-[18px] px-4 py-3 text-sm font-semibold transition"
+                    :class="isActive('/settings/profile') || page.url.startsWith('/settings/') ? 'bg-[var(--app-primary)] text-white shadow-[0_14px_24px_rgba(53,103,232,0.24)]' : 'text-slate-600 hover:bg-[var(--app-primary-soft)] hover:text-[var(--app-primary)]'"
+                    @click="closeSidebar"
+                >
+                    <Settings class="h-5 w-5 shrink-0" />
+                    <span class="truncate">Settings</span>
                 </Link>
             </nav>
         </div>

@@ -3,6 +3,26 @@ import type { LucideIcon } from 'lucide-vue-next';
 export interface Auth {
     user: User | null;
     can: {
+        view_brands: boolean;
+        create_brands: boolean;
+        update_brands: boolean;
+        delete_brands: boolean;
+        view_platforms: boolean;
+        create_platforms: boolean;
+        update_platforms: boolean;
+        delete_platforms: boolean;
+        view_logistics: boolean;
+        create_logistics: boolean;
+        update_logistics: boolean;
+        delete_logistics: boolean;
+        view_sub_cases: boolean;
+        create_sub_cases: boolean;
+        update_sub_cases: boolean;
+        delete_sub_cases: boolean;
+        view_last_steps: boolean;
+        create_last_steps: boolean;
+        update_last_steps: boolean;
+        delete_last_steps: boolean;
         view_users: boolean;
         create_users: boolean;
         update_users: boolean;
