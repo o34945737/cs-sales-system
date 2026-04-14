@@ -617,20 +617,23 @@ const sectionChecks = computed(() => [
 </script>
 
 <template>
-    <Head title="Complaints" />
+    <Head title="Complaints">
+        <meta name="description" content="Manajemen halaman keluhan (complaints). Monitoring tiket case pelanggan yang terstruktur rapi untuk ditindaklanjuti cepat oleh admin dan agen Customer Service." />
+    </Head>
 
     <AppLayout :breadcrumbs="[{ title: 'Dashboard', href: '/dashboard' }, { title: 'Complaints', href: '/complaints' }]">
-        <div class="complaints-shell bg-[var(--canvas)]">
-            <div class="mx-auto flex max-w-7xl flex-col gap-6">
-                <section class="grid gap-6 xl:grid-cols-[244px_minmax(0,1fr)]">
+        <div class="pb-10">
+            <div class="mx-auto flex max-w-[85rem] flex-col gap-6 font-sans">
+                <section class="grid gap-6 xl:grid-cols-[250px_minmax(0,1fr)]">
                     <aside class="space-y-5 xl:sticky xl:top-24 xl:h-fit">
-                        <div class="rounded-[28px] border border-[var(--line)] bg-[var(--panel)] p-5 shadow-[0_24px_60px_rgba(15,23,42,0.06)]">
-                            <div class="flex items-center justify-between">
+                        <div class="app-surface relative overflow-hidden rounded-[28px] p-6">
+                            <div class="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-[var(--app-primary)]/10 blur-2xl"></div>
+                            <div class="relative z-10 flex items-center justify-between">
                                 <div>
-                                    <p class="text-xs font-semibold uppercase tracking-[0.35em] text-slate-400">CS Groupings</p>
-                                    <h2 class="mt-2 text-xl font-semibold text-[var(--ink)]">Complaint Desk</h2>
+                                    <p class="text-[10px] font-bold uppercase tracking-[0.35em] text-[var(--app-primary)]">CS Groupings</p>
+                                    <h2 class="mt-1 text-xl font-bold tracking-tight text-[var(--app-ink)]">Complaint Desk</h2>
                                 </div>
-                                <div class="rounded-2xl bg-[var(--accent-soft)] p-3 text-[var(--accent)]">
+                                <div class="flex h-12 w-12 items-center justify-center rounded-[16px] bg-gradient-to-br from-[var(--app-primary-soft)] to-white shadow-sm text-[var(--app-primary)]">
                                     <Users class="h-5 w-5" />
                                 </div>
                             </div>
@@ -638,12 +641,12 @@ const sectionChecks = computed(() => [
                             <div class="mt-5 grid gap-3">
                                 <button
                                     type="button"
-                                    class="flex items-center justify-between rounded-[22px] border px-4 py-4 text-left transition"
-                                    :class="currentCs === '' ? 'border-[var(--accent)] bg-[var(--accent)] text-white shadow-lg shadow-[var(--accent)]/20' : 'border-[var(--line)] bg-white text-slate-700 hover:border-[var(--accent)]/40'"
+                                    class="group relative overflow-hidden flex items-center justify-between rounded-[22px] border px-5 py-4 text-left transition-colors duration-200"
+                                    :class="currentCs === '' ? 'border-[var(--app-primary)] bg-[var(--app-primary)] text-white shadow-[0_8px_15px_rgba(53,103,232,0.15)]' : 'border-slate-100 bg-white text-slate-700 shadow-[0_2px_10px_rgb(0,0,0,0.02)] hover:border-[var(--app-primary)]/30'"
                                     @click="setCsFilter('')"
                                 >
-                                    <span class="text-sm font-semibold">All Active Agents</span>
-                                    <span class="text-sm">{{ overview.agents || 0 }}</span>
+                                    <span class="relative z-10 text-sm font-bold">All Active Agents</span>
+                                    <span class="relative z-10 text-sm font-medium">{{ overview.agents || 0 }}</span>
                                 </button>
 
                                 <div class="space-y-3">
@@ -653,17 +656,17 @@ const sectionChecks = computed(() => [
                                         v-for="agent in csSummary"
                                         :key="agent.cs_name || 'unassigned'"
                                         type="button"
-                                        class="flex w-full items-center justify-between rounded-[20px] border px-4 py-4 text-left transition"
-                                        :class="currentCs === agent.cs_name ? 'border-[var(--accent)] bg-[var(--accent)] text-white shadow-lg shadow-[var(--accent)]/20' : 'border-[var(--line)] bg-white text-slate-700 hover:border-[var(--accent)]/40'"
+                                        class="group flex w-full items-center justify-between rounded-[20px] border px-5 py-4 text-left transition-colors duration-200"
+                                        :class="currentCs === agent.cs_name ? 'border-[var(--app-primary)] bg-[var(--app-primary)] text-white shadow-[0_8px_15px_rgba(53,103,232,0.15)]' : 'border-slate-100 bg-white text-slate-700 shadow-[0_2px_10px_rgb(0,0,0,0.02)] hover:border-[var(--app-primary)]/30'"
                                         @click="setCsFilter(agent.cs_name)"
                                     >
-                                        <div>
-                                            <p class="text-sm font-semibold">{{ agent.cs_name || 'UNASSIGNED' }}</p>
-                                            <p class="mt-1 text-xs" :class="currentCs === agent.cs_name ? 'text-white/80' : 'text-slate-400'">
+                                        <div class="relative z-10">
+                                            <p class="text-sm font-bold">{{ agent.cs_name || 'UNASSIGNED' }}</p>
+                                            <p class="mt-1 text-xs font-medium" :class="currentCs === agent.cs_name ? 'text-white/80' : 'text-slate-400'">
                                                 {{ agent.total }} complaint
                                             </p>
                                         </div>
-                                        <span class="rounded-full px-3 py-1 text-xs font-semibold" :class="currentCs === agent.cs_name ? 'bg-white/15 text-white' : 'bg-slate-100 text-slate-500'">
+                                        <span class="relative z-10 min-w-[32px] text-center rounded-full px-3 py-1 text-xs font-bold transition-colors" :class="currentCs === agent.cs_name ? 'bg-white/20 text-white shadow-inner' : 'bg-slate-100 text-slate-500 group-hover:bg-[var(--app-primary-soft)] group-hover:text-[var(--app-primary)]'">
                                             {{ agent.total }}
                                         </span>
                                     </button>
@@ -682,14 +685,16 @@ const sectionChecks = computed(() => [
                         </div>
                     </aside>
 
-                    <div class="space-y-5">
-                        <section class="rounded-[32px] border border-[var(--line)] bg-[var(--panel)] p-6 shadow-[0_24px_60px_rgba(15,23,42,0.06)]">
-                            <div class="space-y-6">
-                                <div class="grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(360px,0.85fr)] xl:items-start">
+                    <div class="space-y-6">
+                        <section class="app-table-shell p-7">
+                            <div class="space-y-7">
+                                <div class="grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(380px,0.85fr)] xl:items-start">
                                     <div>
-                                        <p class="text-xs font-semibold uppercase tracking-[0.35em] text-slate-400">Complaint Workspace</p>
-                                        <h1 class="mt-2 text-3xl font-bold tracking-tight text-[var(--ink)]">Complaints</h1>
-                                        <p class="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
+                                        <div class="inline-flex rounded-full border border-[var(--app-primary)]/20 bg-[var(--app-primary)]/5 px-3 py-1 mb-4">
+                                            <p class="text-[10px] font-bold uppercase tracking-[0.25em] text-[var(--app-primary)]">Complaint Workspace</p>
+                                        </div>
+                                        <h1 class="text-4xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900">Complaints Overview</h1>
+                                        <p class="mt-3 max-w-2xl text-[15px] font-medium leading-relaxed text-slate-500">
                                             Entry dan monitoring complaint dibuat lebih fokus supaya tim CS bisa scan data, filter case, dan input follow-up tanpa terasa penuh.
                                         </p>
                                     </div>
@@ -709,20 +714,21 @@ const sectionChecks = computed(() => [
 
                                             <button
                                                 type="button"
-                                                class="inline-flex items-center justify-center gap-2 rounded-[22px] bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-[var(--accent)]/20 transition hover:bg-[var(--accent-dark)]"
+                                                class="group inline-flex items-center justify-center gap-2 rounded-[22px] bg-[var(--app-primary)] px-6 py-3.5 text-sm font-bold text-white shadow-[0_8px_20px_rgb(79,70,229,0.2)] transition-colors hover:bg-[var(--app-primary-dark)]"
                                                 @click="openCreateModal"
                                             >
                                                 <Plus class="h-4 w-4" />
-                                                Tambah Complaint
+                                                <span>Tambah Complaint</span>
                                             </button>
                                         </div>
                                     </div>
                                 </div>
 
-                                <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                                    <article v-for="card in overviewCards" :key="card.label" class="rounded-[24px] border border-[var(--line)] bg-white px-5 py-5">
-                                        <p class="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">{{ card.label }}</p>
-                                        <p class="mt-4 text-[2.15rem] font-bold tracking-tight text-[var(--ink)]">{{ card.value }}</p>
+                                <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                                    <article v-for="(card, index) in overviewCards" :key="card.label" class="app-grid-card px-6 py-6 group hover:-translate-y-1">
+                                        <div class="absolute -right-6 -top-6 h-28 w-28 rounded-full bg-gradient-to-br from-[var(--app-primary)]/10 to-transparent transition-transform duration-500 group-hover:scale-150"></div>
+                                        <p class="relative z-10 text-[11px] font-bold uppercase tracking-[0.2em] text-slate-500">{{ card.label }}</p>
+                                        <p class="relative z-10 mt-3 text-4xl font-extrabold tracking-tight text-[var(--app-ink)]">{{ card.value }}</p>
                                     </article>
                                 </div>
 
@@ -742,15 +748,17 @@ const sectionChecks = computed(() => [
                                             v-for="status in statusCards"
                                             :key="status.key"
                                             type="button"
-                                            class="flex items-center justify-between rounded-[20px] border px-4 py-3 text-left transition"
-                                            :class="currentStatus === status.key ? 'border-[var(--accent)] bg-[var(--accent)] text-white shadow-lg shadow-[var(--accent)]/20' : 'border-[var(--line)] bg-white text-slate-700 hover:border-[var(--accent)]/40'"
+                                            class="group flex items-center justify-between rounded-[20px] border px-5 py-3.5 text-left transition-colors"
+                                            :class="currentStatus === status.key ? 'border-[var(--app-ink)] bg-[var(--app-ink)] text-white shadow-md' : 'border-slate-100 bg-white shadow-sm hover:border-[var(--app-primary)]/30 hover:bg-slate-50'"
                                             @click="setStatus(status.key)"
                                         >
                                             <div class="flex items-center gap-3">
-                                                <component :is="status.icon" class="h-4 w-4" />
-                                                <span class="text-sm font-semibold">{{ status.label }}</span>
+                                                <div class="flex h-8 w-8 items-center justify-center rounded-full transition-colors" :class="currentStatus === status.key ? 'bg-white/10 text-white' : 'bg-slate-100 text-slate-500 group-hover:bg-white group-hover:text-[var(--app-primary)]'">
+                                                    <component :is="status.icon" class="h-4 w-4" />
+                                                </div>
+                                                <span class="text-[15px] font-bold" :class="currentStatus === status.key ? 'text-white' : 'text-[var(--app-ink)]'">{{ status.label }}</span>
                                             </div>
-                                            <span class="rounded-full px-3 py-1 text-xs font-semibold" :class="currentStatus === status.key ? 'bg-white/15 text-white' : 'bg-slate-100 text-slate-500'">
+                                            <span class="relative z-10 min-w-[28px] text-center rounded-full px-2.5 py-1 text-xs font-bold" :class="currentStatus === status.key ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'">
                                                 {{ status.value }}
                                             </span>
                                         </button>
@@ -759,12 +767,12 @@ const sectionChecks = computed(() => [
                             </div>
                         </section>
 
-                        <section class="overflow-hidden rounded-[32px] border border-[var(--line)] bg-[var(--panel)] shadow-[0_24px_60px_rgba(15,23,42,0.06)]">
-                            <div class="flex flex-col gap-4 border-b border-[var(--line)] px-6 py-5 lg:flex-row lg:items-center lg:justify-between">
+                        <section class="app-table-shell p-0">
+                            <div class="flex flex-col gap-4 border-b border-[var(--app-border)] px-7 py-6 lg:flex-row lg:items-center lg:justify-between">
                                 <div class="min-w-0">
-                                    <p class="text-xs font-semibold uppercase tracking-[0.28em] text-slate-400">Complaint Index</p>
-                                    <h2 class="mt-2 text-xl font-semibold text-[var(--ink)]">Daftar Complaint</h2>
-                                    <p class="mt-1 text-sm text-slate-500">Daftar utama untuk monitoring cepat, detail per row, dan pengecekan status serta priority.</p>
+                                    <p class="text-[10px] font-bold uppercase tracking-[0.3em] text-[var(--app-primary)]">Complaint Index</p>
+                                    <h2 class="mt-1 text-2xl font-extrabold text-[var(--app-ink)]">Daftar Complaint</h2>
+                                    <p class="mt-1 text-[14px] font-medium text-slate-500">Daftar pemantauan penuh dengan metrik prioritas real-time.</p>
                                 </div>
                                 <div class="flex flex-wrap items-center gap-2 text-sm text-slate-400">
                                     <span class="rounded-full bg-slate-50 px-3 py-1.5">Showing {{ complaintPage.from || 0 }}-{{ complaintPage.to || 0 }} dari {{ complaintPage.total || 0 }} data</span>
@@ -841,7 +849,7 @@ const sectionChecks = computed(() => [
                                         </tr>
                                     </thead>
                                     <tbody class="divide-y divide-[var(--line)] bg-white">
-                                        <tr v-for="item in complaintRows" :key="item.id" class="align-top">
+                                        <tr v-for="item in complaintRows" :key="item.id" class="align-top group transition-colors hover:bg-slate-50/70">
                                             <td class="px-5 py-4">
                                                 <div class="space-y-1">
                                                     <p class="truncate text-sm font-semibold text-[var(--ink)]">{{ item.source || '-' }}</p>
@@ -895,11 +903,11 @@ const sectionChecks = computed(() => [
                                     <div class="flex flex-wrap justify-center gap-3 pt-2">
                                         <button
                                             type="button"
-                                            class="inline-flex items-center justify-center gap-2 rounded-[18px] bg-[var(--accent)] px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-[var(--accent)]/20 transition hover:bg-[var(--accent-dark)]"
+                                            class="group inline-flex items-center justify-center gap-2 rounded-[20px] bg-[var(--app-primary)] px-6 py-3.5 text-sm font-bold text-white shadow-[0_8px_20px_rgb(79,70,229,0.2)] transition-colors hover:bg-[var(--app-primary-dark)]"
                                             @click="openCreateModal"
                                         >
                                             <Plus class="h-4 w-4" />
-                                            Tambah Complaint
+                                            <span>Tambah Data Baru</span>
                                         </button>
                                         <button
                                             v-if="hasActiveFilters"
@@ -1167,17 +1175,9 @@ const sectionChecks = computed(() => [
                                             </div>
                                         </div>
 
-                                <div class="grid gap-5 sm:grid-cols-2">
-                                    <div class="space-y-2">
-                                        <label class="block text-[15px] font-medium text-slate-700">Username*</label>
-                                        <input v-model="form.username" type="text" :class="controlClass('username')" />
-                                        <p v-if="fieldError('username')" class="text-xs font-medium text-rose-600">{{ fieldError('username') }}</p>
-                                    </div>
-
-                                    <div class="space-y-2">
-                                        <label class="block text-[15px] font-medium text-slate-700">Product*</label>
-                                        <input v-model="form.product_name" type="text" :class="controlClass('product_name')" />
-                                            </div>
+                                        <div class="space-y-2">
+                                            <label class="block text-[15px] font-medium text-slate-700">Product*</label>
+                                            <input v-model="form.product_name" type="text" :class="controlClass('product_name')" />
                                         </div>
 
                                         <div class="grid gap-5 lg:grid-cols-[minmax(0,1fr)_220px]">
@@ -1405,6 +1405,12 @@ const sectionChecks = computed(() => [
                                                 <input type="file" class="hidden" accept="video/*" @change="setVideoFile" />
                                             </label>
                                         </div>
+
+                                        <div class="space-y-2">
+                                            <label class="block text-[15px] font-medium text-slate-700">Username*</label>
+                                            <input v-model="form.username" type="text" :class="controlClass('username')" />
+                                            <p v-if="fieldError('username')" class="text-xs font-medium text-rose-600">{{ fieldError('username') }}</p>
+                                        </div>
                                     </div>
                                 </section>
                                 </div>
@@ -1498,18 +1504,6 @@ const sectionChecks = computed(() => [
 </template>
 
 <style>
-.complaints-shell {
-    --canvas: transparent;
-    --panel: #ffffff;
-    --panel-soft: #f8fbff;
-    --line: #e2e8f0;
-    --ink: #111827;
-    --muted: #667085;
-    --accent: #3567e8;
-    --accent-dark: #2452cb;
-    --accent-soft: #eef4ff;
-}
-
 .line-clamp-2 {
     display: -webkit-box;
     -webkit-line-clamp: 2;

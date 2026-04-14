@@ -3,6 +3,12 @@
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
+        
+        <!-- SEO Setup -->
+        <meta name="description" content="Sistem Penanganan Customer Service: Keluhan, Monitoring OOS, dan Tracking Pengiriman. Tingkatkan kepuasan pelanggan dengan pelayanan responsif.">
+        <meta name="keywords" content="customer service, sistem tracking, manajemen keluhan, dashboard cs">
+        <meta name="author" content="Tim Customer Service">
+        <meta name="theme-color" content="#4f46e5">
 
         <title inertia>{{ config('app.name', 'Laravel') }}</title>
 

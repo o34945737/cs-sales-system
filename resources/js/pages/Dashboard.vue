@@ -106,7 +106,9 @@ const statusClass = (status: string | null) => {
 </script>
 
 <template>
-    <Head title="Dashboard" />
+    <Head title="Dashboard">
+        <meta name="description" content="Tinjauan laporan komprehensif metrik KPI Customer Service dan antrian keluhan yang berjalan secara realtime." />
+    </Head>
 
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="space-y-6 pb-4">
@@ -143,9 +145,10 @@ const statusClass = (status: string | null) => {
                         <article
                             v-for="item in recentComplaints"
                             :key="item.id"
-                            class="rounded-[26px] border border-[var(--app-border)] bg-white px-5 py-5 shadow-[0_10px_30px_rgba(15,23,42,0.05)]"
+                            class="group relative overflow-hidden rounded-[26px] border border-slate-100 bg-white px-5 py-5 shadow-sm transition-all hover:-translate-y-1 hover:shadow-md hover:border-indigo-500/20"
                         >
-                            <div class="flex flex-wrap items-start justify-between gap-3">
+                            <div class="absolute -right-6 -top-6 h-28 w-28 rounded-full bg-[var(--app-primary-soft)] transition-transform group-hover:scale-125 opacity-30"></div>
+                            <div class="relative z-10 flex flex-wrap items-start justify-between gap-3">
                                 <div class="flex items-center gap-2">
                                     <span class="rounded-full bg-rose-50 px-3 py-1 text-xs font-bold uppercase tracking-[0.14em] text-rose-500">Live</span>
                                     <span class="text-xs font-semibold text-slate-400">#{{ item.order_id || item.id }}</span>
@@ -197,13 +200,15 @@ const statusClass = (status: string | null) => {
                                 v-for="link in quickLinks"
                                 :key="link.label"
                                 :href="link.href"
-                                class="flex items-center justify-between rounded-[22px] border border-[var(--app-border)] bg-white px-4 py-4 transition hover:border-[var(--app-primary)] hover:bg-[var(--app-primary-soft)]"
+                                class="group flex items-center justify-between rounded-[22px] border border-slate-100 bg-white px-5 py-4 shadow-[0_2px_10px_rgb(0,0,0,0.02)] transition-all hover:border-[var(--app-primary)]/30 hover:shadow-md"
                             >
                                 <div>
                                     <p class="font-bold text-[var(--app-ink)]">{{ link.label }}</p>
-                                    <p class="mt-1 text-sm text-slate-500">{{ link.description }}</p>
+                                    <p class="mt-1 text-sm font-medium text-slate-500">{{ link.description }}</p>
                                 </div>
-                                <ChevronRight class="h-5 w-5 text-slate-400" />
+                                <div class="flex h-10 w-10 items-center justify-center rounded-full bg-slate-50 text-slate-400 transition-colors group-hover:bg-[var(--app-primary-soft)] group-hover:text-[var(--app-primary)]">
+                                    <ChevronRight class="h-5 w-5 transition-transform group-hover:translate-x-1" />
+                                </div>
                             </Link>
                         </div>
                     </section>
@@ -215,28 +220,28 @@ const statusClass = (status: string | null) => {
                         </div>
 
                         <div class="space-y-3 p-5">
-                            <div class="flex items-center justify-between rounded-[22px] bg-slate-50 px-4 py-4">
+                            <div class="flex items-center justify-between rounded-[22px] border border-slate-100 bg-white px-5 py-4 shadow-[0_2px_10px_rgb(0,0,0,0.02)] hover:bg-slate-50 transition-colors">
                                 <div class="flex items-center gap-3">
                                     <CircleDot class="h-4 w-4 text-emerald-500" />
-                                    <span class="text-sm font-semibold text-[var(--app-ink)]">Account Status</span>
+                                    <span class="text-sm font-bold text-[var(--app-ink)]">Account Status</span>
                                 </div>
-                                <span class="text-sm font-bold text-emerald-600">Active</span>
+                                <span class="rounded-full bg-emerald-50 px-3 py-1 font-bold text-emerald-600">Active</span>
                             </div>
 
-                            <div class="flex items-center justify-between rounded-[22px] bg-slate-50 px-4 py-4">
+                            <div class="flex items-center justify-between rounded-[22px] border border-slate-100 bg-white px-5 py-4 shadow-[0_2px_10px_rgb(0,0,0,0.02)] hover:bg-slate-50 transition-colors">
                                 <div class="flex items-center gap-3">
                                     <CircleDot class="h-4 w-4 text-blue-500" />
-                                    <span class="text-sm font-semibold text-[var(--app-ink)]">Primary Role</span>
+                                    <span class="text-sm font-bold text-[var(--app-ink)]">Primary Role</span>
                                 </div>
-                                <span class="text-sm font-bold text-blue-600">{{ page.props.auth.user?.roles?.[0] || 'Workspace' }}</span>
+                                <span class="rounded-full bg-blue-50 px-3 py-1 font-bold text-blue-600">{{ page.props.auth.user?.roles?.[0] || 'Workspace' }}</span>
                             </div>
 
-                            <div class="flex items-center justify-between rounded-[22px] bg-slate-50 px-4 py-4">
+                            <div class="flex items-center justify-between rounded-[22px] border border-slate-100 bg-white px-5 py-4 shadow-[0_2px_10px_rgb(0,0,0,0.02)] hover:bg-slate-50 transition-colors">
                                 <div class="flex items-center gap-3">
                                     <CircleDot class="h-4 w-4 text-violet-500" />
-                                    <span class="text-sm font-semibold text-[var(--app-ink)]">Accessible Modules</span>
+                                    <span class="text-sm font-bold text-[var(--app-ink)]">Accessible Modules</span>
                                 </div>
-                                <span class="text-sm font-bold text-violet-600">{{ quickLinks.length }}</span>
+                                <span class="rounded-full bg-violet-50 px-3 py-1 font-bold text-violet-600">{{ quickLinks.length }}</span>
                             </div>
                         </div>
                     </section>

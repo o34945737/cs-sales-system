@@ -100,37 +100,49 @@ html {
     body {
         @apply bg-background text-foreground antialiased;
         background:
-            radial-gradient(circle at top left, rgba(53, 103, 232, 0.08), transparent 22%),
-            linear-gradient(180deg, #fbfcff 0%, #f5f7fb 100%);
+            radial-gradient(circle at 0% 0%, rgba(79, 70, 229, 0.08) 0px, transparent 40%),
+            radial-gradient(circle at 100% 0%, rgba(14, 165, 233, 0.08) 0px, transparent 40%),
+            radial-gradient(circle at 100% 100%, rgba(79, 70, 229, 0.05) 0px, transparent 50%),
+            linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+        background-attachment: fixed;
         min-height: 100vh;
     }
 }
 
 @layer components {
     .app-surface {
-        background: var(--app-panel);
-        border: 1px solid var(--app-border);
-        box-shadow: var(--app-shadow);
+        background: #ffffff;
+        border: 1px solid rgba(0, 0, 0, 0.05);
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.04);
     }
 
     .app-surface-soft {
         background: var(--app-panel-soft);
-        border: 1px solid var(--app-border);
-        box-shadow: var(--app-shadow);
+        border: 1px solid rgba(255, 255, 255, 0.8);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.03);
     }
 
     .app-grid-card {
-        background: var(--app-panel);
-        border: 1px solid var(--app-border);
+        background: linear-gradient(180deg, #ffffff 0%, #fafcff 100%);
+        border: 1px solid rgba(0, 0, 0, 0.04);
         border-radius: 1.5rem;
-        box-shadow: 0 12px 28px rgba(15, 23, 42, 0.06);
+        box-shadow: 0 10px 30px rgba(15, 23, 42, 0.04);
+        transition: all 0.2s ease-out;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .app-grid-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 15px 35px rgba(15, 23, 42, 0.06);
+        border-color: rgba(53, 103, 232, 0.15);
     }
 
     .app-table-shell {
-        background: var(--app-panel);
-        border: 1px solid var(--app-border);
+        background: #ffffff;
+        border: 1px solid rgba(0, 0, 0, 0.04);
         border-radius: 1.5rem;
-        box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
+        box-shadow: 0 12px 35px rgba(15, 23, 42, 0.04);
     }
 
     .app-pill {

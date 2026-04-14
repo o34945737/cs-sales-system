@@ -50,56 +50,56 @@ const currentUser = computed(() => page.props.auth.user);
 
 <template>
     <header class="px-4 pt-4 sm:px-6 lg:px-8 lg:pt-6">
-        <div class="app-surface flex flex-col gap-5 rounded-[30px] px-5 py-5 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
-            <div class="flex min-w-0 items-start gap-3">
+        <div class="app-surface flex flex-col gap-3 rounded-[24px] px-4 py-3 sm:px-5 lg:flex-row lg:items-center lg:justify-between bg-white shadow-[0_4px_20px_rgb(0,0,0,0.03)]">
+            <div class="flex min-w-0 items-center gap-3">
                 <button
                     type="button"
-                    class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-[var(--app-border)] bg-white text-slate-600 transition hover:border-[var(--app-primary)] hover:text-[var(--app-primary)] lg:hidden"
+                    class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-[12px] border border-white/60 bg-white/80 text-slate-600 shadow-sm transition hover:border-[var(--app-primary)]/30 hover:text-[var(--app-primary)] lg:hidden"
                     @click="$emit('openSidebar')"
                 >
-                    <Menu class="h-5 w-5" />
+                    <Menu class="h-4 w-4" />
                 </button>
 
                 <div class="min-w-0">
-                    <div v-if="breadcrumbs?.length" class="flex flex-wrap items-center gap-2 text-sm text-slate-400">
+                    <div v-if="breadcrumbs?.length" class="flex flex-wrap items-center gap-1.5 text-[11px] font-medium text-slate-400">
                         <template v-for="(item, index) in breadcrumbs" :key="`${item.title}-${index}`">
                             <Link v-if="index !== breadcrumbs.length - 1" :href="item.href" class="transition hover:text-[var(--app-primary)]">
                                 {{ item.title }}
                             </Link>
-                            <span v-else class="font-semibold text-slate-500">{{ item.title }}</span>
+                            <span v-else class="font-bold text-slate-500">{{ item.title }}</span>
                             <span v-if="index !== breadcrumbs.length - 1">/</span>
                         </template>
                     </div>
 
-                    <h1 class="mt-1 text-2xl font-extrabold tracking-tight text-[var(--app-ink)] sm:text-[2rem]">{{ pageTitle }}</h1>
-                    <p class="mt-1 text-sm text-slate-500 sm:text-base">{{ pageSubtitle }}</p>
+                    <h1 class="text-xl font-extrabold tracking-tight text-[var(--app-ink)] leading-snug">{{ pageTitle }}</h1>
                 </div>
             </div>
 
             <div class="flex flex-wrap items-center justify-end gap-3">
                 <button
                     type="button"
-                    class="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-[var(--app-border)] bg-white text-slate-500 transition hover:border-[var(--app-primary)] hover:text-[var(--app-primary)]"
+                    class="inline-flex h-9 w-9 items-center justify-center rounded-[12px] border border-white/60 bg-white/80 text-slate-500 shadow-sm transition-all hover:-translate-y-0.5 hover:border-[var(--app-primary)]/30 hover:text-[var(--app-primary)]"
                 >
-                    <Bell class="h-5 w-5" />
+                    <Bell class="h-4 w-4" />
                 </button>
 
-                <div class="hidden items-center gap-3 rounded-[22px] border border-[var(--app-border)] bg-[var(--app-primary-soft)] px-4 py-2.5 sm:flex">
-                    <div class="flex h-10 w-10 items-center justify-center rounded-full bg-white text-sm font-bold text-[var(--app-primary)]">
+                <div class="hidden items-center gap-2.5 rounded-[16px] border border-white/60 bg-white/80 px-3 py-1.5 shadow-sm sm:flex">
+                    <div class="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-r from-[var(--app-primary)] to-[var(--app-primary-dark)] text-xs font-bold text-white shadow-sm">
                         {{ currentUser?.name?.slice(0, 1) || 'U' }}
                     </div>
-                    <div class="text-left">
-                        <p class="text-sm font-bold text-[var(--app-ink)]">{{ currentUser?.name || 'Guest' }}</p>
-                        <p class="text-xs text-slate-500">{{ currentUser?.roles?.[0] || 'Workspace' }}</p>
+                    <div class="text-left pr-2">
+                        <p class="text-xs font-bold text-[var(--app-ink)] leading-tight">{{ currentUser?.name || 'Guest' }}</p>
+                        <p class="text-[10px] font-medium text-slate-500 leading-tight">{{ currentUser?.roles?.[0] || 'Workspace' }}</p>
                     </div>
                 </div>
 
                 <Link
                     :href="route('dashboard')"
-                    class="inline-flex items-center gap-2 rounded-[18px] bg-[var(--app-primary)] px-4 py-3 text-sm font-semibold text-white shadow-[0_14px_24px_rgba(53,103,232,0.24)] transition hover:bg-[var(--app-primary-dark)]"
+                    class="group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-[14px] bg-gradient-to-r from-[var(--app-primary)] to-[var(--app-primary-dark)] px-4 py-2 text-sm font-bold text-white shadow-[0_8px_16px_rgba(53,103,232,0.2)] transition-all hover:scale-[1.02] active:scale-95"
                 >
-                    <PanelTopOpen class="h-4 w-4" />
-                    Open Dashboard
+                    <div class="absolute inset-0 translate-y-full bg-gradient-to-t from-white/20 to-transparent opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100"></div>
+                    <PanelTopOpen class="relative z-10 h-4 w-4 transition-transform group-hover:-translate-y-0.5" />
+                    <span class="relative z-10">Dashboard</span>
                 </Link>
             </div>
         </div>
