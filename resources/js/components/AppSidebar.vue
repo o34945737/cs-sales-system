@@ -2,7 +2,7 @@
 import { useInitials } from '@/composables/useInitials';
 import { type NavItem, type SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/vue3';
-import { Archive, ChevronDown, ClipboardList, LayoutGrid, ListChecks, LogOut, MessageSquare, MonitorSmartphone, Settings, Star, Tag, Tags, Truck, Users, X } from 'lucide-vue-next';
+import { Archive, ChevronDown, ClipboardList, LayoutGrid, ListChecks, LogOut, MessageSquare, MonitorSmartphone, Settings, ShieldAlert, Star, Tag, Tags, Truck, Users, X } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 
 const props = withDefaults(
@@ -57,6 +57,10 @@ const masterDataItems = computed<NavItem[]>(() => {
 
     if (page.props.auth.can.view_last_steps) {
         items.push({ title: 'Last Steps', href: '/last-steps', icon: ListChecks });
+    }
+
+    if (page.props.auth.can.view_reason_whitelists) {
+        items.push({ title: 'Whitelist Reasons', href: '/reason-whitelists', icon: ShieldAlert });
     }
 
     return items;

@@ -23,6 +23,10 @@ export interface Auth {
         create_last_steps: boolean;
         update_last_steps: boolean;
         delete_last_steps: boolean;
+        view_reason_whitelists: boolean;
+        create_reason_whitelists: boolean;
+        update_reason_whitelists: boolean;
+        delete_reason_whitelists: boolean;
         view_users: boolean;
         create_users: boolean;
         update_users: boolean;

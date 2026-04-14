@@ -12,6 +12,7 @@ use App\Http\Controllers\LastStepController;
 use App\Http\Controllers\OosController;
 use App\Http\Controllers\OrderTrackingController;
 use App\Http\Controllers\PlatformController;
+use App\Http\Controllers\ReasonWhitelistController;
 use App\Http\Controllers\SubCaseController;
 use App\Http\Controllers\UserManagementController;
 use Illuminate\Support\Facades\Route;
@@ -159,6 +160,21 @@ Route::middleware(['auth', 'active', 'password.reset.required'])->group(function
             ->name('update');
         Route::delete('/{lastStep}', [LastStepController::class, 'destroy'])
             ->middleware('permission:delete last steps')
+            ->name('destroy');
+    });
+
+    Route::prefix('reason-whitelists')->name('reason-whitelists.')->group(function () {
+        Route::get('/', [ReasonWhitelistController::class, 'index'])
+            ->middleware('permission:view reason whitelists')
+            ->name('index');
+        Route::post('/', [ReasonWhitelistController::class, 'store'])
+            ->middleware('permission:create reason whitelists')
+            ->name('store');
+        Route::put('/{reasonWhitelist}', [ReasonWhitelistController::class, 'update'])
+            ->middleware('permission:update reason whitelists')
+            ->name('update');
+        Route::delete('/{reasonWhitelist}', [ReasonWhitelistController::class, 'destroy'])
+            ->middleware('permission:delete reason whitelists')
             ->name('destroy');
     });
 
