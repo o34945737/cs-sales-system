@@ -7,11 +7,16 @@ use App\Models\OrderTracking;
 use App\Http\Controllers\BadReviewController;
 use App\Http\Controllers\BrandController;
 use App\Http\Controllers\ComplaintController;
+use App\Http\Controllers\CauseByController;
 use App\Http\Controllers\LogisticController;
 use App\Http\Controllers\LastStepController;
 use App\Http\Controllers\OosController;
+use App\Http\Controllers\OosReasonController;
+use App\Http\Controllers\OosSolutionController;
 use App\Http\Controllers\OrderTrackingController;
+use App\Http\Controllers\OrderTrackingDataSourceController;
 use App\Http\Controllers\PlatformController;
+use App\Http\Controllers\ReasonLateResponseController;
 use App\Http\Controllers\ReasonWhitelistController;
 use App\Http\Controllers\SubCaseController;
 use App\Http\Controllers\UserManagementController;
@@ -178,6 +183,81 @@ Route::middleware(['auth', 'active', 'password.reset.required'])->group(function
             ->name('destroy');
     });
 
+    Route::prefix('reason-late-responses')->name('reason-late-responses.')->group(function () {
+        Route::get('/', [ReasonLateResponseController::class, 'index'])
+            ->middleware('permission:view reason late responses')
+            ->name('index');
+        Route::post('/', [ReasonLateResponseController::class, 'store'])
+            ->middleware('permission:create reason late responses')
+            ->name('store');
+        Route::put('/{reasonLateResponse}', [ReasonLateResponseController::class, 'update'])
+            ->middleware('permission:update reason late responses')
+            ->name('update');
+        Route::delete('/{reasonLateResponse}', [ReasonLateResponseController::class, 'destroy'])
+            ->middleware('permission:delete reason late responses')
+            ->name('destroy');
+    });
+
+    Route::prefix('order-tracking-data-sources')->name('order-tracking-data-sources.')->group(function () {
+        Route::get('/', [OrderTrackingDataSourceController::class, 'index'])
+            ->middleware('permission:view order tracking data sources')
+            ->name('index');
+        Route::post('/', [OrderTrackingDataSourceController::class, 'store'])
+            ->middleware('permission:create order tracking data sources')
+            ->name('store');
+        Route::put('/{orderTrackingDataSource}', [OrderTrackingDataSourceController::class, 'update'])
+            ->middleware('permission:update order tracking data sources')
+            ->name('update');
+        Route::delete('/{orderTrackingDataSource}', [OrderTrackingDataSourceController::class, 'destroy'])
+            ->middleware('permission:delete order tracking data sources')
+            ->name('destroy');
+    });
+
+    Route::prefix('oos-reasons')->name('oos-reasons.')->group(function () {
+        Route::get('/', [OosReasonController::class, 'index'])
+            ->middleware('permission:view oos reasons')
+            ->name('index');
+        Route::post('/', [OosReasonController::class, 'store'])
+            ->middleware('permission:create oos reasons')
+            ->name('store');
+        Route::put('/{oosReason}', [OosReasonController::class, 'update'])
+            ->middleware('permission:update oos reasons')
+            ->name('update');
+        Route::delete('/{oosReason}', [OosReasonController::class, 'destroy'])
+            ->middleware('permission:delete oos reasons')
+            ->name('destroy');
+    });
+
+    Route::prefix('oos-solutions')->name('oos-solutions.')->group(function () {
+        Route::get('/', [OosSolutionController::class, 'index'])
+            ->middleware('permission:view oos solutions')
+            ->name('index');
+        Route::post('/', [OosSolutionController::class, 'store'])
+            ->middleware('permission:create oos solutions')
+            ->name('store');
+        Route::put('/{oosSolution}', [OosSolutionController::class, 'update'])
+            ->middleware('permission:update oos solutions')
+            ->name('update');
+        Route::delete('/{oosSolution}', [OosSolutionController::class, 'destroy'])
+            ->middleware('permission:delete oos solutions')
+            ->name('destroy');
+    });
+
+    Route::prefix('cause-bys')->name('cause-bys.')->group(function () {
+        Route::get('/', [CauseByController::class, 'index'])
+            ->middleware('permission:view cause bys')
+            ->name('index');
+        Route::post('/', [CauseByController::class, 'store'])
+            ->middleware('permission:create cause bys')
+            ->name('store');
+        Route::put('/{causeBy}', [CauseByController::class, 'update'])
+            ->middleware('permission:update cause bys')
+            ->name('update');
+        Route::delete('/{causeBy}', [CauseByController::class, 'destroy'])
+            ->middleware('permission:delete cause bys')
+            ->name('destroy');
+    });
+
     Route::prefix('users')->name('users.')->group(function () {
         Route::get('/', [UserManagementController::class, 'index'])
             ->middleware('permission:view users')
@@ -194,5 +274,5 @@ Route::middleware(['auth', 'active', 'password.reset.required'])->group(function
     });
 });
 
-require __DIR__.'/settings.php';
-require __DIR__.'/auth.php';
+require __DIR__ . '/settings.php';
+require __DIR__ . '/auth.php';

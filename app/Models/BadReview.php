@@ -30,15 +30,15 @@ class BadReview extends Model
                 $model->status = 'Solved';
             }
 
-            // By (Cause_By) Automation
-            if (in_array($model->category_review, ['Bad Quality Product', 'Expired'])) {
-                $model->cause_by = 'BRAND';
-            } elseif (in_array($model->category_review, ['Misunderstanding of the product', 'Change Mind'])) {
-                $model->cause_by = 'CUSTOMER';
-            } elseif ($model->category_review === 'OOS') {
-                $model->cause_by = 'KAE';
-            } elseif ($model->category_review === 'Promotion') {
-                $model->cause_by = 'PROMO';
+            // By (Cause_By) automation mengikuti default cause by dari master sub case.
+            $defaultCauseBy = $model->category_review
+                ? SubCase::query()
+                    ->where('name', $model->category_review)
+                    ->value('default_cause_by')
+                : null;
+
+            if ($defaultCauseBy) {
+                $model->cause_by = $defaultCauseBy;
             }
         });
     }

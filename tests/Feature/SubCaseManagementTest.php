@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\CauseBy;
 use App\Models\SubCase;
 use App\Models\User;
 use Spatie\Permission\Models\Permission;
@@ -19,6 +20,11 @@ beforeEach(function () {
     ]);
 
     Role::findOrCreate('CS');
+
+    CauseBy::create([
+        'name' => 'BRAND',
+        'is_active' => true,
+    ]);
 });
 
 test('super admin can visit the sub case management page', function () {

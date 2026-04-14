@@ -19,9 +19,14 @@ class DatabaseSeeder extends Seeder
         $this->call(BrandSeeder::class);
         $this->call(PlatformSeeder::class);
         $this->call(LogisticSeeder::class);
+        $this->call(CauseBySeeder::class);
         $this->call(SubCaseSeeder::class);
         $this->call(LastStepSeeder::class);
         $this->call(ReasonWhitelistSeeder::class);
+        $this->call(ReasonLateResponseSeeder::class);
+        $this->call(OrderTrackingDataSourceSeeder::class);
+        $this->call(OosReasonSeeder::class);
+        $this->call(OosSolutionSeeder::class);
 
         $admin = User::query()->updateOrCreate(
             ['email' => 'admin@example.com'],
@@ -46,7 +51,7 @@ class DatabaseSeeder extends Seeder
         User::query()
             ->with('roles')
             ->get()
-            ->filter(fn (User $existingUser) => $existingUser->roles->isEmpty())
+            ->filter(fn(User $existingUser) => $existingUser->roles->isEmpty())
             ->each(function (User $existingUser): void {
                 $defaultRole = User::role('Super Admin')->exists() ? 'CS' : 'Super Admin';
                 $existingUser->assignRole(Role::findByName($defaultRole));

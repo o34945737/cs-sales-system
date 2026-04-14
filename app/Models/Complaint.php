@@ -28,71 +28,40 @@ class Complaint extends Model
                 }
             }
 
-            // 3. Sub Cases -> Cause By Logic
-            // (Untuk SKU auto-fill product dan qty, ini bergantung pada master data SKU. 
-            // Kita bisa melakukannya di logic Controller atau service). 
-            if (in_array($model->sub_case, ['Bad Quality Product', 'Expired'])) {
-                $model->cause_by = 'BRAND';
-            } elseif (in_array($model->sub_case, ['Misunderstanding of the product', 'Change Mind'])) {
-                $model->cause_by = 'CUSTOMER';
-            } elseif ($model->sub_case === 'OOS') {
-                $model->cause_by = 'KAE';
-            } elseif ($model->sub_case === 'Promotion') {
-                $model->cause_by = 'PROMO';
-            }
-            // Di luar kategori di atas, diisi manual sehingga tidak kita overwite.
+            // 3. Sub Cases -> Cause By Logic berbasis master data.
+            $defaultCauseBy = $model->sub_case
+                ? SubCase::query()
+                    ->where('name', $model->sub_case)
+                    ->value('default_cause_by')
+                : null;
 
-            // 4. Status Auto Fill
-            $solvedSteps = [
-                'Claim Receive (10x shipping fee)', 'Claim Receive (Full)', 
-                'Complaint Canceled by buyer/No Respons', 'Product has been delivered (Late Delivery)', 
-                'Refund has been transferred by finance (SPF)', 'Return Refund (Full)', 
-                'Return Refund (Partial)', 'Seller Win', 
-                'The replacement product has been received by the buyer', 
-                'Return follow-up (No further action)'
-            ];
-
-            if ($model->last_step === 'Claim Reject') {
-                $model->status = 'Whitelist';
-            } elseif (in_array($model->last_step, $solvedSteps)) {
-                $model->status = 'Solved';
-            } else {
-                $model->status = 'Pending';
+            if ($defaultCauseBy) {
+                $model->cause_by = $defaultCauseBy;
             }
 
-            // 5. Priority Auto Fill
-            $p_cool = [
-                'Claim Receive (10x shipping fee)', 'Claim Receive (Full)', 
-                'Complaint Canceled by buyer/No Respons', 'Product has been delivered (Late Delivery)', 
-                'Refund has been transferred by finance (SPF)', 'Return Refund (Full)', 
-                'Return Refund (Partial)', 'Seller Win'
-            ];
-            $p1 = ['Analysis MP (Non Late Delivery)', 'Follow Up to After Sales Team', 'Follow Up WH'];
-            $p2 = ['On the way return & plan banding', 'Follow Up KAE to KAM', 'Follow Up KAE to Brand'];
-            $p3 = ['Follow Up Courier (MP Non aktif)', 'On the way return & plan refund', 'Pending return & plan banding', 'Pending return & plan refund', 'Pending RGO & plan refund', 'Waiting Data From Customer'];
-            $p4 = ['On the way return & plan replace', 'Pending return & plan replace'];
-            $p5 = ['Analysis MP (Late Delivery)', 'Return not authorized'];
-            $p6 = ['Kingdee Processing (Waiting AWB for replacement product)', 'Refund processing by finance (SPF)', 'Replacement product on the way'];
-            $p7 = ['Waiting Claim', 'Waiting Money Receive'];
+            // 4-5. Status dan priority mengacu ke master Last Step aktif.
+            $lastStep = $model->last_step
+                ? LastStep::query()
+                    ->where('name', $model->last_step)
+                    ->first(['status_result', 'priority_level'])
+                : null;
 
-            if ($model->last_step === 'Claim Reject') {
-                $model->priority = 'Mines';
-            } elseif (in_array($model->last_step, $p_cool)) {
-                $model->priority = 'Cool';
-            } elseif (in_array($model->last_step, $p1)) {
-                $model->priority = 'P1';
-            } elseif (in_array($model->last_step, $p2)) {
-                $model->priority = 'P2';
-            } elseif (in_array($model->last_step, $p3)) {
-                $model->priority = 'P3';
-            } elseif (in_array($model->last_step, $p4)) {
-                $model->priority = 'P4';
-            } elseif (in_array($model->last_step, $p5)) {
-                $model->priority = 'P5';
-            } elseif (in_array($model->last_step, $p6)) {
-                $model->priority = 'P6';
-            } elseif (in_array($model->last_step, $p7)) {
-                $model->priority = 'P7';
+            if ($lastStep) {
+                $model->status = $lastStep->status_result ?: 'Pending';
+                $model->priority = $lastStep->priority_level;
+            }
+
+            if ($model->last_step !== 'Claim Reject') {
+                $model->reason_whitelist = null;
+                $model->reason_late_respons = null;
+            }
+
+            if ($model->reason_whitelist !== 'Late Respons') {
+                $model->reason_late_respons = null;
+            }
+
+            if ($model->step_cs_selesai !== 'YES') {
+                $model->tanggal_step_cs_selesai = null;
             }
 
             // 7. Category Customer (Penghitungan riwayat username)
@@ -116,8 +85,10 @@ class Complaint extends Model
                 // Hubungkan ke model OOS (kalau ada match di tabel oos)
                 $existsInOos = \App\Models\Oos::where('order_id', $model->order_id)->exists();
                 if ($existsInOos) {
+                    $model->oos = 'Ada Riwayat OOS';
                     $model->riwayat_oos = 'Ada Riwayat OOS';
                 } else {
+                    $model->oos = 'Tidak Ada Riwayat OOS';
                     $model->riwayat_oos = null;
                 }
             }

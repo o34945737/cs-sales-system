@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\CauseBy;
 use App\Models\SubCase;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -11,35 +12,10 @@ use Inertia\Response;
 
 class SubCaseController extends Controller
 {
-    private const CAUSE_BY_OPTIONS = [
-        'CS',
-        'KAE',
-        'WH',
-        'ANTERAJA',
-        'CHAT++',
-        'CUSTOM LOGISTICS',
-        'GOJEK/GRAB',
-        'GTL',
-        'INDOPAKET',
-        'J&T',
-        'JNE',
-        'KURIR REKOMENDASI',
-        'LEX',
-        'NINJA',
-        'POS',
-        'SAP EXPRESS',
-        'SICEPAT',
-        'SPX',
-        'STREAMER',
-        'CUSTOMER',
-        'BRAND',
-        'PROMO',
-        'PART',
-    ];
-
     public function index(Request $request): Response
     {
         $baseQuery = SubCase::query();
+        $causeByOptions = $this->causeByOptions();
 
         $filteredQuery = (clone $baseQuery)
             ->when($request->filled('search'), function ($query) use ($request) {
@@ -63,7 +39,7 @@ class SubCaseController extends Controller
 
         return Inertia::render('SubCases/Index', [
             'subCases' => $subCases,
-            'causeByOptions' => self::CAUSE_BY_OPTIONS,
+            'causeByOptions' => $causeByOptions,
             'filters' => [
                 'search' => $request->input('search'),
                 'status' => $request->input('status', 'All'),
@@ -79,9 +55,11 @@ class SubCaseController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
+        $causeByOptions = $this->causeByOptions();
+
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255', 'unique:sub_cases,name'],
-            'default_cause_by' => ['nullable', 'string', Rule::in(self::CAUSE_BY_OPTIONS)],
+            'default_cause_by' => ['nullable', 'string', Rule::in($causeByOptions)],
             'is_active' => ['required', 'boolean'],
         ]);
 
@@ -92,9 +70,11 @@ class SubCaseController extends Controller
 
     public function update(Request $request, SubCase $subCase): RedirectResponse
     {
+        $causeByOptions = $this->causeByOptions();
+
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255', Rule::unique('sub_cases', 'name')->ignore($subCase->id)],
-            'default_cause_by' => ['nullable', 'string', Rule::in(self::CAUSE_BY_OPTIONS)],
+            'default_cause_by' => ['nullable', 'string', Rule::in($causeByOptions)],
             'is_active' => ['required', 'boolean'],
         ]);
 
@@ -119,5 +99,14 @@ class SubCaseController extends Controller
             'is_active' => (bool) $subCase->is_active,
             'created_at' => optional($subCase->created_at)?->toDateTimeString(),
         ];
+    }
+
+    private function causeByOptions(): array
+    {
+        return CauseBy::query()
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->pluck('name')
+            ->all();
     }
 }

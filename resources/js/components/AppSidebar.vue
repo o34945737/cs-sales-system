@@ -2,7 +2,7 @@
 import { useInitials } from '@/composables/useInitials';
 import { type NavItem, type SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/vue3';
-import { Archive, ChevronDown, ClipboardList, LayoutGrid, ListChecks, LogOut, MessageSquare, MonitorSmartphone, Settings, ShieldAlert, Star, Tag, Tags, Truck, Users, X } from 'lucide-vue-next';
+import { Archive, ChevronDown, ClipboardList, Database, LayoutGrid, ListChecks, LogOut, MessageSquare, MonitorSmartphone, Settings, ShieldAlert, ShieldCheck, Star, Tag, Tags, Truck, Users, Wrench, X } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 
 const props = withDefaults(
@@ -61,6 +61,26 @@ const masterDataItems = computed<NavItem[]>(() => {
 
     if (page.props.auth.can.view_reason_whitelists) {
         items.push({ title: 'Whitelist Reasons', href: '/reason-whitelists', icon: ShieldAlert });
+    }
+
+    if (page.props.auth.can.view_reason_late_responses) {
+        items.push({ title: 'Reason Late Responses', href: '/reason-late-responses', icon: ShieldAlert });
+    }
+
+    if (page.props.auth.can.view_order_tracking_data_sources) {
+        items.push({ title: 'Tracking Data Sources', href: '/order-tracking-data-sources', icon: Database });
+    }
+
+    if (page.props.auth.can.view_oos_reasons) {
+        items.push({ title: 'OOS Reasons', href: '/oos-reasons', icon: Archive });
+    }
+
+    if (page.props.auth.can.view_oos_solutions) {
+        items.push({ title: 'OOS Solutions', href: '/oos-solutions', icon: Wrench });
+    }
+
+    if (page.props.auth.can.view_cause_bys) {
+        items.push({ title: 'Cause By', href: '/cause-bys', icon: ShieldCheck });
     }
 
     return items;

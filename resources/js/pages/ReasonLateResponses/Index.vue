@@ -11,36 +11,36 @@ import debounce from 'lodash/debounce';
 import { CheckCircle2, ChevronLeft, ChevronRight, PencilLine, Plus, Search, ShieldAlert, Trash2, XCircle } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 
-interface ManagedReasonWhitelist { id: number; name: string; is_active: boolean; created_at: string | null; }
+interface ManagedReasonLateResponse { id: number; name: string; is_active: boolean; created_at: string | null; }
 interface PaginatorLink { active: boolean; label: string; url: string | null; }
 interface Paginator<T> { current_page: number; data: T[]; from: number | null; last_page: number; links: PaginatorLink[]; path: string; per_page: number; to: number | null; total: number; }
 
 const props = defineProps<{
-    reasonWhitelists: Paginator<ManagedReasonWhitelist>;
+    reasonLateResponses: Paginator<ManagedReasonLateResponse>;
     filters: { search?: string | null; status?: string | null; };
     metrics: { total: number; active: number; inactive: number; };
 }>();
 
-const breadcrumbs: BreadcrumbItem[] = [{ title: 'Dashboard', href: '/dashboard' }, { title: 'Reason Whitelists', href: '/reason-whitelists' }];
+const breadcrumbs: BreadcrumbItem[] = [{ title: 'Dashboard', href: '/dashboard' }, { title: 'Reason Late Responses', href: '/reason-late-responses' }];
 const page = usePage<SharedData>();
 const search = ref(props.filters.search || '');
 const statusFilter = ref(props.filters.status || 'All');
 const isCreateOpen = ref(false);
 const isEditOpen = ref(false);
 const isDeleteOpen = ref(false);
-const activeReason = ref<ManagedReasonWhitelist | null>(null);
+const activeReason = ref<ManagedReasonLateResponse | null>(null);
 
-const canCreateReasons = computed(() => page.props.auth.can.create_reason_whitelists);
-const canUpdateReasons = computed(() => page.props.auth.can.update_reason_whitelists);
-const canDeleteReasons = computed(() => page.props.auth.can.delete_reason_whitelists);
+const canCreateReasons = computed(() => page.props.auth.can.create_reason_late_responses);
+const canUpdateReasons = computed(() => page.props.auth.can.update_reason_late_responses);
+const canDeleteReasons = computed(() => page.props.auth.can.delete_reason_late_responses);
 
 const createForm = useForm({ name: '', is_active: true });
 const editForm = useForm({ name: '', is_active: true });
 const deleteForm = useForm({});
 
-const pageData = computed(() => props.reasonWhitelists);
-const rows = computed(() => props.reasonWhitelists.data ?? []);
-const paginationLinks = computed(() => props.reasonWhitelists.links?.filter((link) => link.url) ?? []);
+const pageData = computed(() => props.reasonLateResponses);
+const rows = computed(() => props.reasonLateResponses.data ?? []);
+const paginationLinks = computed(() => props.reasonLateResponses.links?.filter((link) => link.url) ?? []);
 const summaryCards = computed(() => [
     { label: 'Total Reason', value: props.metrics.total, icon: ShieldAlert, tone: 'bg-[var(--app-primary)] text-white shadow-[0_12px_24px_rgba(53,103,232,0.22)]' },
     { label: 'Active', value: props.metrics.active, icon: CheckCircle2, tone: 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200' },
@@ -48,7 +48,7 @@ const summaryCards = computed(() => [
 ]);
 
 const visitIndex = (overrides: Record<string, unknown> = {}, replace = true) => {
-    router.get(route('reason-whitelists.index'), {
+    router.get(route('reason-late-responses.index'), {
         search: search.value || undefined,
         status: statusFilter.value !== 'All' ? statusFilter.value : undefined,
         ...overrides,
@@ -69,7 +69,7 @@ const openCreateModal = () => {
     isCreateOpen.value = true;
 };
 
-const openEditModal = (reason: ManagedReasonWhitelist) => {
+const openEditModal = (reason: ManagedReasonLateResponse) => {
     activeReason.value = reason;
     editForm.defaults({ name: reason.name, is_active: reason.is_active });
     editForm.reset();
@@ -77,7 +77,7 @@ const openEditModal = (reason: ManagedReasonWhitelist) => {
     isEditOpen.value = true;
 };
 
-const openDeleteModal = (reason: ManagedReasonWhitelist) => {
+const openDeleteModal = (reason: ManagedReasonLateResponse) => {
     activeReason.value = reason;
     deleteForm.clearErrors();
     isDeleteOpen.value = true;
@@ -89,14 +89,14 @@ const closeDeleteModal = () => {
     deleteForm.clearErrors();
 };
 
-const submitCreate = () => createForm.post(route('reason-whitelists.store'), { preserveScroll: true, onSuccess: () => { isCreateOpen.value = false; resetCreateForm(); } });
+const submitCreate = () => createForm.post(route('reason-late-responses.store'), { preserveScroll: true, onSuccess: () => { isCreateOpen.value = false; resetCreateForm(); } });
 const submitEdit = () => {
     if (!activeReason.value) return;
-    editForm.put(route('reason-whitelists.update', activeReason.value.id), { preserveScroll: true, onSuccess: () => { isEditOpen.value = false; activeReason.value = null; editForm.clearErrors(); } });
+    editForm.put(route('reason-late-responses.update', activeReason.value.id), { preserveScroll: true, onSuccess: () => { isEditOpen.value = false; activeReason.value = null; editForm.clearErrors(); } });
 };
 const submitDelete = () => {
     if (!activeReason.value) return;
-    deleteForm.delete(route('reason-whitelists.destroy', activeReason.value.id), { preserveScroll: true, onSuccess: () => closeDeleteModal() });
+    deleteForm.delete(route('reason-late-responses.destroy', activeReason.value.id), { preserveScroll: true, onSuccess: () => closeDeleteModal() });
 };
 
 const formatDate = (value: string | null) => {
@@ -111,7 +111,7 @@ const statusBadgeClass = (active: boolean) => active ? 'bg-emerald-100 text-emer
 
 <template>
     <AppLayout :breadcrumbs="breadcrumbs">
-        <Head title="Reason Whitelists" />
+        <Head title="Reason Late Responses" />
 
         <div class="space-y-6">
             <div class="mx-auto max-w-7xl space-y-6">
@@ -119,9 +119,9 @@ const statusBadgeClass = (active: boolean) => active ? 'bg-emerald-100 text-emer
                     <div class="grid gap-6 border-b border-[var(--app-border)] bg-[linear-gradient(135deg,_#eef4ff_0%,_#f8fbff_100%)] px-6 py-7 text-[var(--app-ink)] lg:grid-cols-[1.2fr,0.8fr]">
                         <div>
                             <p class="text-xs font-semibold uppercase tracking-[0.28em] text-slate-400">Master Data</p>
-                            <h1 class="mt-3 text-3xl font-extrabold tracking-tight">Reason Whitelist Directory</h1>
+                            <h1 class="mt-3 text-3xl font-extrabold tracking-tight">Reason Late Response Directory</h1>
                             <p class="mt-3 max-w-2xl text-sm leading-6 text-slate-500">
-                                Kelola daftar reason whitelist agar opsi pada complaint dan tracking nantinya diambil dari master data yang sama.
+                                Kelola daftar reason late response agar opsi alasan keterlambatan bisa konsisten dipakai di seluruh modul.
                             </p>
                         </div>
 
@@ -151,13 +151,13 @@ const statusBadgeClass = (active: boolean) => active ? 'bg-emerald-100 text-emer
                         <div class="min-w-0 max-w-xl">
                             <h2 class="text-xl font-semibold text-slate-900">Reason List</h2>
                             <p class="mt-1 max-w-md text-sm leading-6 text-slate-500">
-                                Mulai dari master whitelist dulu agar validasi `Claim Reject` nanti tidak lagi bergantung pada option hardcoded.
+                                Master data ini membantu menjaga pilihan alasan late response tetap seragam dan mudah dirawat.
                             </p>
                         </div>
                         <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,0.8fr)]">
                             <div class="relative">
                                 <Search class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                                <Input v-model="search" class="pl-10" placeholder="Cari reason whitelist..." />
+                                <Input v-model="search" class="pl-10" placeholder="Cari reason late response..." />
                             </div>
 
                             <select v-model="statusFilter" class="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm shadow-sm outline-none">
@@ -173,7 +173,7 @@ const statusBadgeClass = (active: boolean) => active ? 'bg-emerald-100 text-emer
                             <table class="min-w-full divide-y divide-slate-200 text-sm">
                                 <thead class="bg-slate-50/90">
                                     <tr class="text-left text-slate-500">
-                                        <th class="px-5 py-4 font-medium">Reason Whitelist</th>
+                                        <th class="px-5 py-4 font-medium">Reason Late Response</th>
                                         <th class="px-5 py-4 font-medium">Status</th>
                                         <th class="px-5 py-4 font-medium">Created</th>
                                         <th class="px-5 py-4 text-right font-medium">Action</th>
@@ -188,7 +188,7 @@ const statusBadgeClass = (active: boolean) => active ? 'bg-emerald-100 text-emer
                                                 </div>
                                                 <div>
                                                     <p class="font-medium text-slate-900">{{ reason.name }}</p>
-                                                    <p class="mt-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Master Reason Whitelist</p>
+                                                    <p class="mt-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Master Reason Late Response</p>
                                                 </div>
                                             </div>
                                         </td>
@@ -217,7 +217,7 @@ const statusBadgeClass = (active: boolean) => active ? 'bg-emerald-100 text-emer
                                                 <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-500">
                                                     <ShieldAlert class="h-5 w-5" />
                                                 </div>
-                                                <p class="font-medium text-slate-900">Tidak ada reason whitelist yang cocok</p>
+                                                <p class="font-medium text-slate-900">Tidak ada reason late response yang cocok</p>
                                                 <p class="text-sm text-slate-500">Coba ubah pencarian atau status filter untuk melihat data lain.</p>
                                             </div>
                                         </td>
@@ -247,7 +247,7 @@ const statusBadgeClass = (active: boolean) => active ? 'bg-emerald-100 text-emer
                 <div class="overflow-hidden rounded-[28px]">
                     <div class="bg-[linear-gradient(135deg,_#eef4ff_0%,_#dbeafe_100%)] px-6 py-6 text-[var(--app-ink)]">
                         <DialogHeader>
-                            <DialogTitle class="text-2xl">Tambah Reason Whitelist</DialogTitle>
+                            <DialogTitle class="text-2xl">Tambah Reason Late Response</DialogTitle>
                             <DialogDescription class="text-slate-500">Masukkan reason baru agar siap dipakai sebagai master data.</DialogDescription>
                         </DialogHeader>
                     </div>
@@ -255,7 +255,7 @@ const statusBadgeClass = (active: boolean) => active ? 'bg-emerald-100 text-emer
                         <div class="grid gap-5">
                             <div class="grid gap-2">
                                 <Label for="create-name">Nama Reason</Label>
-                                <Input id="create-name" v-model="createForm.name" placeholder="Contoh: Packing not proper" />
+                                <Input id="create-name" v-model="createForm.name" placeholder="Contoh: Need approval from warehouse" />
                                 <InputError :message="createForm.errors.name" />
                             </div>
                             <div class="flex items-end rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
@@ -279,7 +279,7 @@ const statusBadgeClass = (active: boolean) => active ? 'bg-emerald-100 text-emer
                 <div class="overflow-hidden rounded-[28px]">
                     <div class="bg-[linear-gradient(135deg,_#eef4ff_0%,_#dbeafe_100%)] px-6 py-6 text-[var(--app-ink)]">
                         <DialogHeader>
-                            <DialogTitle class="text-2xl">Edit Reason Whitelist</DialogTitle>
+                            <DialogTitle class="text-2xl">Edit Reason Late Response</DialogTitle>
                             <DialogDescription class="text-slate-500">Perbarui nama atau status aktif reason agar master data tetap rapi.</DialogDescription>
                         </DialogHeader>
                     </div>
@@ -311,7 +311,7 @@ const statusBadgeClass = (active: boolean) => active ? 'bg-emerald-100 text-emer
                 <div class="overflow-hidden rounded-[28px] bg-white">
                     <div class="bg-[linear-gradient(135deg,_#fff1f2_0%,_#ffe4e6_100%)] px-6 py-6 text-[var(--app-ink)]">
                         <DialogHeader>
-                            <DialogTitle class="text-2xl">Hapus Reason Whitelist</DialogTitle>
+                            <DialogTitle class="text-2xl">Hapus Reason Late Response</DialogTitle>
                             <DialogDescription class="text-rose-500">Tindakan ini tidak bisa dibatalkan. Pastikan reason memang aman untuk dihapus dari master data.</DialogDescription>
                         </DialogHeader>
                     </div>
@@ -331,6 +331,5 @@ const statusBadgeClass = (active: boolean) => active ? 'bg-emerald-100 text-emer
                 </div>
             </DialogContent>
         </Dialog>
-
     </AppLayout>
 </template>

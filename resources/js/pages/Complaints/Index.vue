@@ -20,140 +20,34 @@ import {
 } from 'lucide-vue-next';
 
 const SOURCE_OPTIONS = ['AFTERSALES', 'B2B', 'PRESALES', 'SOCMED', 'BRAND/OPS'];
-const SUB_CASE_OPTIONS = [
-    'Bad Quality Product',
-    'Bad Service',
-    'Change Mind',
-    'Damaged Packaging',
-    'Damaged Product',
-    'Expired',
-    'Fake Return',
-    'Late Delivery',
-    'Under Delivery Product',
-    'Misunderstanding of the product',
-    'No Reason',
-    'Promotion',
-    'Wrong Product',
-    'OOS',
-    'Refund DP',
-    'Lost Product',
-];
-const CAUSE_BY_OPTIONS = [
-    '?',
-    'CS',
-    'KAE',
-    'WH',
-    'ANTERAJA',
-    'CHAT++',
-    'CUSTOM LOGISTICS',
-    'GOJEK/GRAB',
-    'GTL',
-    'INDOPAKET',
-    'J&T',
-    'JNE',
-    'KURIR REKOMENDASI',
-    'LEX',
-    'NINJA',
-    'POS',
-    'SAP EXPRESS',
-    'SICEPAT',
-    'SPX',
-    'STREAMER',
-    'CUSTOMER',
-    'BRAND',
-    'PROMO',
-    'PART',
-];
-const LAST_STEP_OPTIONS = [
-    { label: 'Claim Receive (10x shipping fee)', value: 'Claim Receive (10x shipping fee)' },
-    { label: 'Claim Receive (Full)', value: 'Claim Receive (Full)' },
-    { label: 'Claim Reject', value: 'Claim Reject' },
-    { label: 'Complaint Canceled by buyer/No Respons', value: 'Complaint Canceled by buyer/No Respons' },
-    { label: 'FU Courier (MP Non aktif)', value: 'Follow Up Courier (MP Non aktif)' },
-    { label: 'Analysis MP (Late Delivery)', value: 'Analysis MP (Late Delivery)' },
-    { label: 'Analysis MP (Non Late Delivery)', value: 'Analysis MP (Non Late Delivery)' },
-    { label: 'Kingdee Processing (Waiting AWB for replacement product)', value: 'Kingdee Processing (Waiting AWB for replacement product)' },
-    { label: 'On the way return & plan banding', value: 'On the way return & plan banding' },
-    { label: 'On the way return & plan refund', value: 'On the way return & plan refund' },
-    { label: 'On the way return & plan replace', value: 'On the way return & plan replace' },
-    { label: 'Pending return & plan banding', value: 'Pending return & plan banding' },
-    { label: 'Pending return & plan refund', value: 'Pending return & plan refund' },
-    { label: 'Pending return & plan replace', value: 'Pending return & plan replace' },
-    { label: 'Pending RGO & plan refund', value: 'Pending RGO & plan refund' },
-    { label: 'Product has been delivered (Late Delivery)', value: 'Product has been delivered (Late Delivery)' },
-    { label: 'Refund has been transferred by finance (SPF)', value: 'Refund has been transferred by finance (SPF)' },
-    { label: 'Refund processing by finance (SPF)', value: 'Refund processing by finance (SPF)' },
-    { label: 'Replacement product on the way', value: 'Replacement product on the way' },
-    { label: 'Return Refund (Full)', value: 'Return Refund (Full)' },
-    { label: 'Return Refund (Partial)', value: 'Return Refund (Partial)' },
-    { label: 'Seller Win', value: 'Seller Win' },
-    { label: 'The replacement product has been received by the buyer', value: 'The replacement product has been received by the buyer' },
-    { label: 'Follow Up to After Sales Team', value: 'Follow Up to After Sales Team' },
-    { label: 'Waiting Claim', value: 'Waiting Claim' },
-    { label: 'Waiting Money Receive', value: 'Waiting Money Receive' },
-    { label: 'Waiting Data From Customer', value: 'Waiting Data From Customer' },
-    { label: 'Follow Up KAE to Brand', value: 'Follow Up KAE to Brand' },
-    { label: 'Follow Up WH', value: 'Follow Up WH' },
-    { label: 'Follow Up KAE to KAM', value: 'Follow Up KAE to KAM' },
-    { label: 'Return not authorized', value: 'Return not authorized' },
-    { label: 'Return follow-up (No further action)', value: 'Return follow-up (No further action)' },
-];
-const REASON_WHITELIST_OPTIONS = [
-    'No repacking indication',
-    'Packing not proper',
-    "Customer's evidence is stronger than us",
-    'Our evidences are not strong (platform T&C)',
-    'CCTV does not show receipt number',
-    'Late Respons',
-];
-const REASON_LATE_RESPONS_OPTIONS = ['CS', 'KAE', 'Finance', 'WH', 'PH'];
 const COMPLAINT_POWER_OPTIONS = [
     { label: 'HARD COMPLAINT', value: 'Hard Complaint' },
     { label: 'NORMAL COMPLAINT', value: 'Normal Complaint' },
 ];
 
-const AUTO_CAUSE_BY_MAP = {
-    'Bad Quality Product': 'BRAND',
-    Expired: 'BRAND',
-    'Misunderstanding of the product': 'CUSTOMER',
-    OOS: 'KAE',
-    Promotion: 'PROMO',
-    'Change Mind': 'CUSTOMER',
-};
-
-const SOLVED_STEPS = [
-    'Claim Receive (10x shipping fee)',
-    'Claim Receive (Full)',
-    'Complaint Canceled by buyer/No Respons',
-    'Product has been delivered (Late Delivery)',
-    'Refund has been transferred by finance (SPF)',
-    'Return Refund (Full)',
-    'Return Refund (Partial)',
-    'Seller Win',
-    'The replacement product has been received by the buyer',
-    'Return follow-up (No further action)',
-];
-const PRIORITY_GROUPS = {
-    Cool: [
-        'Claim Receive (10x shipping fee)',
-        'Claim Receive (Full)',
-        'Complaint Canceled by buyer/No Respons',
-        'Product has been delivered (Late Delivery)',
-        'Refund has been transferred by finance (SPF)',
-        'Return Refund (Full)',
-        'Return Refund (Partial)',
-        'Seller Win',
-    ],
-    P1: ['Analysis MP (Non Late Delivery)', 'Follow Up to After Sales Team', 'Follow Up WH'],
-    P2: ['On the way return & plan banding', 'Follow Up KAE to KAM', 'Follow Up KAE to Brand'],
-    P3: ['Follow Up Courier (MP Non aktif)', 'On the way return & plan refund', 'Pending return & plan banding', 'Pending return & plan refund', 'Pending RGO & plan refund', 'Waiting Data From Customer'],
-    P4: ['On the way return & plan replace', 'Pending return & plan replace'],
-    P5: ['Analysis MP (Late Delivery)', 'Return not authorized'],
-    P6: ['Kingdee Processing (Waiting AWB for replacement product)', 'Refund processing by finance (SPF)', 'Replacement product on the way'],
-    P7: ['Waiting Claim', 'Waiting Money Receive'],
-};
-
 const uniqueOptions = (values) => [...new Set(values.filter(Boolean))];
+const pickPreferredOption = (options, preferred = '') => {
+    const normalizedOptions = Array.isArray(options) ? options.filter(Boolean) : [];
+
+    if (preferred && normalizedOptions.includes(preferred)) {
+        return preferred;
+    }
+
+    return normalizedOptions[0] || '';
+};
+const pickPreferredLastStep = (options, preferred = '') => {
+    const normalizedOptions = Array.isArray(options) ? options.filter((option) => option?.value) : [];
+
+    if (preferred) {
+        const matchedOption = normalizedOptions.find((option) => option.value === preferred);
+
+        if (matchedOption) {
+            return matchedOption.value;
+        }
+    }
+
+    return normalizedOptions[0]?.value || '';
+};
 const today = () => {
     const currentDate = new Date();
     const timezoneOffset = currentDate.getTimezoneOffset() * 60000;
@@ -187,6 +81,14 @@ const props = defineProps({
     cs_summary: Array,
     status_summary: Object,
     overview: Object,
+    brandOptions: Array,
+    platformOptions: Array,
+    subCaseOptions: Array,
+    causeByOptions: Array,
+    lastStepOptions: Array,
+    reasonWhitelistOptions: Array,
+    reasonLateResponseOptions: Array,
+    autoCauseByMap: Object,
 });
 
 const complaintPage = computed(() => ({
@@ -199,6 +101,50 @@ const filterState = computed(() => (props.filters && !Array.isArray(props.filter
 const csSummary = computed(() => props.cs_summary || []);
 const statusSummary = computed(() => props.status_summary || {});
 const overview = computed(() => props.overview || {});
+const masterBrandOptions = computed(() => (Array.isArray(props.brandOptions) ? props.brandOptions : []));
+const masterPlatformOptions = computed(() => (Array.isArray(props.platformOptions) ? props.platformOptions : []));
+const subCaseOptions = computed(() => (Array.isArray(props.subCaseOptions) ? props.subCaseOptions : []));
+const causeByOptions = computed(() => (Array.isArray(props.causeByOptions) ? props.causeByOptions : ['?']));
+const lastStepOptions = computed(() => {
+    if (Array.isArray(props.lastStepOptions) && props.lastStepOptions.length) {
+        return props.lastStepOptions;
+    }
+
+    return uniqueOptions(complaintRows.value.map((item) => item.last_step)).map((value) => ({
+        label: value,
+        value,
+        status_result: null,
+        priority_level: null,
+    }));
+});
+const reasonWhitelistOptions = computed(() => {
+    if (Array.isArray(props.reasonWhitelistOptions) && props.reasonWhitelistOptions.length) {
+        return props.reasonWhitelistOptions;
+    }
+
+    return uniqueOptions(complaintRows.value.map((item) => item.reason_whitelist));
+});
+const reasonLateResponseOptions = computed(() => {
+    if (Array.isArray(props.reasonLateResponseOptions) && props.reasonLateResponseOptions.length) {
+        return props.reasonLateResponseOptions;
+    }
+
+    return uniqueOptions(complaintRows.value.map((item) => item.reason_late_respons));
+});
+const autoCauseByMap = computed(() => (props.autoCauseByMap && !Array.isArray(props.autoCauseByMap) ? props.autoCauseByMap : {}));
+const lastStepMetaMap = computed(() =>
+    Object.fromEntries(
+        lastStepOptions.value
+            .filter((option) => option?.value)
+            .map((option) => [
+                option.value,
+                {
+                    status: option.status_result || 'Pending',
+                    priority: option.priority_level ?? null,
+                },
+            ]),
+    ),
+);
 
 const search = ref(filterState.value.search || '');
 const isModalOpen = ref(false);
@@ -237,24 +183,11 @@ const formatCurrency = (value) => {
 };
 
 const resolveStatus = (lastStep) => {
-    if (lastStep === 'Claim Reject') {
-        return 'Whitelist';
-    }
-
-    if (SOLVED_STEPS.includes(lastStep)) {
-        return 'Solved';
-    }
-
-    return 'Pending';
+    return lastStepMetaMap.value[lastStep]?.status || 'Pending';
 };
 
 const resolvePriority = (lastStep) => {
-    if (lastStep === 'Claim Reject') {
-        return 'Mines';
-    }
-
-    const matchedPriority = Object.entries(PRIORITY_GROUPS).find(([, steps]) => steps.includes(lastStep));
-    return matchedPriority ? matchedPriority[0] : 'P3';
+    return lastStepMetaMap.value[lastStep]?.priority ?? null;
 };
 
 const overviewCards = computed(() => [
@@ -289,8 +222,12 @@ const resetFilters = () => {
     );
 };
 
-const brandOptions = computed(() => uniqueOptions(['ANTA', ...complaintRows.value.map((item) => item.brand)]));
-const platformOptions = computed(() => uniqueOptions(['SHOPEE', 'TOKOPEDIA', 'TIKTOK', 'LAZADA', 'BLIBLI', ...complaintRows.value.map((item) => item.platform)]));
+const brandOptions = computed(() =>
+    masterBrandOptions.value.length ? masterBrandOptions.value : uniqueOptions(complaintRows.value.map((item) => item.brand)),
+);
+const platformOptions = computed(() =>
+    masterPlatformOptions.value.length ? masterPlatformOptions.value : uniqueOptions(complaintRows.value.map((item) => item.platform)),
+);
 const skuOptions = computed(() => uniqueOptions(['PBP246', ...complaintRows.value.map((item) => item.sku)]));
 const csNameOptions = computed(() => uniqueOptions(['TYAS', ...csSummary.value.map((item) => item.cs_name)]));
 const skuCatalog = computed(() => {
@@ -317,21 +254,21 @@ const createInitialFormState = () => ({
     tanggal_complaint: today(),
     tanggal_order: today(),
     jam_customer_complaint: nowTime(),
-    brand: 'ANTA',
-    platform: 'SHOPEE',
+    brand: pickPreferredOption(brandOptions.value, 'ANTA'),
+    platform: pickPreferredOption(platformOptions.value, 'SHOPEE'),
     order_id: '',
     resi: '',
     product_name: '',
-    sku: 'PBP246',
+    sku: pickPreferredOption(skuOptions.value, 'PBP246'),
     value_of_product: 0,
-    sub_case: 'Damaged Packaging',
+    sub_case: pickPreferredOption(subCaseOptions.value, 'Damaged Packaging'),
     cause_by: '?',
     proof: '',
     summary_case: '',
     update_long_text: '',
     part_of_bad: '',
-    cs_name: 'TYAS',
-    last_step: 'Follow Up Courier (MP Non aktif)',
+    cs_name: pickPreferredOption(csNameOptions.value, 'TYAS'),
+    last_step: pickPreferredLastStep(lastStepOptions.value, 'Follow Up Courier (MP Non aktif)'),
     tanggal_step_cs_selesai: '',
     update_ai: '',
     step_cs_selesai: 'NO',
@@ -354,7 +291,7 @@ const form = useForm(createInitialFormState());
 watch(
     () => form.sub_case,
     (value) => {
-        const nextCause = AUTO_CAUSE_BY_MAP[value];
+        const nextCause = autoCauseByMap.value[value];
 
         if (nextCause) {
             form.cause_by = nextCause;
@@ -501,7 +438,7 @@ const oosPreview = computed(() => {
     return hasOosHistory ? 'Ada Riwayat OOS' : 'Tidak Ada Riwayat OOS';
 });
 
-const causeByLocked = computed(() => Boolean(AUTO_CAUSE_BY_MAP[form.sub_case]));
+const causeByLocked = computed(() => Boolean(autoCauseByMap.value[form.sub_case]));
 const videoLabel = computed(() => form.video_unboxing?.name || 'Upload video unboxing');
 
 const setVideoFile = (event) => {
@@ -753,12 +690,12 @@ const sectionChecks = computed(() => [
                                         <p class="text-xs font-semibold uppercase tracking-[0.35em] text-slate-400">Complaint Workspace</p>
                                         <h1 class="mt-2 text-3xl font-bold tracking-tight text-[var(--ink)]">Complaints</h1>
                                         <p class="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-                                            Entry dan monitoring complaint dirapikan agar lebih cepat dipakai tim CS, terutama saat kondisi kosong, volume tinggi, atau butuh follow-up cepat.
+                                            Entry dan monitoring complaint dibuat lebih fokus supaya tim CS bisa scan data, filter case, dan input follow-up tanpa terasa penuh.
                                         </p>
                                     </div>
 
                                     <div class="rounded-[28px] border border-[var(--line)] bg-[var(--panel-soft)] p-4">
-                                        <p class="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">Quick Actions</p>
+                                        <p class="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">Cari Dan Tambah</p>
                                         <div class="mt-3 flex flex-col gap-3 sm:flex-row">
                                             <label class="relative flex-1">
                                                 <Search class="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
@@ -776,7 +713,7 @@ const sectionChecks = computed(() => [
                                                 @click="openCreateModal"
                                             >
                                                 <Plus class="h-4 w-4" />
-                                                Add Complaint
+                                                Tambah Complaint
                                             </button>
                                         </div>
                                     </div>
@@ -847,8 +784,45 @@ const sectionChecks = computed(() => [
                                 </div>
                             </div>
 
-                            <div class="overflow-hidden">
-                                <table class="w-full table-fixed divide-y divide-[var(--line)]">
+                            <div class="space-y-4 px-4 py-4 lg:hidden">
+                                <article v-for="item in complaintRows" :key="`card-${item.id}`" class="rounded-[24px] border border-[var(--line)] bg-white p-4 shadow-[0_10px_25px_rgba(15,23,42,0.04)]">
+                                    <div class="flex items-start justify-between gap-4">
+                                        <div class="min-w-0">
+                                            <p class="truncate text-sm font-semibold text-[var(--ink)]">{{ item.order_id || '-' }}</p>
+                                            <p class="mt-1 text-xs text-slate-400">{{ formatDate(item.tanggal_complaint) }} - {{ item.brand || '-' }} / {{ item.platform || '-' }}</p>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            class="inline-flex shrink-0 items-center gap-2 rounded-2xl border border-[var(--line)] px-3 py-2 text-sm font-semibold text-slate-600 transition hover:border-[var(--accent)]/40 hover:text-[var(--accent)]"
+                                            @click="openDetail(item)"
+                                        >
+                                            <Eye class="h-4 w-4" />
+                                            Detail
+                                        </button>
+                                    </div>
+
+                                    <div class="mt-4 grid gap-3 sm:grid-cols-2">
+                                        <div class="rounded-2xl bg-slate-50 px-4 py-3">
+                                            <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Customer</p>
+                                            <p class="mt-2 text-sm font-semibold text-[var(--ink)]">{{ item.username || '-' }}</p>
+                                            <p class="mt-1 text-xs text-slate-500">{{ item.resi || '-' }}</p>
+                                        </div>
+                                        <div class="rounded-2xl bg-slate-50 px-4 py-3">
+                                            <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">CS</p>
+                                            <p class="mt-2 text-sm font-semibold text-[var(--ink)]">{{ item.cs_name || 'UNASSIGNED' }}</p>
+                                            <p class="mt-1 text-xs text-slate-500 line-clamp-2">{{ item.product_name || item.summary_case || '-' }}</p>
+                                        </div>
+                                    </div>
+
+                                    <div class="mt-4 flex flex-wrap gap-2">
+                                        <span class="inline-flex rounded-full px-3 py-1 text-xs font-semibold" :class="statusClass(item.status)">{{ item.status || 'Pending' }}</span>
+                                        <span class="inline-flex rounded-full px-3 py-1 text-xs font-semibold" :class="priorityClass(item.priority)">{{ item.priority || '-' }}</span>
+                                    </div>
+                                </article>
+                            </div>
+
+                            <div class="hidden overflow-x-auto lg:block">
+                                <table class="min-w-[1080px] w-full table-fixed divide-y divide-[var(--line)]">
                                     <thead class="bg-[var(--panel-soft)]">
                                         <tr class="text-left text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">
                                             <th class="w-[12%] px-5 py-4">Source</th>
@@ -871,7 +845,7 @@ const sectionChecks = computed(() => [
                                             <td class="px-5 py-4">
                                                 <div class="space-y-1">
                                                     <p class="truncate text-sm font-semibold text-[var(--ink)]">{{ item.source || '-' }}</p>
-                                                    <p class="text-xs text-slate-400">{{ item.brand || '-' }} · {{ item.platform || '-' }}</p>
+                                                    <p class="text-xs text-slate-400">{{ item.brand || '-' }} - {{ item.platform || '-' }}</p>
                                                 </div>
                                             </td>
                                             <td class="px-5 py-4 text-sm text-slate-700">{{ formatDate(item.tanggal_complaint) }}</td>
@@ -925,7 +899,7 @@ const sectionChecks = computed(() => [
                                             @click="openCreateModal"
                                         >
                                             <Plus class="h-4 w-4" />
-                                            Add Complaint
+                                            Tambah Complaint
                                         </button>
                                         <button
                                             v-if="hasActiveFilters"
@@ -1068,8 +1042,8 @@ const sectionChecks = computed(() => [
                                     <X class="h-7 w-7" />
                                 </button>
                                 <div>
-                                    <h2 class="text-[20px] font-medium text-slate-900">COMPLAINT Form</h2>
-                                    <p class="mt-1 text-sm text-slate-500">Urutan penting dari sistem lama tetap dipertahankan, lalu dirapikan per section supaya lebih cepat diisi dan lebih mudah dicek.</p>
+                                    <h2 class="text-[20px] font-medium text-slate-900">Form Complaint</h2>
+                                    <p class="mt-1 text-sm text-slate-500">Fokuskan input ke data penting lebih dulu, lalu lanjut ke handling agar entry terasa lebih ringan.</p>
                                 </div>
                             </div>
 
@@ -1186,23 +1160,23 @@ const sectionChecks = computed(() => [
                                                 <p v-if="fieldError('order_id')" class="text-xs font-medium text-rose-600">{{ fieldError('order_id') }}</p>
                                             </div>
 
-                                            <div class="space-y-2">
-                                                <label class="block text-[15px] font-medium text-slate-700">Username*</label>
-                                                <input v-model="form.username" type="text" :class="controlClass('username')" />
-                                                <p v-if="fieldError('username')" class="text-xs font-medium text-rose-600">{{ fieldError('username') }}</p>
-                                            </div>
-                                        </div>
-
-                                        <div class="grid gap-5 sm:grid-cols-2">
-                                            <div class="space-y-2">
+                                             <div class="space-y-2">
                                                 <label class="block text-[15px] font-medium text-slate-700">No Resi*</label>
                                                 <input v-model="form.resi" type="text" :class="controlClass('resi')" />
                                                 <p v-if="fieldError('resi')" class="text-xs font-medium text-rose-600">{{ fieldError('resi') }}</p>
                                             </div>
+                                        </div>
 
-                                            <div class="space-y-2">
-                                                <label class="block text-[15px] font-medium text-slate-700">Product*</label>
-                                                <input v-model="form.product_name" type="text" :class="controlClass('product_name')" />
+                                <div class="grid gap-5 sm:grid-cols-2">
+                                    <div class="space-y-2">
+                                        <label class="block text-[15px] font-medium text-slate-700">Username*</label>
+                                        <input v-model="form.username" type="text" :class="controlClass('username')" />
+                                        <p v-if="fieldError('username')" class="text-xs font-medium text-rose-600">{{ fieldError('username') }}</p>
+                                    </div>
+
+                                    <div class="space-y-2">
+                                        <label class="block text-[15px] font-medium text-slate-700">Product*</label>
+                                        <input v-model="form.product_name" type="text" :class="controlClass('product_name')" />
                                             </div>
                                         </div>
 
@@ -1240,7 +1214,7 @@ const sectionChecks = computed(() => [
                                                     <label class="block text-[15px] font-medium text-slate-700">Sub Case*</label>
                                                     <div class="relative">
                                                         <select v-model="form.sub_case" :class="controlClass('sub_case', 'select')">
-                                                            <option v-for="option in SUB_CASE_OPTIONS" :key="option" :value="option">{{ option }}</option>
+                                                            <option v-for="option in subCaseOptions" :key="option" :value="option">{{ option }}</option>
                                                         </select>
                                                         <ChevronDown class="pointer-events-none absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
                                                     </div>
@@ -1270,7 +1244,7 @@ const sectionChecks = computed(() => [
                                             </div>
                                             <div class="flex flex-wrap gap-2">
                                                 <button
-                                                    v-for="option in CAUSE_BY_OPTIONS"
+                                                    v-for="option in causeByOptions"
                                                     :key="option"
                                                     type="button"
                                                     class="rounded-[8px] border px-5 py-4 text-[17px] font-medium transition disabled:cursor-not-allowed disabled:opacity-60"
@@ -1335,7 +1309,7 @@ const sectionChecks = computed(() => [
                                                 <label class="block text-[15px] font-medium text-slate-700">Last Step*</label>
                                                 <div class="relative">
                                                     <select v-model="form.last_step" :class="controlClass('last_step', 'select')">
-                                                        <option v-for="option in LAST_STEP_OPTIONS" :key="option.value" :value="option.value">{{ option.label }}</option>
+                                                        <option v-for="option in lastStepOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
                                                     </select>
                                                     <ChevronDown class="pointer-events-none absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
                                                 </div>
@@ -1349,7 +1323,7 @@ const sectionChecks = computed(() => [
                                                 <div class="relative">
                                                     <select v-model="form.reason_whitelist" :class="controlClass('reason_whitelist', 'select')">
                                                         <option value="" disabled>Pilih reason whitelist</option>
-                                                        <option v-for="option in REASON_WHITELIST_OPTIONS" :key="option" :value="option">{{ option }}</option>
+                                                        <option v-for="option in reasonWhitelistOptions" :key="option" :value="option">{{ option }}</option>
                                                     </select>
                                                     <ChevronDown class="pointer-events-none absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
                                                 </div>
@@ -1361,7 +1335,7 @@ const sectionChecks = computed(() => [
                                                 <div class="relative">
                                                     <select v-model="form.reason_late_respons" :class="controlClass('reason_late_respons', 'select')">
                                                         <option value="" disabled>Pilih reason late respons</option>
-                                                        <option v-for="option in REASON_LATE_RESPONS_OPTIONS" :key="option" :value="option">{{ option }}</option>
+                                                        <option v-for="option in reasonLateResponseOptions" :key="option" :value="option">{{ option }}</option>
                                                     </select>
                                                     <ChevronDown class="pointer-events-none absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
                                                 </div>
@@ -1422,6 +1396,7 @@ const sectionChecks = computed(() => [
                                             <p v-if="fieldError('complaint_power')" class="mt-2 text-xs font-medium text-rose-600">{{ fieldError('complaint_power') }}</p>
                                         </div>
 
+
                                         <div class="space-y-2">
                                             <label class="block text-[15px] font-medium text-slate-700">Video Unboxing</label>
                                             <label class="flex cursor-pointer flex-col items-center justify-center gap-3 rounded-[10px] border border-dashed border-slate-300 bg-slate-50 px-4 py-10 text-center transition hover:border-[var(--accent)]/50 hover:bg-white">
@@ -1436,7 +1411,7 @@ const sectionChecks = computed(() => [
 
                                 <aside class="space-y-5 xl:sticky xl:top-24 xl:h-fit">
                                     <section class="rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_10px_30px_rgba(15,23,42,0.04)]">
-                                        <p class="text-xs font-semibold uppercase tracking-[0.28em] text-[var(--accent)]">Progress</p>
+                                        <p class="text-xs font-semibold uppercase tracking-[0.28em] text-[var(--accent)]">Ringkasan Input</p>
                                         <div class="mt-4">
                                             <div class="flex items-center justify-between text-sm text-slate-500">
                                                 <span>Readiness</span>
@@ -1463,45 +1438,41 @@ const sectionChecks = computed(() => [
 
                                         <div class="mt-5 space-y-4">
                                             <div class="rounded-[20px] bg-slate-50 p-4">
-                                                <p class="text-xs uppercase tracking-[0.22em] text-slate-400">Status</p>
-                                                <div class="mt-3 inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold" :class="statusClass(statusPreview)">
-                                                    <span class="h-2 w-2 rounded-full" :class="statusDotClass(statusPreview)"></span>
-                                                    {{ statusPreview }}
+                                                <p class="text-xs uppercase tracking-[0.22em] text-slate-400">Status Dan Priority</p>
+                                                <div class="mt-3 flex flex-wrap items-center gap-2">
+                                                    <div class="inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold" :class="statusClass(statusPreview)">
+                                                        <span class="h-2 w-2 rounded-full" :class="statusDotClass(statusPreview)"></span>
+                                                        {{ statusPreview }}
+                                                    </div>
+                                                    <div class="inline-flex rounded-full px-3 py-1 text-xs font-semibold" :class="priorityClass(priorityPreview)">
+                                                        {{ priorityPreview || '-' }}
+                                                    </div>
                                                 </div>
                                             </div>
 
                                             <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
-                                                <div class="rounded-[20px] bg-slate-50 p-4">
-                                                    <p class="text-xs uppercase tracking-[0.22em] text-slate-400">Priority</p>
-                                                    <div class="mt-3 inline-flex rounded-full px-3 py-1 text-xs font-semibold" :class="priorityClass(priorityPreview)">
-                                                        {{ priorityPreview }}
-                                                    </div>
-                                                </div>
                                                 <div class="rounded-[20px] bg-slate-50 p-4">
                                                     <p class="text-xs uppercase tracking-[0.22em] text-slate-400">Cycle</p>
                                                     <p class="mt-3 text-sm font-semibold text-slate-900">{{ cyclePreview }}</p>
                                                 </div>
-                                            </div>
-
-                                            <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
                                                 <div class="rounded-[20px] bg-slate-50 p-4">
                                                     <p class="text-xs uppercase tracking-[0.22em] text-slate-400">SLA</p>
                                                     <p class="mt-3 text-sm font-semibold text-slate-900">{{ slaPreview }} hari</p>
                                                     <p class="mt-1 text-xs text-slate-400">{{ autoSyncSlaPreview }}</p>
                                                 </div>
+                                            </div>
+
+                                            <div class="grid gap-4">
                                                 <div class="rounded-[20px] bg-slate-50 p-4">
                                                     <p class="text-xs uppercase tracking-[0.22em] text-slate-400">Report Category</p>
                                                     <p class="mt-3 text-sm font-semibold text-slate-900">{{ reportCategoryPreview || '-' }}</p>
                                                 </div>
-                                            </div>
-
-                                            <div class="grid gap-4">
                                                 <div class="rounded-[20px] bg-slate-50 p-4">
                                                     <p class="text-xs uppercase tracking-[0.22em] text-slate-400">Category Customer</p>
                                                     <p class="mt-3 text-sm font-semibold text-slate-900">{{ categoryCustomerPreview || '-' }}</p>
                                                 </div>
                                                 <div class="rounded-[20px] bg-slate-50 p-4">
-                                                    <p class="text-xs uppercase tracking-[0.22em] text-slate-400">OOS</p>
+                                                    <p class="text-xs uppercase tracking-[0.22em] text-slate-400">Riwayat OOS</p>
                                                     <p class="mt-3 text-sm font-semibold text-slate-900">{{ oosPreview || '-' }}</p>
                                                 </div>
                                             </div>
@@ -1509,11 +1480,11 @@ const sectionChecks = computed(() => [
                                     </section>
 
                                     <section class="rounded-[28px] border border-slate-200 bg-[var(--accent-soft)] p-5 shadow-[0_10px_30px_rgba(15,23,42,0.04)]">
-                                        <p class="text-xs font-semibold uppercase tracking-[0.28em] text-[var(--accent)]">Input Guide</p>
+                                        <p class="text-xs font-semibold uppercase tracking-[0.28em] text-[var(--accent)]">Panduan Singkat</p>
                                         <div class="mt-4 space-y-3 text-sm text-slate-600">
-                                            <p>Isi identitas complaint terlebih dulu, lalu lanjut ke handling agar minim bolak-balik scroll.</p>
-                                            <p>`By` otomatis terkunci untuk sub case tertentu seperti `OOS`, `Promotion`, dan `Change Mind`.</p>
-                                            <p>Field whitelist dan tanggal selesai hanya muncul saat memang dibutuhkan, supaya form tetap ringkas.</p>
+                                            <p>Mulai dari data order dan customer dulu, lalu lanjut ke handling agar input tidak bolak-balik.</p>
+                                            <p>`By` akan terkunci otomatis untuk sub case yang memang sudah punya mapping master data.</p>
+                                            <p>Whitelist dan tanggal selesai hanya muncul saat kondisinya memang relevan.</p>
                                         </div>
                                     </section>
                                 </aside>

@@ -34,6 +34,11 @@ const pageSubtitle = computed(() => {
     if (page.url.startsWith('/sub-cases')) return 'Master data sub case untuk menyiapkan pilihan complaint dan default cause by yang lebih terstruktur.';
     if (page.url.startsWith('/last-steps')) return 'Master data last step untuk menjaga mapping status dan priority tetap konsisten.';
     if (page.url.startsWith('/reason-whitelists')) return 'Master data reason whitelist untuk menyatukan alasan claim reject di seluruh modul.';
+    if (page.url.startsWith('/reason-late-responses')) return 'Master data reason late responses untuk menyatukan alasan late di seluruh modul.';
+    if (page.url.startsWith('/order-tracking-data-sources')) return 'Master data data source order tracking untuk menjaga asal input tracking tetap konsisten.';
+    if (page.url.startsWith('/oos-reasons')) return 'Master data OOS reason untuk menjaga alasan stok kosong tetap konsisten.';
+    if (page.url.startsWith('/oos-solutions')) return 'Master data OOS solution untuk menjaga opsi penyelesaian OOS tetap konsisten.';
+    if (page.url.startsWith('/cause-bys')) return 'Master data cause by untuk menjaga pilihan penanggung jawab penyebab case tetap konsisten.';
     if (page.url.startsWith('/users')) return 'Manage internal accounts, role access, and activation status.';
     if (page.url.startsWith('/settings')) return 'Profile, password, and security preferences.';
 
