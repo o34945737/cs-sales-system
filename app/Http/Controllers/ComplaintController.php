@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Complaint;
 use Illuminate\Http\Request;
+use Throwable;
 use Inertia\Inertia;
 
 class ComplaintController extends Controller
@@ -93,7 +94,13 @@ class ComplaintController extends Controller
 
         return Inertia::render('Complaints/Index', [
             'complaints' => $listQuery->paginate(15)->withQueryString(),
-            'filters' => $request->only(['search', 'status', 'sort', 'order', 'cs_name']),
+            'filters' => [
+                'search' => $request->input('search'),
+                'status' => $request->input('status'),
+                'sort' => $request->input('sort'),
+                'order' => $request->input('order'),
+                'cs_name' => $request->input('cs_name'),
+            ],
             'cs_summary' => $csSummaryQuery
                 ->select('cs_name', \DB::raw('count(*) as total'))
                 ->groupBy('cs_name')
@@ -128,62 +135,94 @@ class ComplaintController extends Controller
 
     public function store(Request $request)
     {
-        // Validation with Conditional Logic
         $request->validate([
-            'step_cs_selesai' => 'nullable|in:YES,NO',
-            'last_step' => 'nullable|string',
-
-            // Conditional validation rules:
-            'tanggal_step_cs_selesai' => 'required_if:step_cs_selesai,YES',
-            'reason_whitelist' => 'required_if:last_step,Claim Reject',
-            'reason_late_respons' => 'required_if:reason_whitelist,Late Respons',
-            
-            // File validation handling
-            'video_unboxing' => 'nullable|file|mimes:mp4,mov,ogg,qt|max:20000', // max 20MB as sample
-            'proof' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:5000',
+            'source' => 'required|string',
+            'tanggal_complaint' => 'required|date',
+            'tanggal_order' => 'required|date',
+            'jam_customer_complaint' => 'required',
+            'brand' => 'required|string',
+            'platform' => 'required|string',
+            'order_id' => 'required|string',
+            'username' => 'required|string',
+            'resi' => 'required|string',
+            'sku' => 'required|string',
+            'sub_case' => 'required|string',
+            'cause_by' => 'required|string',
+            'summary_case' => 'required|string',
+            'update_long_text' => 'required|string',
+            'cs_name' => 'required|string',
+            'last_step' => 'required|string',
+            'step_cs_selesai' => 'required|in:YES,NO',
+            'tanggal_update' => 'required|date',
+            'tanggal_step_cs_selesai' => 'required_if:step_cs_selesai,YES|nullable|date',
+            'reason_whitelist' => 'required_if:last_step,Claim Reject|nullable|string',
+            'reason_late_respons' => 'required_if:reason_whitelist,Late Respons|nullable|string',
+            'value_of_product' => 'nullable|numeric|min:0',
+            'proof' => 'nullable|string|max:1000',
+            'video_unboxing' => 'nullable|file|mimes:mp4,mov,ogg,qt|max:20000',
         ], [
-            // Custom Messages
             'tanggal_step_cs_selesai.required_if' => 'Tanggal harus diisi jika Step CS Selesai = YES.',
             'reason_whitelist.required_if' => 'Reason Whitelist wajib diisi jika Last Step = Claim Reject.',
-            'reason_late_respons.required_if' => 'Reason Late Respons wajib diisi jika Whitelist = Late Respons.'
+            'reason_late_respons.required_if' => 'Reason Late Respons wajib diisi jika Whitelist = Late Respons.',
         ]);
 
-        $data = collect($request->all())->except(['_token', 'video_unboxing', 'proof'])->toArray();
+        $data = collect($request->all())->except(['_token', 'video_unboxing'])->toArray();
 
-        // Handle File Uploads ke folder storage/app/public/
-        if ($request->hasFile('video_unboxing')) {
-            $data['video_unboxing'] = $request->file('video_unboxing')->store('complaints/videos', 'public');
+        try {
+            if ($request->hasFile('video_unboxing')) {
+                $data['video_unboxing'] = $request->file('video_unboxing')->store('complaints/videos', 'public');
+            }
+
+            Complaint::create($data);
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return redirect()
+                ->back()
+                ->withInput()
+                ->with('error', 'Complaint gagal dibuat. Silakan coba lagi.');
         }
-        if ($request->hasFile('proof')) {
-            $data['proof'] = $request->file('proof')->store('complaints/proofs', 'public');
-        }
 
-        Complaint::create($data);
-
-        return redirect()->back()->with('success', 'Data Complaint berhasil disimpan.');
+        return redirect()->back()->with('success', 'Complaint berhasil dibuat.');
     }
 
     public function update(Request $request, Complaint $complaint)
     {
-        // Validasi conditional serupa untuk versi Update
         $request->validate([
             'step_cs_selesai' => 'nullable|in:YES,NO',
             'last_step' => 'nullable|string',
-            'tanggal_step_cs_selesai' => 'required_if:step_cs_selesai,YES',
-            'reason_whitelist' => 'required_if:last_step,Claim Reject',
-            'reason_late_respons' => 'required_if:reason_whitelist,Late Respons',
+            'tanggal_step_cs_selesai' => 'required_if:step_cs_selesai,YES|nullable|date',
+            'reason_whitelist' => 'required_if:last_step,Claim Reject|nullable|string',
+            'reason_late_respons' => 'required_if:reason_whitelist,Late Respons|nullable|string',
+            'proof' => 'nullable|string|max:1000',
         ]);
-        
-        // Handling update data bisa diletakkan di sini
-        $data = collect($request->all())->except(['_token', '_method'])->toArray();
-        $complaint->update($data);
 
-        return redirect()->back()->with('success', 'Data Complaint berhasil diupdate.');
+        $data = collect($request->all())->except(['_token', '_method'])->toArray();
+
+        try {
+            $complaint->update($data);
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return redirect()
+                ->back()
+                ->withInput()
+                ->with('error', 'Complaint gagal diperbarui. Silakan coba lagi.');
+        }
+
+        return redirect()->back()->with('success', 'Complaint berhasil diperbarui.');
     }
 
     public function destroy(Complaint $complaint)
     {
-        $complaint->delete();
-        return redirect()->back()->with('success', 'Data Complaint dihapus.');
+        try {
+            $complaint->delete();
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return redirect()->back()->with('error', 'Complaint gagal dihapus. Silakan coba lagi.');
+        }
+
+        return redirect()->back()->with('success', 'Complaint berhasil dihapus.');
     }
 }

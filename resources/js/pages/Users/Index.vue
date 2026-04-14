@@ -46,10 +46,10 @@ const usersPage = computed(() => props.users);
 const userRows = computed(() => props.users.data ?? []);
 const paginationLinks = computed(() => props.users.links?.filter((link) => link.url) ?? []);
 const summaryCards = computed(() => [
-    { label: 'Total User', value: props.metrics.total, icon: UsersIcon, tone: 'bg-slate-900 text-white' },
+    { label: 'Total User', value: props.metrics.total, icon: UsersIcon, tone: 'bg-[var(--app-primary)] text-white shadow-[0_12px_24px_rgba(53,103,232,0.22)]' },
     { label: 'Active', value: props.metrics.active, icon: CheckCircle2, tone: 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200' },
     { label: 'Inactive', value: props.metrics.inactive, icon: XCircle, tone: 'bg-rose-50 text-rose-700 ring-1 ring-rose-200' },
-    { label: 'Super Admin', value: props.metrics.super_admin, icon: ShieldCheck, tone: 'bg-amber-50 text-amber-700 ring-1 ring-amber-200' },
+    { label: 'Super Admin', value: props.metrics.super_admin, icon: ShieldCheck, tone: 'bg-[var(--app-primary-soft)] text-[var(--app-primary)] ring-1 ring-[rgba(53,103,232,0.14)]' },
 ]);
 
 const visitIndex = (overrides: Record<string, unknown> = {}, replace = true) => {
@@ -107,20 +107,20 @@ const statusBadgeClass = (active: boolean) => active ? 'bg-emerald-100 text-emer
     <AppLayout :breadcrumbs="breadcrumbs">
         <Head title="User Management" />
 
-        <div class="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(15,23,42,0.08),_transparent_28%),linear-gradient(180deg,_#f8fafc_0%,_#eef2ff_100%)] px-4 py-5 sm:px-6">
+        <div class="space-y-6">
             <div class="mx-auto max-w-7xl space-y-6">
-                <section class="overflow-hidden rounded-[30px] border border-slate-200/80 bg-white/90 shadow-[0_18px_60px_rgba(15,23,42,0.08)] backdrop-blur">
-                    <div class="grid gap-6 border-b border-slate-200/80 bg-[linear-gradient(135deg,_#0f172a_0%,_#1e293b_45%,_#312e81_100%)] px-6 py-7 text-white lg:grid-cols-[1.2fr,0.8fr]">
+                <section class="app-table-shell overflow-hidden">
+                    <div class="grid gap-6 border-b border-[var(--app-border)] bg-[linear-gradient(135deg,_#eef4ff_0%,_#f8fbff_100%)] px-6 py-7 text-[var(--app-ink)] lg:grid-cols-[1.2fr,0.8fr]">
                         <div>
-                            <p class="text-xs font-semibold uppercase tracking-[0.28em] text-slate-300">Internal Access</p>
-                            <h1 class="mt-3 text-3xl font-semibold tracking-tight">User Management</h1>
-                            <p class="mt-3 max-w-2xl text-sm leading-6 text-slate-300">
+                            <p class="text-xs font-semibold uppercase tracking-[0.28em] text-slate-400">Internal Access</p>
+                            <h1 class="mt-3 text-3xl font-extrabold tracking-tight">User Management</h1>
+                            <p class="mt-3 max-w-2xl text-sm leading-6 text-slate-500">
                                 Kelola akun internal, role, dan status aktif user dalam workspace admin yang lebih aman, cepat, dan siap scale.
                             </p>
                         </div>
 
                         <div class="flex items-start justify-end" v-if="canCreateUsers">
-                            <Button type="button" size="lg" class="rounded-2xl bg-white text-slate-900 shadow-sm hover:bg-slate-100" @click="openCreateModal">
+                            <Button type="button" size="lg" class="rounded-2xl bg-[var(--app-primary)] text-white shadow-[0_14px_24px_rgba(53,103,232,0.24)] hover:bg-[var(--app-primary-dark)]" @click="openCreateModal">
                                 <ShieldPlus class="h-4 w-4" />
                                 Tambah User
                             </Button>
@@ -141,7 +141,7 @@ const statusBadgeClass = (active: boolean) => active ? 'bg-emerald-100 text-emer
                 </section>
 
                 <div class="space-y-6">
-                    <section class="rounded-[30px] border border-slate-200/80 bg-white/90 p-6 shadow-[0_18px_60px_rgba(15,23,42,0.06)] backdrop-blur">
+                    <section class="app-table-shell p-6">
                         <div class="grid gap-5 xl:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] xl:items-end">
                             <div class="min-w-0 max-w-xl">
                                 <h2 class="text-xl font-semibold text-slate-900">Directory</h2>
@@ -261,7 +261,7 @@ const statusBadgeClass = (active: boolean) => active ? 'bg-emerald-100 text-emer
                         </div>
                     </section>
 
-                    <section class="rounded-[30px] border border-slate-200/80 bg-white/90 p-6 shadow-[0_18px_60px_rgba(15,23,42,0.06)] backdrop-blur">
+                    <section class="app-table-shell p-6">
                         <div>
                             <p class="text-xs font-semibold uppercase tracking-[0.28em] text-slate-400">Audit Trail</p>
                             <h2 class="mt-3 text-xl font-semibold text-slate-900">Recent Admin Activities</h2>
@@ -298,10 +298,10 @@ const statusBadgeClass = (active: boolean) => active ? 'bg-emerald-100 text-emer
         <Dialog v-model:open="isCreateOpen">
             <DialogContent class="max-w-2xl rounded-[28px] border-0 p-0 shadow-[0_30px_80px_rgba(15,23,42,0.25)]">
                 <div class="overflow-hidden rounded-[28px]">
-                    <div class="bg-[linear-gradient(135deg,_#0f172a_0%,_#1e293b_55%,_#1d4ed8_100%)] px-6 py-6 text-white">
+                    <div class="bg-[linear-gradient(135deg,_#eef4ff_0%,_#dbeafe_100%)] px-6 py-6 text-[var(--app-ink)]">
                         <DialogHeader>
                             <DialogTitle class="text-2xl">Tambah User Baru</DialogTitle>
-                            <DialogDescription class="text-slate-300">Buat akun internal baru dan tetapkan role yang sesuai sejak awal.</DialogDescription>
+                            <DialogDescription class="text-slate-500">Buat akun internal baru dan tetapkan role yang sesuai sejak awal.</DialogDescription>
                         </DialogHeader>
                     </div>
 
@@ -362,10 +362,10 @@ const statusBadgeClass = (active: boolean) => active ? 'bg-emerald-100 text-emer
         <Dialog v-model:open="isEditOpen">
             <DialogContent class="max-w-2xl rounded-[28px] border-0 p-0 shadow-[0_30px_80px_rgba(15,23,42,0.25)]">
                 <div class="overflow-hidden rounded-[28px]">
-                    <div class="bg-[linear-gradient(135deg,_#111827_0%,_#1f2937_55%,_#0f766e_100%)] px-6 py-6 text-white">
+                    <div class="bg-[linear-gradient(135deg,_#eef4ff_0%,_#dbeafe_100%)] px-6 py-6 text-[var(--app-ink)]">
                         <DialogHeader>
                             <DialogTitle class="text-2xl">Edit User</DialogTitle>
-                            <DialogDescription class="text-slate-300">Perbarui identitas, role, password, dan status akses user.</DialogDescription>
+                            <DialogDescription class="text-slate-500">Perbarui identitas, role, password, dan status akses user.</DialogDescription>
                         </DialogHeader>
                     </div>
 
@@ -428,10 +428,10 @@ const statusBadgeClass = (active: boolean) => active ? 'bg-emerald-100 text-emer
         <Dialog v-model:open="isDeleteOpen">
             <DialogContent class="max-w-md rounded-[28px] border-0 p-0 shadow-[0_30px_80px_rgba(15,23,42,0.25)]">
                 <div class="overflow-hidden rounded-[28px] bg-white">
-                    <div class="bg-[linear-gradient(135deg,_#7f1d1d_0%,_#991b1b_50%,_#be123c_100%)] px-6 py-6 text-white">
+                    <div class="bg-[linear-gradient(135deg,_#fff1f2_0%,_#ffe4e6_100%)] px-6 py-6 text-[var(--app-ink)]">
                         <DialogHeader>
                             <DialogTitle class="text-2xl">Hapus User</DialogTitle>
-                            <DialogDescription class="text-rose-100">Tindakan ini tidak bisa dibatalkan. Pastikan akun yang dipilih memang aman untuk dihapus.</DialogDescription>
+                            <DialogDescription class="text-rose-500">Tindakan ini tidak bisa dibatalkan. Pastikan akun yang dipilih memang aman untuk dihapus.</DialogDescription>
                         </DialogHeader>
                     </div>
 

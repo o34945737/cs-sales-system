@@ -56,8 +56,8 @@ onBeforeUnmount(() => {
 
 const toneClasses = computed(() =>
     tone.value === 'success'
-        ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-        : 'border-rose-200 bg-rose-50 text-rose-700',
+        ? 'border-emerald-100 bg-white text-slate-700'
+        : 'border-rose-100 bg-white text-slate-700',
 );
 </script>
 
@@ -71,15 +71,23 @@ const toneClasses = computed(() =>
         leave-to-class="translate-y-2 opacity-0"
     >
         <div v-if="visible && message" class="pointer-events-none fixed right-4 top-4 z-[90] w-full max-w-sm">
-            <div class="pointer-events-auto rounded-2xl border px-4 py-3 shadow-[0_16px_40px_rgba(15,23,42,0.14)] backdrop-blur" :class="toneClasses">
-                <div class="flex items-start gap-3">
-                    <CheckCircle2 v-if="tone === 'success'" class="mt-0.5 h-5 w-5" />
-                    <XCircle v-else class="mt-0.5 h-5 w-5" />
-                    <div class="min-w-0">
-                        <p class="text-sm font-semibold">{{ tone === 'success' ? 'Berhasil' : 'Perlu perhatian' }}</p>
-                        <p class="mt-1 text-sm">{{ message }}</p>
+            <div class="pointer-events-auto overflow-hidden rounded-[24px] border shadow-[0_18px_44px_rgba(15,23,42,0.14)]" :class="toneClasses">
+                <div class="flex items-start gap-3 px-4 py-4">
+                    <div
+                        class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl"
+                        :class="tone === 'success' ? 'bg-emerald-50 text-emerald-500' : 'bg-rose-50 text-rose-500'"
+                    >
+                        <CheckCircle2 v-if="tone === 'success'" class="h-5 w-5" />
+                        <XCircle v-else class="h-5 w-5" />
+                    </div>
+
+                    <div class="min-w-0 flex-1">
+                        <p class="text-sm font-semibold text-[var(--app-ink)]">{{ tone === 'success' ? 'Berhasil' : 'Perlu perhatian' }}</p>
+                        <p class="mt-1 text-sm text-slate-500">{{ message }}</p>
                     </div>
                 </div>
+
+                <div class="h-1 w-full" :class="tone === 'success' ? 'bg-emerald-400' : 'bg-rose-400'" />
             </div>
         </div>
     </transition>
