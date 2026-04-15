@@ -5,22 +5,47 @@ namespace App\Http\Controllers;
 use App\Models\Brand;
 use App\Models\CauseBy;
 use App\Models\Complaint;
+use App\Models\ComplaintPower;
+use App\Models\ComplaintSource;
+use App\Models\ComplaintStepStatus;
 use App\Models\LastStep;
+use App\Models\PartOfBad;
 use App\Models\Platform;
 use App\Models\ReasonLateResponse;
 use App\Models\ReasonWhitelist;
+use App\Models\SkuCode;
 use App\Models\SubCase;
+use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Throwable;
 use Inertia\Inertia;
 
 class ComplaintController extends Controller
 {
-    private const SOURCE_OPTIONS = ['AFTERSALES', 'B2B', 'PRESALES', 'SOCMED', 'BRAND/OPS'];
-
     public function index(Request $request)
     {
+        $sourceOptions = ComplaintSource::query()
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->pluck('name')
+            ->all();
+        $complaintPowerOptions = ComplaintPower::query()
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->pluck('name')
+            ->all();
+        $stepStatusOptions = ComplaintStepStatus::query()
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->pluck('name')
+            ->all();
+        $partOfBadOptions = PartOfBad::query()
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->pluck('name')
+            ->all();
         $brandOptions = Brand::query()
             ->where('is_active', true)
             ->orderBy('name')
@@ -36,6 +61,19 @@ class ComplaintController extends Controller
             ->orderBy('name')
             ->pluck('name')
             ->all();
+        $skuCodeOptions = SkuCode::query()
+            ->where('is_active', true)
+            ->orderBy('sku')
+            ->get(['sku', 'product_name', 'brand', 'default_value_of_product'])
+            ->map(fn(SkuCode $skuCode) => [
+                'sku' => $skuCode->sku,
+                'product_name' => $skuCode->product_name,
+                'brand' => $skuCode->brand,
+                'default_value_of_product' => $skuCode->default_value_of_product !== null
+                    ? (float) $skuCode->default_value_of_product
+                    : null,
+            ])
+            ->all();
         $causeByNames = CauseBy::query()
             ->where('is_active', true)
             ->orderBy('name')
@@ -45,7 +83,7 @@ class ComplaintController extends Controller
             ->where('is_active', true)
             ->orderBy('name')
             ->get(['name', 'status_result', 'priority_level'])
-            ->map(fn (LastStep $lastStep) => [
+            ->map(fn(LastStep $lastStep) => [
                 'label' => $lastStep->name,
                 'value' => $lastStep->name,
                 'status_result' => $lastStep->status_result,
@@ -58,6 +96,12 @@ class ComplaintController extends Controller
             ->pluck('name')
             ->all();
         $reasonLateResponseOptions = ReasonLateResponse::query()
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->pluck('name')
+            ->all();
+        $csNameOptions = User::query()
+            ->whereHas('roles', fn($q) => $q->where('name', 'CS'))
             ->where('is_active', true)
             ->orderBy('name')
             ->pluck('name')
@@ -154,7 +198,7 @@ class ComplaintController extends Controller
                 'cs_name' => $request->input('cs_name'),
             ],
             'cs_summary' => $csSummaryQuery
-                ->select('cs_name', \DB::raw('count(*) as total'))
+                ->select('cs_name', DB::raw('count(*) as total'))
                 ->groupBy('cs_name')
                 ->orderByDesc('total')
                 ->get(),
@@ -183,7 +227,13 @@ class ComplaintController extends Controller
                     ->count('cs_name'),
             ],
             'brandOptions' => $brandOptions,
+            'csNameOptions' => $csNameOptions,
             'platformOptions' => $platformOptions,
+            'skuCodeOptions' => $skuCodeOptions,
+            'sourceOptions' => $sourceOptions,
+            'complaintPowerOptions' => $complaintPowerOptions,
+            'stepStatusOptions' => $stepStatusOptions,
+            'partOfBadOptions' => $partOfBadOptions,
             'subCaseOptions' => $subCaseOptions,
             'causeByOptions' => array_values(array_unique(array_merge(
                 ['?'],
@@ -197,24 +247,28 @@ class ComplaintController extends Controller
                 ->whereNotNull('default_cause_by')
                 ->orderBy('name')
                 ->get(['name', 'default_cause_by'])
-                ->mapWithKeys(fn (SubCase $subCase) => [$subCase->name => $subCase->default_cause_by])
+                ->mapWithKeys(fn(SubCase $subCase) => [$subCase->name => $subCase->default_cause_by])
                 ->all(),
         ]);
     }
 
     public function store(Request $request)
     {
-        $request->validate($this->complaintRules(), [
+        $request->validate($this->complaintRules($request), [
             'tanggal_step_cs_selesai.required_if' => 'Tanggal harus diisi jika Step CS Selesai = YES.',
             'reason_whitelist.required_if' => 'Reason Whitelist wajib diisi jika Last Step = Claim Reject.',
             'reason_late_respons.required_if' => 'Reason Late Respons wajib diisi jika Whitelist = Late Respons.',
         ]);
 
-        $data = collect($request->all())->except(['_token', 'video_unboxing'])->toArray();
+        $data = collect($request->all())->except(['_token', 'video_unboxing', 'proof_attachment'])->toArray();
 
         try {
             if ($request->hasFile('video_unboxing')) {
                 $data['video_unboxing'] = $request->file('video_unboxing')->store('complaints/videos', 'public');
+            }
+
+            if ($request->hasFile('proof_attachment')) {
+                $data['proof_attachment'] = $request->file('proof_attachment')->store('complaints/proofs', 'public');
             }
 
             Complaint::create($data);
@@ -232,15 +286,23 @@ class ComplaintController extends Controller
 
     public function update(Request $request, Complaint $complaint)
     {
-        $request->validate($this->complaintRules(forUpdate: true), [
+        $request->validate($this->complaintRules($request, forUpdate: true), [
             'tanggal_step_cs_selesai.required_if' => 'Tanggal harus diisi jika Step CS Selesai = YES.',
             'reason_whitelist.required_if' => 'Reason Whitelist wajib diisi jika Last Step = Claim Reject.',
             'reason_late_respons.required_if' => 'Reason Late Respons wajib diisi jika Whitelist = Late Respons.',
         ]);
 
-        $data = collect($request->all())->except(['_token', '_method'])->toArray();
+        $data = collect($request->all())->except(['_token', '_method', 'video_unboxing', 'proof_attachment'])->toArray();
 
         try {
+            if ($request->hasFile('video_unboxing')) {
+                $data['video_unboxing'] = $request->file('video_unboxing')->store('complaints/videos', 'public');
+            }
+
+            if ($request->hasFile('proof_attachment')) {
+                $data['proof_attachment'] = $request->file('proof_attachment')->store('complaints/proofs', 'public');
+            }
+
             $complaint->update($data);
         } catch (Throwable $exception) {
             report($exception);
@@ -267,19 +329,60 @@ class ComplaintController extends Controller
         return redirect()->back()->with('success', 'Complaint berhasil dihapus.');
     }
 
-    private function complaintRules(bool $forUpdate = false): array
+    private function complaintRules(Request $request, bool $forUpdate = false): array
     {
+        $sourceOptions = ComplaintSource::query()
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->pluck('name')
+            ->all();
+        $complaintPowerOptions = ComplaintPower::query()
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->pluck('name')
+            ->all();
+        $stepStatusOptions = ComplaintStepStatus::query()
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->pluck('name')
+            ->all();
+        $partOfBadOptions = PartOfBad::query()
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->pluck('name')
+            ->all();
         $brandOptions = Brand::query()
             ->where('is_active', true)
             ->orderBy('name')
             ->pluck('name')
             ->all();
+        $selectedSkuBrand = $request->filled('sku')
+            ? SkuCode::query()
+                ->where('sku', $request->input('sku'))
+                ->where('is_active', true)
+                ->value('brand')
+            : null;
+        if ($selectedSkuBrand) {
+            $brandOptions = array_values(array_unique([...$brandOptions, $selectedSkuBrand]));
+        }
         $platformOptions = Platform::query()
             ->where('is_active', true)
             ->orderBy('name')
             ->pluck('name')
             ->all();
         $subCaseOptions = SubCase::query()
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->pluck('name')
+            ->all();
+        $skuOptions = SkuCode::query()
+            ->where('is_active', true)
+            ->whereNotNull('sku')
+            ->orderBy('sku')
+            ->pluck('sku')
+            ->all();
+        $csNameOptions = User::query()
+            ->whereHas('roles', fn($q) => $q->where('name', 'CS'))
             ->where('is_active', true)
             ->orderBy('name')
             ->pluck('name')
@@ -308,31 +411,37 @@ class ComplaintController extends Controller
             ->pluck('name')
             ->all();
         $required = $forUpdate ? 'sometimes' : 'required';
+        $brandRequirement = $selectedSkuBrand ? 'nullable' : $required;
 
         return [
-            'source' => [$required, 'string', Rule::in(self::SOURCE_OPTIONS)],
+            'source' => [$required, 'string', Rule::in($sourceOptions)],
             'tanggal_complaint' => [$required, 'date'],
             'tanggal_order' => [$required, 'date'],
             'jam_customer_complaint' => [$required, 'date_format:H:i:s'],
-            'brand' => [$required, 'string', Rule::in($brandOptions)],
+            'brand' => [$brandRequirement, 'string', Rule::in($brandOptions)],
             'platform' => [$required, 'string', Rule::in($platformOptions)],
             'order_id' => [$required, 'string'],
             'username' => [$required, 'string'],
             'resi' => [$required, 'string'],
-            'sku' => [$required, 'string'],
+            'sku' => empty($skuOptions) ? [$required, 'string'] : [$required, 'string', Rule::in($skuOptions)],
+            'product_name' => ['nullable', 'string'],
             'sub_case' => [$required, 'string', Rule::in($subCaseOptions)],
             'cause_by' => [$required, 'string', Rule::in($causeByOptions)],
             'summary_case' => [$required, 'string'],
             'update_long_text' => [$required, 'string'],
-            'cs_name' => [$required, 'string'],
+            'part_of_bad' => empty($partOfBadOptions) ? ['nullable', 'string'] : ['nullable', 'string', Rule::in($partOfBadOptions)],
+            'cs_name' => [$required, 'string', Rule::in($csNameOptions)],
             'last_step' => [$required, 'string', Rule::in($lastStepOptions)],
-            'step_cs_selesai' => [$required, Rule::in(['YES', 'NO'])],
+            'step_cs_selesai' => empty($stepStatusOptions) ? [$required, Rule::in(['YES', 'NO'])] : [$required, Rule::in($stepStatusOptions)],
+            'complaint_power' => empty($complaintPowerOptions) ? [$required, 'string'] : [$required, 'string', Rule::in($complaintPowerOptions)],
+            'level_customer' => empty($complaintPowerOptions) ? ['nullable', 'string'] : ['nullable', 'string', Rule::in($complaintPowerOptions)],
             'tanggal_update' => [$required, 'date'],
             'tanggal_step_cs_selesai' => ['required_if:step_cs_selesai,YES', 'nullable', 'date'],
             'reason_whitelist' => ['required_if:last_step,Claim Reject', 'nullable', 'string', Rule::in($reasonWhitelistOptions)],
             'reason_late_respons' => ['required_if:reason_whitelist,Late Respons', 'nullable', 'string', Rule::in($reasonLateResponseOptions)],
             'value_of_product' => ['nullable', 'numeric', 'min:0'],
             'proof' => ['nullable', 'string', 'max:1000'],
+            'proof_attachment' => [$forUpdate ? 'sometimes' : 'nullable', 'nullable', 'file', 'mimes:jpg,jpeg,png,pdf,mp4,mov,ogg,qt', 'max:20000'],
             'video_unboxing' => [$forUpdate ? 'sometimes' : 'nullable', 'nullable', 'file', 'mimes:mp4,mov,ogg,qt', 'max:20000'],
         ];
     }

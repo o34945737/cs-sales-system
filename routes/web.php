@@ -7,6 +7,9 @@ use App\Models\OrderTracking;
 use App\Http\Controllers\BadReviewController;
 use App\Http\Controllers\BrandController;
 use App\Http\Controllers\ComplaintController;
+use App\Http\Controllers\ComplaintPowerController;
+use App\Http\Controllers\ComplaintSourceController;
+use App\Http\Controllers\ComplaintStepStatusController;
 use App\Http\Controllers\CauseByController;
 use App\Http\Controllers\LogisticController;
 use App\Http\Controllers\LastStepController;
@@ -16,8 +19,10 @@ use App\Http\Controllers\OosSolutionController;
 use App\Http\Controllers\OrderTrackingController;
 use App\Http\Controllers\OrderTrackingDataSourceController;
 use App\Http\Controllers\PlatformController;
+use App\Http\Controllers\PartOfBadController;
 use App\Http\Controllers\ReasonLateResponseController;
 use App\Http\Controllers\ReasonWhitelistController;
+use App\Http\Controllers\SkuCodeController;
 use App\Http\Controllers\SubCaseController;
 use App\Http\Controllers\UserManagementController;
 use Illuminate\Support\Facades\Route;
@@ -120,6 +125,66 @@ Route::middleware(['auth', 'active', 'password.reset.required'])->group(function
             ->name('update');
         Route::delete('/{platform}', [PlatformController::class, 'destroy'])
             ->middleware('permission:delete platforms')
+            ->name('destroy');
+    });
+
+    Route::prefix('complaint-sources')->name('complaint-sources.')->group(function () {
+        Route::get('/', [ComplaintSourceController::class, 'index'])
+            ->middleware('permission:view complaint sources')
+            ->name('index');
+        Route::post('/', [ComplaintSourceController::class, 'store'])
+            ->middleware('permission:create complaint sources')
+            ->name('store');
+        Route::put('/{complaintSource}', [ComplaintSourceController::class, 'update'])
+            ->middleware('permission:update complaint sources')
+            ->name('update');
+        Route::delete('/{complaintSource}', [ComplaintSourceController::class, 'destroy'])
+            ->middleware('permission:delete complaint sources')
+            ->name('destroy');
+    });
+
+    Route::prefix('complaint-powers')->name('complaint-powers.')->group(function () {
+        Route::get('/', [ComplaintPowerController::class, 'index'])
+            ->middleware('permission:view complaint powers')
+            ->name('index');
+        Route::post('/', [ComplaintPowerController::class, 'store'])
+            ->middleware('permission:create complaint powers')
+            ->name('store');
+        Route::put('/{complaintPower}', [ComplaintPowerController::class, 'update'])
+            ->middleware('permission:update complaint powers')
+            ->name('update');
+        Route::delete('/{complaintPower}', [ComplaintPowerController::class, 'destroy'])
+            ->middleware('permission:delete complaint powers')
+            ->name('destroy');
+    });
+
+    Route::prefix('complaint-step-statuses')->name('complaint-step-statuses.')->group(function () {
+        Route::get('/', [ComplaintStepStatusController::class, 'index'])
+            ->middleware('permission:view complaint step statuses')
+            ->name('index');
+        Route::post('/', [ComplaintStepStatusController::class, 'store'])
+            ->middleware('permission:create complaint step statuses')
+            ->name('store');
+        Route::put('/{complaintStepStatus}', [ComplaintStepStatusController::class, 'update'])
+            ->middleware('permission:update complaint step statuses')
+            ->name('update');
+        Route::delete('/{complaintStepStatus}', [ComplaintStepStatusController::class, 'destroy'])
+            ->middleware('permission:delete complaint step statuses')
+            ->name('destroy');
+    });
+
+    Route::prefix('sku-codes')->name('sku-codes.')->group(function () {
+        Route::get('/', [SkuCodeController::class, 'index'])
+            ->middleware('permission:view sku codes')
+            ->name('index');
+        Route::post('/', [SkuCodeController::class, 'store'])
+            ->middleware('permission:create sku codes')
+            ->name('store');
+        Route::put('/{skuCode}', [SkuCodeController::class, 'update'])
+            ->middleware('permission:update sku codes')
+            ->name('update');
+        Route::delete('/{skuCode}', [SkuCodeController::class, 'destroy'])
+            ->middleware('permission:delete sku codes')
             ->name('destroy');
     });
 
@@ -255,6 +320,21 @@ Route::middleware(['auth', 'active', 'password.reset.required'])->group(function
             ->name('update');
         Route::delete('/{causeBy}', [CauseByController::class, 'destroy'])
             ->middleware('permission:delete cause bys')
+            ->name('destroy');
+    });
+
+    Route::prefix('part-of-bads')->name('part-of-bads.')->group(function () {
+        Route::get('/', [PartOfBadController::class, 'index'])
+            ->middleware('permission:view part of bads')
+            ->name('index');
+        Route::post('/', [PartOfBadController::class, 'store'])
+            ->middleware('permission:create part of bads')
+            ->name('store');
+        Route::put('/{partOfBad}', [PartOfBadController::class, 'update'])
+            ->middleware('permission:update part of bads')
+            ->name('update');
+        Route::delete('/{partOfBad}', [PartOfBadController::class, 'destroy'])
+            ->middleware('permission:delete part of bads')
             ->name('destroy');
     });
 

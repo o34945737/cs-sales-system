@@ -17,6 +17,28 @@ class Complaint extends Model
         parent::boot();
 
         static::saving(function ($model) {
+            // 0. SKU master -> autofill product, brand, dan default value bila tersedia.
+            $skuCode = $model->sku
+                ? SkuCode::query()
+                    ->where('sku', $model->sku)
+                    ->where('is_active', true)
+                    ->first(['product_name', 'brand', 'default_value_of_product'])
+                : null;
+
+            if ($skuCode) {
+                if (blank($model->product_name)) {
+                    $model->product_name = $skuCode->product_name;
+                }
+
+                if (blank($model->brand) && filled($skuCode->brand)) {
+                    $model->brand = $skuCode->brand;
+                }
+
+                if (($model->value_of_product === null || $model->value_of_product === '') && $skuCode->default_value_of_product !== null) {
+                    $model->value_of_product = $skuCode->default_value_of_product;
+                }
+            }
+
             // 1. Cycle - Auto fill
             if ($model->jam_customer_complaint) {
                 // Asumsi format 'H:i' atau 'H:i:s'

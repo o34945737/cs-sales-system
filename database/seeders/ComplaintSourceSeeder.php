@@ -2,26 +2,23 @@
 
 namespace Database\Seeders;
 
-use App\Models\ReasonLateResponse;
+use App\Models\ComplaintSource;
 use Illuminate\Database\Seeder;
 
-class ReasonLateResponseSeeder extends Seeder
+class ComplaintSourceSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
     public function run(): void
     {
         $items = [
-            'CS',
+            'After Sales',
+            'Pre Sales',
+            'Brand',
             'KAE',
-            'Finance',
-            'WH',
-            'PH',
+            'Socmed',
         ];
 
         foreach ($items as $name) {
-            ReasonLateResponse::query()->updateOrCreate(
+            ComplaintSource::query()->updateOrCreate(
                 ['name' => $name],
                 ['is_active' => true],
             );

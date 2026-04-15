@@ -2,7 +2,28 @@
 import { useInitials } from '@/composables/useInitials';
 import { type NavItem, type SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/vue3';
-import { Archive, ChevronDown, ClipboardList, Database, LayoutGrid, ListChecks, LogOut, MessageSquare, MonitorSmartphone, Settings, ShieldAlert, ShieldCheck, Star, Tag, Tags, Truck, Users, Wrench, X } from 'lucide-vue-next';
+import {
+    Archive,
+    Boxes,
+    ChevronDown,
+    ClipboardList,
+    Database,
+    LayoutGrid,
+    ListChecks,
+    LogOut,
+    MessageSquare,
+    MonitorSmartphone,
+    Settings,
+    ShieldAlert,
+    ShieldCheck,
+    Star,
+    Tag,
+    Tags,
+    Truck,
+    Users,
+    Wrench,
+    X,
+} from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 
 const props = withDefaults(
@@ -47,6 +68,22 @@ const masterDataItems = computed<NavItem[]>(() => {
         items.push({ title: 'Platforms', href: '/platforms', icon: MonitorSmartphone });
     }
 
+    if (page.props.auth.can.view_complaint_sources) {
+        items.push({ title: 'Complaint Sources', href: '/complaint-sources', icon: Database });
+    }
+
+    if (page.props.auth.can.view_complaint_powers) {
+        items.push({ title: 'Complaint Powers', href: '/complaint-powers', icon: ShieldAlert });
+    }
+
+    if (page.props.auth.can.view_complaint_step_statuses) {
+        items.push({ title: 'Step Statuses', href: '/complaint-step-statuses', icon: ClipboardList });
+    }
+
+    if (page.props.auth.can.view_sku_codes) {
+        items.push({ title: 'SKU Codes', href: '/sku-codes', icon: Boxes });
+    }
+
     if (page.props.auth.can.view_logistics) {
         items.push({ title: 'Logistics', href: '/logistics', icon: Truck });
     }
@@ -81,6 +118,10 @@ const masterDataItems = computed<NavItem[]>(() => {
 
     if (page.props.auth.can.view_cause_bys) {
         items.push({ title: 'Cause By', href: '/cause-bys', icon: ShieldCheck });
+    }
+
+    if (page.props.auth.can.view_part_of_bads) {
+        items.push({ title: 'Part Of Bad', href: '/part-of-bads', icon: Archive });
     }
 
     return items;
@@ -121,12 +162,16 @@ const closeSidebar = () => emit('close');
     >
         <div class="flex items-center justify-between border-b border-[var(--app-border)] px-5 py-5 lg:justify-start">
             <Link :href="route('dashboard')" class="flex min-w-0 items-center gap-3" @click="closeSidebar">
-                <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-[var(--app-primary)] text-base font-extrabold text-white shadow-[0_12px_20px_rgba(53,103,232,0.28)]">
+                <div
+                    class="flex h-11 w-11 items-center justify-center rounded-2xl bg-[var(--app-primary)] text-base font-extrabold text-white shadow-[0_12px_20px_rgba(53,103,232,0.28)]"
+                >
                     {{ getInitials(workspaceName) }}
                 </div>
                 <div class="min-w-0">
                     <p class="truncate text-lg font-extrabold text-[var(--app-ink)]">{{ workspaceName }}</p>
-                    <span class="mt-1 inline-flex rounded-full bg-[var(--app-primary-soft)] px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--app-primary)]">
+                    <span
+                        class="mt-1 inline-flex rounded-full bg-[var(--app-primary-soft)] px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--app-primary)]"
+                    >
                         {{ primaryRole }}
                     </span>
                 </div>
@@ -144,7 +189,9 @@ const closeSidebar = () => emit('close');
         <div class="border-b border-[var(--app-border)] px-4 py-5">
             <div class="rounded-[22px] border border-[var(--app-border)] bg-[var(--app-primary-soft)] px-4 py-4">
                 <div class="flex items-center gap-3">
-                    <div class="flex h-12 w-12 items-center justify-center rounded-full border border-white/80 bg-white text-sm font-bold text-[var(--app-primary)]">
+                    <div
+                        class="flex h-12 w-12 items-center justify-center rounded-full border border-white/80 bg-white text-sm font-bold text-[var(--app-primary)]"
+                    >
                         {{ getInitials(user?.name || 'Guest') }}
                     </div>
                     <div class="min-w-0 flex-1">
@@ -164,7 +211,11 @@ const closeSidebar = () => emit('close');
                     :key="item.title"
                     :href="item.href"
                     class="group flex items-center gap-3 rounded-[18px] px-4 py-3 text-sm font-semibold transition"
-                    :class="isActive(item.href) ? 'bg-[var(--app-primary)] text-white shadow-[0_14px_24px_rgba(53,103,232,0.24)]' : 'text-slate-600 hover:bg-[var(--app-primary-soft)] hover:text-[var(--app-primary)]'"
+                    :class="
+                        isActive(item.href)
+                            ? 'bg-[var(--app-primary)] text-white shadow-[0_14px_24px_rgba(53,103,232,0.24)]'
+                            : 'text-slate-600 hover:bg-[var(--app-primary-soft)] hover:text-[var(--app-primary)]'
+                    "
                     @click="closeSidebar"
                 >
                     <component :is="item.icon" class="h-5 w-5 shrink-0" />
@@ -175,7 +226,11 @@ const closeSidebar = () => emit('close');
                     <button
                         type="button"
                         class="flex w-full items-center gap-3 rounded-[18px] px-4 py-3 text-left text-sm font-semibold transition"
-                        :class="isMasterDataActive ? 'bg-[var(--app-primary-soft)] text-[var(--app-primary)]' : 'text-slate-600 hover:bg-[var(--app-primary-soft)] hover:text-[var(--app-primary)]'"
+                        :class="
+                            isMasterDataActive
+                                ? 'bg-[var(--app-primary-soft)] text-[var(--app-primary)]'
+                                : 'text-slate-600 hover:bg-[var(--app-primary-soft)] hover:text-[var(--app-primary)]'
+                        "
                         @click="toggleMasterData"
                     >
                         <Tags class="h-5 w-5 shrink-0" />
@@ -189,7 +244,11 @@ const closeSidebar = () => emit('close');
                             :key="item.title"
                             :href="item.href"
                             class="group flex items-center gap-3 rounded-[16px] px-4 py-2.5 text-sm font-medium transition"
-                            :class="isActive(item.href) ? 'bg-[var(--app-primary)] text-white shadow-[0_12px_22px_rgba(53,103,232,0.22)]' : 'text-slate-500 hover:bg-[var(--app-primary-soft)] hover:text-[var(--app-primary)]'"
+                            :class="
+                                isActive(item.href)
+                                    ? 'bg-[var(--app-primary)] text-white shadow-[0_12px_22px_rgba(53,103,232,0.22)]'
+                                    : 'text-slate-500 hover:bg-[var(--app-primary-soft)] hover:text-[var(--app-primary)]'
+                            "
                             @click="closeSidebar"
                         >
                             <component :is="item.icon" class="h-4 w-4 shrink-0" />
@@ -202,7 +261,11 @@ const closeSidebar = () => emit('close');
                     v-if="page.props.auth.can.access_complaints"
                     href="/complaints"
                     class="group flex items-center gap-3 rounded-[18px] px-4 py-3 text-sm font-semibold transition"
-                    :class="isActive('/complaints') ? 'bg-[var(--app-primary)] text-white shadow-[0_14px_24px_rgba(53,103,232,0.24)]' : 'text-slate-600 hover:bg-[var(--app-primary-soft)] hover:text-[var(--app-primary)]'"
+                    :class="
+                        isActive('/complaints')
+                            ? 'bg-[var(--app-primary)] text-white shadow-[0_14px_24px_rgba(53,103,232,0.24)]'
+                            : 'text-slate-600 hover:bg-[var(--app-primary-soft)] hover:text-[var(--app-primary)]'
+                    "
                     @click="closeSidebar"
                 >
                     <MessageSquare class="h-5 w-5 shrink-0" />
@@ -213,7 +276,11 @@ const closeSidebar = () => emit('close');
                     v-if="page.props.auth.can.access_bad_reviews"
                     href="/bad-reviews"
                     class="group flex items-center gap-3 rounded-[18px] px-4 py-3 text-sm font-semibold transition"
-                    :class="isActive('/bad-reviews') ? 'bg-[var(--app-primary)] text-white shadow-[0_14px_24px_rgba(53,103,232,0.24)]' : 'text-slate-600 hover:bg-[var(--app-primary-soft)] hover:text-[var(--app-primary)]'"
+                    :class="
+                        isActive('/bad-reviews')
+                            ? 'bg-[var(--app-primary)] text-white shadow-[0_14px_24px_rgba(53,103,232,0.24)]'
+                            : 'text-slate-600 hover:bg-[var(--app-primary-soft)] hover:text-[var(--app-primary)]'
+                    "
                     @click="closeSidebar"
                 >
                     <Star class="h-5 w-5 shrink-0" />
@@ -224,7 +291,11 @@ const closeSidebar = () => emit('close');
                     v-if="page.props.auth.can.access_order_trackings"
                     href="/order-trackings"
                     class="group flex items-center gap-3 rounded-[18px] px-4 py-3 text-sm font-semibold transition"
-                    :class="isActive('/order-trackings') ? 'bg-[var(--app-primary)] text-white shadow-[0_14px_24px_rgba(53,103,232,0.24)]' : 'text-slate-600 hover:bg-[var(--app-primary-soft)] hover:text-[var(--app-primary)]'"
+                    :class="
+                        isActive('/order-trackings')
+                            ? 'bg-[var(--app-primary)] text-white shadow-[0_14px_24px_rgba(53,103,232,0.24)]'
+                            : 'text-slate-600 hover:bg-[var(--app-primary-soft)] hover:text-[var(--app-primary)]'
+                    "
                     @click="closeSidebar"
                 >
                     <Truck class="h-5 w-5 shrink-0" />
@@ -235,7 +306,11 @@ const closeSidebar = () => emit('close');
                     v-if="page.props.auth.can.access_oos"
                     href="/oos"
                     class="group flex items-center gap-3 rounded-[18px] px-4 py-3 text-sm font-semibold transition"
-                    :class="isActive('/oos') ? 'bg-[var(--app-primary)] text-white shadow-[0_14px_24px_rgba(53,103,232,0.24)]' : 'text-slate-600 hover:bg-[var(--app-primary-soft)] hover:text-[var(--app-primary)]'"
+                    :class="
+                        isActive('/oos')
+                            ? 'bg-[var(--app-primary)] text-white shadow-[0_14px_24px_rgba(53,103,232,0.24)]'
+                            : 'text-slate-600 hover:bg-[var(--app-primary-soft)] hover:text-[var(--app-primary)]'
+                    "
                     @click="closeSidebar"
                 >
                     <Archive class="h-5 w-5 shrink-0" />
@@ -246,7 +321,11 @@ const closeSidebar = () => emit('close');
                     v-if="page.props.auth.can.view_users"
                     href="/users"
                     class="group flex items-center gap-3 rounded-[18px] px-4 py-3 text-sm font-semibold transition"
-                    :class="isActive('/users') ? 'bg-[var(--app-primary)] text-white shadow-[0_14px_24px_rgba(53,103,232,0.24)]' : 'text-slate-600 hover:bg-[var(--app-primary-soft)] hover:text-[var(--app-primary)]'"
+                    :class="
+                        isActive('/users')
+                            ? 'bg-[var(--app-primary)] text-white shadow-[0_14px_24px_rgba(53,103,232,0.24)]'
+                            : 'text-slate-600 hover:bg-[var(--app-primary-soft)] hover:text-[var(--app-primary)]'
+                    "
                     @click="closeSidebar"
                 >
                     <Users class="h-5 w-5 shrink-0" />
@@ -256,7 +335,11 @@ const closeSidebar = () => emit('close');
                 <Link
                     href="/settings/profile"
                     class="group flex items-center gap-3 rounded-[18px] px-4 py-3 text-sm font-semibold transition"
-                    :class="isActive('/settings/profile') || page.url.startsWith('/settings/') ? 'bg-[var(--app-primary)] text-white shadow-[0_14px_24px_rgba(53,103,232,0.24)]' : 'text-slate-600 hover:bg-[var(--app-primary-soft)] hover:text-[var(--app-primary)]'"
+                    :class="
+                        isActive('/settings/profile') || page.url.startsWith('/settings/')
+                            ? 'bg-[var(--app-primary)] text-white shadow-[0_14px_24px_rgba(53,103,232,0.24)]'
+                            : 'text-slate-600 hover:bg-[var(--app-primary-soft)] hover:text-[var(--app-primary)]'
+                    "
                     @click="closeSidebar"
                 >
                     <Settings class="h-5 w-5 shrink-0" />
