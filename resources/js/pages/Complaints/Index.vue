@@ -9,7 +9,6 @@ import {
     ChevronDown,
     ClipboardList,
     Eye,
-    Minus,
     Plus,
     Search,
     ShieldAlert,
@@ -168,6 +167,7 @@ const lastStepMetaMap = computed(() =>
 const search = ref(filterState.value.search || '');
 const isModalOpen = ref(false);
 const detailItem = ref(null);
+const submitError = ref('');
 
 const visitIndex = (overrides = {}, options = {}) => {
     router.get(
@@ -250,12 +250,15 @@ const resetFilters = () => {
 const brandOptions = computed(() =>
     masterBrandOptions.value.length ? masterBrandOptions.value : uniqueOptions(complaintRows.value.map((item) => item.brand)),
 );
+
 const platformOptions = computed(() =>
     masterPlatformOptions.value.length ? masterPlatformOptions.value : uniqueOptions(complaintRows.value.map((item) => item.platform)),
 );
+
 const skuOptions = computed(() =>
     uniqueOptions([...masterSkuCodeOptions.value.map((item) => item?.sku), ...complaintRows.value.map((item) => item.sku)]),
 );
+
 const skuCatalog = computed(() => {
     const catalog = {};
 
@@ -268,8 +271,6 @@ const skuCatalog = computed(() => {
             product_name: item.product_name || '',
             available_qty: '',
             status_qty: '',
-            value_of_product: item.default_value_of_product ?? 0,
-            brand: item.brand || '',
         };
     });
 
@@ -283,8 +284,6 @@ const skuCatalog = computed(() => {
             product_name: item.product_name || catalog[item.sku]?.product_name || '',
             available_qty: item.available_qty ?? item.qty ?? catalog[item.sku]?.available_qty ?? '',
             status_qty: item.status_qty || catalog[item.sku]?.status_qty || '',
-            value_of_product: item.value_of_product ?? catalog[item.sku]?.value_of_product ?? 0,
-            brand: item.brand || catalog[item.sku]?.brand || '',
         };
     });
 
@@ -333,6 +332,8 @@ const createInitialFormState = () => ({
 
 const form = useForm(createInitialFormState());
 
+const selectedSku = computed(() => skuCatalog.value[form.sku] || {});
+
 watch(
     () => form.sub_case,
     (value) => {
@@ -346,35 +347,25 @@ watch(
 );
 
 watch(
-    () => form.sku,
-    (value) => {
-        const matchedSku = skuCatalog.value[value];
-
+    selectedSku,
+    (matchedSku) => {
         if (!matchedSku) {
+            form.product_name = '';
+            form.available_qty = '';
+            form.status_qty = '';
             return;
         }
 
-        if (matchedSku.product_name) {
-            form.product_name = matchedSku.product_name;
-        }
-
-        if (matchedSku.brand) {
-            form.brand = matchedSku.brand;
-        }
-
-        if (matchedSku.available_qty !== '' && matchedSku.available_qty !== null && matchedSku.available_qty !== undefined) {
-            form.available_qty = String(matchedSku.available_qty);
-        }
-
-        if (matchedSku.status_qty) {
-            form.status_qty = matchedSku.status_qty;
-        }
-
-        if (Number(matchedSku.value_of_product) > 0 && !Number(form.value_of_product)) {
-            form.value_of_product = Number(matchedSku.value_of_product);
-        }
+        form.product_name = matchedSku.product_name || '';
+        form.available_qty =
+            matchedSku.available_qty !== '' &&
+            matchedSku.available_qty !== null &&
+            matchedSku.available_qty !== undefined
+                ? String(matchedSku.available_qty)
+                : '';
+        form.status_qty = matchedSku.status_qty || '';
     },
-    { immediate: true },
+    { immediate: true, deep: true },
 );
 
 watch(
@@ -871,8 +862,7 @@ const sectionChecks = computed(() => [
                                                 <span
                                                     class="text-[15px] font-bold"
                                                     :class="currentStatus === status.key ? 'text-white' : 'text-[var(--app-ink)]'"
-                                                    >{{ status.label }}</span
-                                                >
+                                                >{{ status.label }}</span>
                                             </div>
                                             <span
                                                 class="relative z-10 min-w-[28px] rounded-full px-2.5 py-1 text-center text-xs font-bold"
@@ -900,19 +890,16 @@ const sectionChecks = computed(() => [
                                 <div class="flex flex-wrap items-center gap-2 text-sm text-slate-400">
                                     <span class="rounded-full bg-slate-50 px-3 py-1.5"
                                         >Showing {{ complaintPage.from || 0 }}-{{ complaintPage.to || 0 }} dari
-                                        {{ complaintPage.total || 0 }} data</span
-                                    >
+                                        {{ complaintPage.total || 0 }} data</span>
                                     <span
                                         class="rounded-full border border-[var(--line)] bg-white px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500"
                                     >
                                         {{ activeFilterCount ? `${activeFilterCount} active filter` : 'No active filter' }}
                                     </span>
                                     <span v-if="currentCs" class="rounded-full bg-[var(--accent-soft)] px-3 py-1.5 text-[var(--accent)]"
-                                        >CS: {{ currentCs }}</span
-                                    >
+                                        >CS: {{ currentCs }}</span>
                                     <span v-if="currentStatus !== 'All'" class="rounded-full bg-[var(--accent-soft)] px-3 py-1.5 text-[var(--accent)]"
-                                        >Status: {{ currentStatus }}</span
-                                    >
+                                        >Status: {{ currentStatus }}</span>
                                     <button
                                         v-if="hasActiveFilters"
                                         type="button"
@@ -969,8 +956,7 @@ const sectionChecks = computed(() => [
                                         <span
                                             class="inline-flex rounded-full px-3 py-1 text-xs font-semibold"
                                             :class="priorityClass(item.priority)"
-                                            >{{ item.priority || '-' }}</span
-                                        >
+                                        >{{ item.priority || '-' }}</span>
                                     </div>
                                 </article>
                             </div>
@@ -1027,15 +1013,13 @@ const sectionChecks = computed(() => [
                                                 <span
                                                     class="inline-flex rounded-full px-3 py-1 text-xs font-semibold"
                                                     :class="statusClass(item.status)"
-                                                    >{{ item.status || 'Pending' }}</span
-                                                >
+                                                >{{ item.status || 'Pending' }}</span>
                                             </td>
                                             <td class="px-5 py-4">
                                                 <span
                                                     class="inline-flex rounded-full px-3 py-1 text-xs font-semibold"
                                                     :class="priorityClass(item.priority)"
-                                                    >{{ item.priority || '-' }}</span
-                                                >
+                                                >{{ item.priority || '-' }}</span>
                                             </td>
                                             <td class="px-5 py-4 text-right">
                                                 <button
@@ -1259,7 +1243,6 @@ const sectionChecks = computed(() => [
                                 </button>
                             </div>
                         </div>
-
                         <div class="px-5 py-8 sm:px-8">
                             <div class="mx-auto grid max-w-[1160px] gap-8 xl:grid-cols-[minmax(0,1fr)_320px]">
                                 <div class="space-y-7">
@@ -1393,76 +1376,51 @@ const sectionChecks = computed(() => [
                                                 </div>
                                             </div>
 
-                                            <div class="space-y-2">
-                                                <label class="block text-[15px] font-medium text-slate-700">Product*</label>
-                                                <input v-model="form.product_name" type="text" :class="controlClass('product_name')" />
+                                            <div class="grid gap-5 sm:grid-cols-2">
+                                                <div class="space-y-2">
+                                                    <label class="block text-[15px] font-medium text-slate-700">SKU Code*</label>
+                                                    <div class="relative">
+                                                        <select v-model="form.sku" :class="controlClass('sku', 'select')">
+                                                            <option v-for="option in skuOptions" :key="option" :value="option">
+                                                                {{ option }}
+                                                            </option>
+                                                        </select>
+                                                        <ChevronDown
+                                                            class="pointer-events-none absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400"
+                                                        />
+                                                    </div>
+                                                    <p v-if="fieldError('sku')" class="text-xs font-medium text-rose-600">
+                                                        {{ fieldError('sku') }}
+                                                    </p>
+                                                </div>
+
+                                                <div class="space-y-2">
+                                                    <label class="block text-[15px] font-medium text-slate-700">Product Name*</label>
+                                                    <input
+                                                        v-model="form.product_name"
+                                                        type="text"
+                                                        readonly
+                                                        :class="readonlyInputClass"
+                                                    />
+                                                </div>
                                             </div>
 
-                                            <div class="grid gap-5 lg:grid-cols-[minmax(0,1fr)_220px]">
-                                                <div class="space-y-5">
-                                                    <div class="grid gap-5 sm:grid-cols-2">
-                                                        <div class="space-y-2">
-                                                            <label class="block text-[15px] font-medium text-slate-700">SKU Code*</label>
-                                                            <div class="relative">
-                                                                <select v-model="form.sku" :class="controlClass('sku', 'select')">
-                                                                    <option v-for="option in skuOptions" :key="option" :value="option">
-                                                                        {{ option }}
-                                                                    </option>
-                                                                </select>
-                                                                <ChevronDown
-                                                                    class="pointer-events-none absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400"
-                                                                />
-                                                            </div>
-                                                            <p v-if="fieldError('sku')" class="text-xs font-medium text-rose-600">
-                                                                {{ fieldError('sku') }}
-                                                            </p>
-                                                        </div>
-
-                                                        <div class="space-y-2">
-                                                            <label class="block text-[15px] font-medium text-slate-700">Value*</label>
-                                                            <div class="relative">
-                                                                <input
-                                                                    v-model="form.value_of_product"
-                                                                    type="number"
-                                                                    min="0"
-                                                                    :class="`${controlClass('value_of_product')} pr-24`"
-                                                                />
-                                                                <div class="absolute right-3 top-1/2 flex -translate-y-1/2 items-center gap-2">
-                                                                    <button
-                                                                        type="button"
-                                                                        class="rounded-full p-1 text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
-                                                                        @click="adjustValue(-1)"
-                                                                    >
-                                                                        <Minus class="h-5 w-5" />
-                                                                    </button>
-                                                                    <button
-                                                                        type="button"
-                                                                        class="rounded-full p-1 text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
-                                                                        @click="adjustValue(1)"
-                                                                    >
-                                                                        <Plus class="h-5 w-5" />
-                                                                    </button>
-                                                                </div>
-                                                            </div>
-                                                        </div>
+                                            <div class="grid gap-5 sm:grid-cols-2">
+                                                <div class="space-y-2">
+                                                    <label class="block text-[15px] font-medium text-slate-700">Sub Case*</label>
+                                                    <div class="relative">
+                                                        <select v-model="form.sub_case" :class="controlClass('sub_case', 'select')">
+                                                            <option v-for="option in subCaseOptions" :key="option" :value="option">
+                                                                {{ option }}
+                                                            </option>
+                                                        </select>
+                                                        <ChevronDown
+                                                            class="pointer-events-none absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400"
+                                                        />
                                                     </div>
-
-                                                    <div class="space-y-2">
-                                                        <label class="block text-[15px] font-medium text-slate-700">Sub Case*</label>
-                                                        <div class="relative">
-                                                            <select v-model="form.sub_case" :class="controlClass('sub_case', 'select')">
-                                                                <option v-for="option in subCaseOptions" :key="option" :value="option">
-                                                                    {{ option }}
-                                                                </option>
-                                                            </select>
-                                                            <ChevronDown
-                                                                class="pointer-events-none absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400"
-                                                            />
-                                                        </div>
-                                                        <p v-if="fieldError('sub_case')" class="text-xs font-medium text-rose-600">
-                                                            {{ fieldError('sub_case') }}
-                                                        </p>
-                                                    </div>
+                                                    <p v-if="fieldError('sub_case')" class="text-xs font-medium text-rose-600">
+                                                        {{ fieldError('sub_case') }}
+                                                    </p>
                                                 </div>
 
                                                 <div class="rounded-[20px] border border-slate-200 bg-slate-50 p-4">
@@ -1486,8 +1444,7 @@ const sectionChecks = computed(() => [
                                                     <span
                                                         v-if="causeByLocked"
                                                         class="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--accent)]"
-                                                        >Auto from Sub Case</span
-                                                    >
+                                                    >Auto from Sub Case</span>
                                                 </div>
                                                 <div class="flex flex-wrap gap-2">
                                                     <button
