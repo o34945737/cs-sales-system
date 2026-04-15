@@ -8,7 +8,7 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem, type SharedData } from '@/types';
 import { Head, router, useForm, usePage } from '@inertiajs/vue3';
 import debounce from 'lodash/debounce';
-import { CheckCircle2, ChevronLeft, ChevronRight, Mail, Plus, Search, ShieldCheck, ShieldPlus, Trash2, UserCog, Users as UsersIcon, XCircle } from 'lucide-vue-next';
+import { CheckCircle2, ChevronLeft, ChevronRight, Mail, Search, ShieldCheck, ShieldPlus, Trash2, UserCog, Users as UsersIcon, XCircle } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 
 interface ManagedUser { id: number; name: string; email: string; is_active: boolean; force_password_reset: boolean; roles: string[]; created_at: string | null; }

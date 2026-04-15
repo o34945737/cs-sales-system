@@ -17,13 +17,7 @@ return new class extends Migration
             |--------------------------------------------------------------------------
             */
 
-            $table->enum('source', [
-                'After Sales',
-                'Pre Sales',
-                'Brand',
-                'KAE',
-                'Socmed',
-            ])->nullable();
+            $table->string('source')->nullable();
 
             $table->date('tanggal_complaint')->nullable()->index();
             $table->date('tanggal_order')->nullable();
@@ -61,21 +55,24 @@ return new class extends Migration
             // Autofill dari SKU jika memang dipakai
             $table->integer('available_qty')->nullable();
             $table->string('status_qty')->nullable();
+            $table->string('sub_case')->nullable();
+            $table->string('cause_by')->nullable();
 
+            $table->text('summary_case')->nullable();
             $table->longText('update_long_text')->nullable();
             $table->string('part_of_bad')->nullable();
+            $table->string('last_step')->nullable();
 
-            $table->boolean('step_cs_selesai')->default(false);
+            $table->string('step_cs_selesai')->nullable()->default('NO');
 
-            $table->enum('level_customer', [
-                'Hard Complaint',
-                'Normal Complaint',
-            ])->nullable();
+            $table->string('level_customer')->nullable();
 
             $table->date('tanggal_step_cs_selesai')->nullable();
             $table->date('tanggal_update')->nullable();
 
-            $table->string('video_unboxing_path')->nullable();
+            $table->string('video_unboxing')->nullable();
+            $table->string('reason_whitelist')->nullable();
+            $table->string('reason_late_respons')->nullable();
             $table->text('proof')->nullable();
 
             /*
@@ -88,6 +85,7 @@ return new class extends Migration
             $table->string('status')->nullable()->index();
             $table->string('priority')->nullable()->index();
             $table->string('category_customer')->nullable();
+            $table->string('oos')->nullable();
             $table->string('riwayat_oos')->nullable();
 
             $table->timestamps();

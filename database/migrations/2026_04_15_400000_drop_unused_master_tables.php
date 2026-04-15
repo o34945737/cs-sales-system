@@ -8,16 +8,12 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // Drop unused master tables that are not linked to complaints
-        Schema::dropIfExists('logistics');
-        Schema::dropIfExists('oos_reasons');
-        Schema::dropIfExists('oos_solutions');
-        Schema::dropIfExists('order_tracking_data_sources');
+        // Intentionally left as a no-op.
+        // These master tables are still used by routes, controllers, pages, and tests.
     }
 
     public function down(): void
     {
-        // Recreate tables if needed for rollback
-        // (In production, you may want to keep backups)
+        // No-op.
     }
 };

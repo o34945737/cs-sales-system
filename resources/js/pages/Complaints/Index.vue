@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Head, router, useForm } from '@inertiajs/vue3';
 import debounce from 'lodash/debounce';
@@ -247,11 +247,11 @@ const resetFilters = () => {
     );
 };
 
-const brandOptions = computed(() =>
+const complaintBrandOptions = computed(() =>
     masterBrandOptions.value.length ? masterBrandOptions.value : uniqueOptions(complaintRows.value.map((item) => item.brand)),
 );
 
-const platformOptions = computed(() =>
+const complaintPlatformOptions = computed(() =>
     masterPlatformOptions.value.length ? masterPlatformOptions.value : uniqueOptions(complaintRows.value.map((item) => item.platform)),
 );
 
@@ -271,6 +271,7 @@ const skuCatalog = computed(() => {
             product_name: item.product_name || '',
             available_qty: '',
             status_qty: '',
+            default_value_of_product: Number(item.default_value_of_product ?? 0),
         };
     });
 
@@ -284,6 +285,9 @@ const skuCatalog = computed(() => {
             product_name: item.product_name || catalog[item.sku]?.product_name || '',
             available_qty: item.available_qty ?? item.qty ?? catalog[item.sku]?.available_qty ?? '',
             status_qty: item.status_qty || catalog[item.sku]?.status_qty || '',
+            default_value_of_product: Number(
+                item.value_of_product ?? catalog[item.sku]?.default_value_of_product ?? 0,
+            ),
         };
     });
 
@@ -295,8 +299,8 @@ const createInitialFormState = () => ({
     tanggal_complaint: today(),
     tanggal_order: today(),
     jam_customer_complaint: nowTime(),
-    brand: pickPreferredOption(brandOptions.value),
-    platform: pickPreferredOption(platformOptions.value),
+    brand: pickPreferredOption(complaintBrandOptions.value),
+    platform: pickPreferredOption(complaintPlatformOptions.value),
     order_id: '',
     resi: '',
     product_name: '',
@@ -349,10 +353,11 @@ watch(
 watch(
     selectedSku,
     (matchedSku) => {
-        if (!matchedSku) {
+        if (!matchedSku || Object.keys(matchedSku).length === 0) {
             form.product_name = '';
             form.available_qty = '';
             form.status_qty = '';
+            form.value_of_product = 0;
             return;
         }
 
@@ -364,6 +369,7 @@ watch(
                 ? String(matchedSku.available_qty)
                 : '';
         form.status_qty = matchedSku.status_qty || '';
+        form.value_of_product = Number(matchedSku.default_value_of_product ?? 0);
     },
     { immediate: true, deep: true },
 );
@@ -484,12 +490,8 @@ const setVideoFile = (event) => {
     form.video_unboxing = file || null;
 };
 
-const adjustValue = (delta) => {
-    const currentValue = Number(form.value_of_product || 0);
-    form.value_of_product = Math.max(0, currentValue + delta);
-};
-
 const discardForm = () => {
+    submitError.value = '';
     form.defaults(createInitialFormState());
     form.reset();
     form.clearErrors();
@@ -497,6 +499,7 @@ const discardForm = () => {
 };
 
 const openCreateModal = () => {
+    submitError.value = '';
     form.defaults(createInitialFormState());
     form.reset();
     form.clearErrors();
@@ -512,33 +515,45 @@ const closeDetail = () => {
 };
 
 const submitForm = () => {
-    form.transform((data) => {
-        const { complaint_power, ...payload } = data;
-        const oosValue = oosPreview.value || null;
+    submitError.value = '';
 
-        return {
-            ...payload,
-            cycle: cyclePreview.value,
-            status: statusPreview.value,
-            priority: priorityPreview.value,
-            auto_sync_sla: autoSyncSlaPreview.value,
-            report_category: reportCategoryPreview.value || null,
-            category_customer: categoryCustomerPreview.value || null,
-            complaint_power,
-            level_customer: complaint_power,
-            oos: oosValue,
-            riwayat_oos: oosValue === 'Ada Riwayat OOS' ? oosValue : null,
-            reason_whitelist: showReasonWhitelist.value ? data.reason_whitelist : null,
-            reason_late_respons: showReasonLateRespons.value ? data.reason_late_respons : null,
-            tanggal_step_cs_selesai: showStepCompletedDate.value ? data.tanggal_step_cs_selesai || data.tanggal_update : null,
-            proof: data.proof || null,
-            available_qty: data.available_qty || null,
-            status_qty: data.status_qty || null,
-        };
-    }).post(route('complaints.store'), {
-        forceFormData: true,
-        onSuccess: () => discardForm(),
-    });
+    form
+        .transform((data) => {
+            const { complaint_power, ...payload } = data;
+            const oosValue = oosPreview.value || null;
+
+            return {
+                ...payload,
+                cycle: cyclePreview.value,
+                status: statusPreview.value,
+                priority: priorityPreview.value,
+                auto_sync_sla: autoSyncSlaPreview.value,
+                report_category: reportCategoryPreview.value || null,
+                category_customer: categoryCustomerPreview.value || null,
+                complaint_power,
+                level_customer: complaint_power,
+                oos: oosValue,
+                riwayat_oos: oosValue === 'Ada Riwayat OOS' ? oosValue : null,
+                reason_whitelist: showReasonWhitelist.value ? data.reason_whitelist : null,
+                reason_late_respons: showReasonLateRespons.value ? data.reason_late_respons : null,
+                tanggal_step_cs_selesai: showStepCompletedDate.value
+                    ? data.tanggal_step_cs_selesai || data.tanggal_update
+                    : null,
+                proof: data.proof || null,
+                available_qty: data.available_qty || null,
+                status_qty: data.status_qty || null,
+                value_of_product: Number(data.value_of_product || 0),
+            };
+        })
+        .post(route('complaints.store'), {
+            forceFormData: true,
+            preserveScroll: true,
+            onSuccess: () => discardForm(),
+            onError: (errors) => {
+                console.error('Complaint submit failed:', errors);
+                submitError.value = 'Data gagal disimpan. Periksa field wajib dan validasi backend.';
+            },
+        });
 };
 
 const selectButtonClass = (currentValue, expectedValue) =>
@@ -808,7 +823,7 @@ const sectionChecks = computed(() => [
 
                                 <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                                     <article
-                                        v-for="(card, index) in overviewCards"
+                                        v-for="card in overviewCards"
                                         :key="card.label"
                                         class="app-grid-card group px-6 py-6 hover:-translate-y-1"
                                     >
@@ -1329,7 +1344,7 @@ const sectionChecks = computed(() => [
                                                     <label class="block text-[15px] font-medium uppercase text-slate-700">BRAND*</label>
                                                     <div class="relative">
                                                         <select v-model="form.brand" :class="controlClass('brand', 'select')">
-                                                            <option v-for="option in brandOptions" :key="option" :value="option">{{ option }}</option>
+                                                            <option v-for="option in complaintBrandOptions" :key="option" :value="option">{{ option }}</option>
                                                         </select>
                                                         <ChevronDown
                                                             class="pointer-events-none absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400"
@@ -1344,7 +1359,7 @@ const sectionChecks = computed(() => [
                                                     <label class="block text-[15px] font-medium text-slate-700">Platform*</label>
                                                     <div class="relative">
                                                         <select v-model="form.platform" :class="controlClass('platform', 'select')">
-                                                            <option v-for="option in platformOptions" :key="option" :value="option">
+                                                            <option v-for="option in complaintPlatformOptions" :key="option" :value="option">
                                                                 {{ option }}
                                                             </option>
                                                         </select>
