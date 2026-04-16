@@ -184,14 +184,14 @@ const agentSearchQuery = ref('');
 
 const filteredCsSummary = computed(() => {
     let list = [...(props.cs_summary || [])];
-    
+
     if (agentSearchQuery.value) {
         const query = agentSearchQuery.value.toLowerCase();
-        list = list.filter(cs => 
+        list = list.filter(cs =>
             cs.cs_name && cs.cs_name.toLowerCase().includes(query)
         );
     }
-    
+
     return list.sort((a, b) => (b.total || 0) - (a.total || 0));
 });
 const deleteForm = useForm({});
@@ -408,7 +408,7 @@ watch(
     (val) => {
         form.status = automationResults.value.status;
         form.priority = automationResults.value.priority;
-        
+
         if (val !== 'Claim Reject') {
             form.reason_whitelist = '';
             form.reason_late_respons = '';
@@ -563,7 +563,7 @@ const openEditModal = (item) => {
     submitError.value = '';
     modalMode.value = 'edit';
     editId.value = item.id;
-    
+
     // Map existing data to form
     const initialState = createInitialFormState();
     Object.keys(initialState).forEach(key => {
@@ -574,7 +574,7 @@ const openEditModal = (item) => {
 
     // Special handling for legacy/missing fields in form that might be in row
     if (item.level_customer) form.complaint_power = item.level_customer;
-    
+
     isModalOpen.value = true;
 };
 
@@ -681,7 +681,7 @@ const isFilled = (value) => value !== null && value !== undefined && value !== '
 const computedCycle = computed(() => {
     if (!form.jam_customer_complaint) return 'Waiting for time...';
     const time = form.jam_customer_complaint;
-    // Logic: 
+    // Logic:
     // >= 21:00 or <= 15:00 -> Cycle 1
     // >= 15:01 and <= 20:59 -> Cycle 2
     if (time >= '21:00' || time <= '15:00') return 'Cycle 1 (21.00 – 15.00)';
@@ -694,7 +694,7 @@ const computedSLAStatus = computed(() => {
     const end = form.step_cs_selesai === 'YES' ? new Date(form.tanggal_update) : new Date();
     const diffTime = Math.abs(end - start);
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
+
     return `${diffDays} Days`;
 });
 
@@ -721,13 +721,13 @@ const automationResults = computed(() => {
 
     // 2. Status Automation
     const solvedSteps = [
-        'Claim Receive (10x shipping fee)', 'Claim Receive (Full)', 
+        'Claim Receive (10x shipping fee)', 'Claim Receive (Full)',
         'Complaint Canceled by buyer/No Respons', 'Product has been delivered (Late Delivery)',
         'Refund has been transferred by finance (SPF)', 'Return Refund (Full)',
-        'Return Refund (Partial)', 'Seller Win', 
+        'Return Refund (Partial)', 'Seller Win',
         'The replacement product has been received by the buyer', 'Return follow up (No further action)'
     ];
-    
+
     if (solvedSteps.includes(form.last_step)) res.status = 'Solved';
     else if (form.last_step === 'Claim Reject') res.status = 'Whitelist';
 
@@ -883,7 +883,7 @@ const sectionChecks = computed(() => [
                             <div class="flex flex-wrap items-center gap-2 pr-1">
                                 <!-- Brand Select -->
                                 <div class="relative min-w-[140px]">
-                                    <select 
+                                    <select
                                         :value="currentBrand"
                                         class="h-10 w-full appearance-none rounded-xl border border-slate-200/60 bg-white pl-4 pr-10 text-[11px] font-black uppercase tracking-wider text-slate-600 outline-none transition-all hover:border-slate-300 focus:ring-4 focus:ring-blue-50/50 shadow-sm"
                                         @change="setBrandFilter($event.target.value)"
@@ -897,7 +897,7 @@ const sectionChecks = computed(() => [
 
                                 <!-- Priority Select -->
                                 <div class="relative min-w-[130px]">
-                                    <select 
+                                    <select
                                         :value="currentPriority"
                                         class="h-10 w-full appearance-none rounded-xl border border-slate-200/60 bg-white pl-4 pr-10 text-[11px] font-black uppercase tracking-wider text-slate-600 outline-none transition-all hover:border-slate-300 focus:ring-4 focus:ring-blue-50/50 shadow-sm"
                                         @change="setPriorityFilter($event.target.value)"
@@ -911,7 +911,7 @@ const sectionChecks = computed(() => [
 
                                 <!-- Status Select -->
                                 <div class="relative min-w-[130px]">
-                                    <select 
+                                    <select
                                         :value="currentStatus"
                                         class="h-10 w-full appearance-none rounded-xl border border-slate-200/60 bg-white pl-4 pr-10 text-[11px] font-black uppercase tracking-wider text-slate-600 outline-none transition-all hover:border-slate-300 focus:ring-4 focus:ring-blue-50/50 shadow-sm"
                                         @change="setStatus($event.target.value)"
@@ -943,7 +943,7 @@ const sectionChecks = computed(() => [
 
                                 <div class="mt-6 space-y-2.5">
                                     <div class="space-y-4">
-                                        <button 
+                                        <button
                                             @click="setCsFilter('')"
                                             class="w-full h-10 px-4 flex items-center justify-between rounded-xl transition-all font-black text-[13px]"
                                             :class="!currentCs ? 'bg-[var(--app-primary)] text-white shadow-lg shadow-blue-500/20' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'"
@@ -958,24 +958,24 @@ const sectionChecks = computed(() => [
                                         <!-- NEW: Agent Search Bar for Scalability -->
                                         <div class="relative group">
                                             <Search class="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400 group-focus-within:text-[var(--app-primary)] transition-colors" />
-                                            <input 
+                                            <input
                                                 v-model="agentSearchQuery"
-                                                type="text" 
+                                                type="text"
                                                 placeholder="Search agent name..."
                                                 class="h-9 w-full rounded-xl border border-slate-100 bg-slate-50/50 pl-9 pr-4 text-[11px] font-bold text-slate-700 outline-none transition-all focus:border-[var(--app-primary)] focus:bg-white focus:ring-4 focus:ring-blue-50/50 placeholder:font-medium placeholder:text-slate-400"
                                             />
                                         </div>
                                     </div>
-                                    
+
                                     <div class="space-y-1.5 mt-4 max-h-[360px] overflow-y-auto pr-1.5 custom-scrollbar border-b border-dashed border-slate-100 pb-3">
                                         <p class="text-[9px] font-black uppercase tracking-[0.15em] text-slate-400 mb-2">Select Agent</p>
-                                        <button 
-                                            v-for="cs in filteredCsSummary" 
+                                        <button
+                                            v-for="cs in filteredCsSummary"
                                             :key="cs.cs_name"
                                             @click="setCsFilter(cs.cs_name)"
                                             class="w-full group p-3 flex items-center justify-between rounded-xl border transition-all text-left"
-                                            :class="currentCs === cs.cs_name 
-                                                ? 'border-[var(--app-primary)] bg-blue-50/50 ring-1 ring-[var(--app-primary)]/10' 
+                                            :class="currentCs === cs.cs_name
+                                                ? 'border-[var(--app-primary)] bg-blue-50/50 ring-1 ring-[var(--app-primary)]/10'
                                                 : 'border-slate-50 bg-white hover:border-slate-200'"
                                         >
                                             <div>
@@ -986,7 +986,7 @@ const sectionChecks = computed(() => [
                                                 <span class="text-[10px] font-black">{{ cs.total }}</span>
                                             </div>
                                         </button>
-                                        
+
                                         <!-- No Result State for Agent Search -->
                                         <div v-if="filteredCsSummary.length === 0" class="py-10 text-center">
                                             <Users class="h-8 w-8 text-slate-200 mx-auto opacity-50" />
@@ -1027,7 +1027,7 @@ const sectionChecks = computed(() => [
                                             </div>
                                         </div>
                                     </div>
-                                    
+
                                     <div class="flex flex-1 flex-col gap-4 lg:max-w-xl lg:flex-row lg:items-center lg:justify-end">
                                         <!-- High Fidelity Search Bar -->
                                         <div class="relative flex-1 group">
@@ -1446,7 +1446,7 @@ const sectionChecks = computed(() => [
                                                 <li v-for="(message, field) in form.errors" :key="field">{{ message }}</li>
                                             </ul>
                                         </div>
-                                        
+
                                         <div
                                             v-if="form.errors.general"
                                             class="rounded-[18px] border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-700"
@@ -1688,18 +1688,10 @@ const sectionChecks = computed(() => [
                                         </div>
 
                                         <div class="space-y-6">
-                                            <div class="grid gap-5 sm:grid-cols-3">
+                                             <div class="grid gap-5 sm:grid-cols-2">
                                                 <div class="space-y-2">
                                                     <label class="block text-[13px] font-bold uppercase tracking-wide text-slate-700">Proof</label>
                                                     <input v-model="form.proof" type="text" :class="controlClass('proof')" />
-                                                </div>
-
-                                                <div class="space-y-2">
-                                                    <label class="block text-[13px] font-bold uppercase tracking-wide text-slate-700">Summary Case*</label>
-                                                    <input v-model="form.summary_case" type="text" :class="controlClass('summary_case')" />
-                                                    <p v-if="fieldError('summary_case')" class="text-xs font-medium text-rose-600">
-                                                        {{ fieldError('summary_case') }}
-                                                    </p>
                                                 </div>
 
                                                 <div class="space-y-2">
@@ -1719,6 +1711,15 @@ const sectionChecks = computed(() => [
                                                         {{ fieldError('part_of_bad') }}
                                                     </p>
                                                 </div>
+                                            </div>
+
+                                            <div class="space-y-2">
+                                                    <label class="block text-[13px] font-bold uppercase tracking-wide text-slate-700">Summary Case*</label>
+                                                     <textarea v-model="form.summary_case" rows="4"
+                                                    :class="controlClass('summary_case', 'textarea')"></textarea>
+                                                    <p v-if="fieldError('summary_case')" class="text-xs font-medium text-rose-600">
+                                                        {{ fieldError('summary_case') }}
+                                                    </p>
                                             </div>
 
                                             <div class="space-y-2">
@@ -1814,11 +1815,6 @@ const sectionChecks = computed(() => [
 
                                             <div class="grid gap-5 sm:grid-cols-2">
                                                 <div class="space-y-2">
-                                                    <label class="block text-[13px] font-bold uppercase tracking-wide uppercase text-slate-700">UPDATE AI</label>
-                                                    <input v-model="form.update_ai" type="text" :class="controlClass('update_ai')" />
-                                                </div>
-
-                                                <div class="space-y-2">
                                                     <label class="block text-[13px] font-bold uppercase tracking-wide text-slate-700">Tanggal Update*</label>
                                                     <input v-model="form.tanggal_update" type="date" :class="controlClass('tanggal_update')" />
                                                     <p v-if="fieldError('tanggal_update')" class="text-xs font-medium text-rose-600">
@@ -1881,21 +1877,21 @@ const sectionChecks = computed(() => [
                                                 <div class="space-y-2">
                                                     <label class="block text-[13px] font-bold uppercase tracking-wide text-slate-700">Video Unboxing</label>
                                                     <label
-                                                        class="hover:border-[var(--accent)]/50 flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center transition hover:bg-white"
+                                                        class="hover:border-[var(--accent)]/50 flex w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center transition hover:bg-white"
                                                     >
                                                         <Upload class="h-5 w-5 text-slate-400" />
-                                                        <span class="text-[12px] font-medium text-slate-500 line-clamp-1">{{ videoLabel }}</span>
+                                                        <span class="w-full overflow-hidden truncate px-1 text-[12px] font-medium text-slate-500">{{ videoLabel }}</span>
                                                         <input type="file" class="hidden" accept="video/*" @change="setVideoFile" />
                                                     </label>
                                                 </div>
 
                                                 <div class="space-y-1.5">
-                                                    <label class="block text-[13px] font-bold uppercase tracking-wide text-slate-700">Proof Attachment (IMG/PDF/VID)</label>
+                                                    <label class="block text-[13px] font-bold uppercase tracking-wide text-slate-700">Proof Attachment<br/><span class="text-[11px]">(IMG/PDF/VID)</span></label>
                                                     <label
-                                                        class="hover:border-[var(--accent)]/50 flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center transition hover:bg-white"
+                                                        class="hover:border-[var(--accent)]/50 flex w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center transition hover:bg-white"
                                                     >
                                                         <Upload class="h-5 w-5 text-slate-400" />
-                                                        <span class="text-[12px] font-medium text-slate-500 line-clamp-1">{{ proofAttachmentLabel }}</span>
+                                                        <span class="w-full overflow-hidden truncate px-1 text-[12px] font-medium text-slate-500">{{ proofAttachmentLabel }}</span>
                                                         <input type="file" class="hidden" @change="setProofAttachmentFile" />
                                                     </label>
                                                 </div>
@@ -1954,6 +1950,21 @@ const sectionChecks = computed(() => [
                                                 <div v-if="reportCategoryPreview" class="rounded-xl border border-slate-50 bg-slate-50/50 p-3.5">
                                                     <p class="text-[10px] font-bold text-slate-400">Categorization</p>
                                                     <p class="mt-1 text-[13px] font-bold text-slate-700 leading-tight">{{ reportCategoryPreview }}</p>
+                                                </div>
+
+                                                <div class="rounded-xl border border-slate-50 bg-slate-50/50 p-3.5">
+                                                    <p class="text-[10px] font-bold text-slate-400">Work Cycle</p>
+                                                    <p class="mt-0.5 text-[11px] font-bold text-slate-700">{{ computedCycle }}</p>
+                                                </div>
+
+                                                <div class="rounded-xl border border-blue-100 bg-blue-50/50 p-3.5">
+                                                    <p class="text-[10px] font-bold text-blue-400">Stock Available</p>
+                                                    <p class="mt-0.5 text-[12px] font-bold text-blue-700">{{ selectedSku.available_qty ?? 0 }} Units</p>
+                                                </div>
+
+                                                <div class="rounded-xl border border-amber-100 bg-amber-50/50 p-3.5">
+                                                    <p class="text-[10px] font-bold text-amber-400">Stock Status</p>
+                                                    <p class="mt-0.5 text-[11px] font-bold text-amber-700">{{ selectedSku.status_qty || 'Normal' }}</p>
                                                 </div>
                                             </div>
                                         </div>
@@ -2030,17 +2041,17 @@ const sectionChecks = computed(() => [
                             </div>
 
                             <div class="flex items-center justify-end gap-3 pt-4">
-                                <button 
-                                    type="button" 
-                                    class="h-12 flex-1 rounded-2xl bg-slate-50 px-6 text-[14px] font-black text-slate-500 transition hover:bg-slate-100 active:scale-95" 
+                                <button
+                                    type="button"
+                                    class="h-12 flex-1 rounded-2xl bg-slate-50 px-6 text-[14px] font-black text-slate-500 transition hover:bg-slate-100 active:scale-95"
                                     @click="isDeleteModalOpen = false"
                                 >
                                     Batal
                                 </button>
-                                <button 
-                                    type="button" 
-                                    class="h-12 flex-[2] rounded-2xl bg-rose-600 px-6 text-[14px] font-black text-white shadow-lg shadow-rose-500/20 transition hover:bg-rose-700 hover:-translate-y-1 active:scale-[0.98] disabled:opacity-50" 
-                                    :disabled="deleteForm.processing" 
+                                <button
+                                    type="button"
+                                    class="h-12 flex-[2] rounded-2xl bg-rose-600 px-6 text-[14px] font-black text-white shadow-lg shadow-rose-500/20 transition hover:bg-rose-700 hover:-translate-y-1 active:scale-[0.98] disabled:opacity-50"
+                                    :disabled="deleteForm.processing"
                                     @click="submitDelete"
                                 >
                                     {{ deleteForm.processing ? 'Menghapus...' : 'Ya, Hapus Tiket' }}
