@@ -33,7 +33,7 @@ html {
         --chart-3: 142 71% 45%;
         --chart-4: 25 95% 53%;
         --chart-5: 341 75% 51%;
-        --radius: 1rem;
+        --radius: 0.75rem;
         --sidebar-background: 0 0% 100%;
         --sidebar-foreground: 222 47% 11%;
         --sidebar-primary: 222 84% 56%;
@@ -158,7 +158,7 @@ html {
 
     .app-section-title {
         color: var(--app-ink);
-        font-size: 2rem;
+        font-size: 1.5rem;
         font-weight: 800;
         line-height: 1.1;
     }

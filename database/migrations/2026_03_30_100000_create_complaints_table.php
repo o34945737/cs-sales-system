@@ -11,88 +11,73 @@ return new class extends Migration
         Schema::create('complaints', function (Blueprint $table) {
             $table->id();
 
-            /*
-            |--------------------------------------------------------------------------
-            | A. INPUT / TRANSACTION DATA
-            |--------------------------------------------------------------------------
-            */
-
-            $table->string('source')->nullable();
-
+            // A. TICKET SOURCE & IDENTIFICATION
+            $table->string('source')->nullable()->index();
             $table->date('tanggal_complaint')->nullable()->index();
             $table->date('tanggal_order')->nullable();
-            $table->time('jam_customer_complaint')->nullable();
-
-            // Relasi ke master
+            $table->string('jam_customer_complaint')->nullable(); // String for flexible format (H:i or H:i:s)
+            
+            // Relasi ke master data (FK)
             $table->foreignId('brand_id')->nullable()->constrained('brands')->nullOnDelete();
+            $table->string('brand')->nullable()->index(); // String snapshot for dashboard/reports
             $table->foreignId('platform_id')->nullable()->constrained('platforms')->nullOnDelete();
+            $table->string('platform')->nullable()->index(); // String snapshot for dashboard/reports
             $table->foreignId('sku_code_id')->nullable()->constrained('sku_codes')->nullOnDelete();
             $table->foreignId('sub_case_id')->nullable()->constrained('sub_cases')->nullOnDelete();
-            $table->foreignId('cause_id')->nullable()->constrained('cause_bys')->nullOnDelete();
             $table->foreignId('last_step_id')->nullable()->constrained('last_steps')->nullOnDelete();
-            $table->foreignId('reason_whitelist_id')->nullable()->constrained('reason_whitelists')->nullOnDelete();
-            $table->foreignId('reason_late_response_id')->nullable()->constrained('reason_late_responses')->nullOnDelete();
-
-            // CS sebaiknya relasi ke users
             $table->foreignId('cs_user_id')->nullable()->constrained('users')->nullOnDelete();
-
-            // Data complaint
+            $table->foreignId('complaint_source_id')->nullable()->constrained('complaint_sources')->nullOnDelete();
+            $table->foreignId('complaint_power_id')->nullable()->constrained('complaint_powers')->nullOnDelete();
+            $table->foreignId('part_of_bad_id')->nullable()->constrained('part_of_bads')->nullOnDelete();
+            
+            // B. ORDER & CUSTOMER DATA
             $table->string('order_id')->nullable()->index();
             $table->string('username')->nullable()->index();
-            $table->string('resi')->nullable();
-
-            /*
-            |--------------------------------------------------------------------------
-            | SKU SNAPSHOT
-            |--------------------------------------------------------------------------
-            | Tetap disimpan walaupun ada relasi ke sku_codes,
-            | supaya histori tidak berubah jika master SKU berubah
-            */
+            $table->string('resi')->nullable()->index();
+            
+            // C. PRODUCT & CASE DETAILS (SNAPSHOTS)
             $table->string('sku')->nullable()->index();
             $table->string('product_name')->nullable();
             $table->decimal('value_of_product', 15, 2)->nullable();
-
-            // Autofill dari SKU jika memang dipakai
-            $table->integer('available_qty')->nullable();
-            $table->string('status_qty')->nullable();
             $table->string('sub_case')->nullable();
             $table->string('cause_by')->nullable();
-
+            $table->text('proof')->nullable();
+            
+            // D. HANDLING & INVESTIGATION
             $table->text('summary_case')->nullable();
             $table->longText('update_long_text')->nullable();
             $table->string('part_of_bad')->nullable();
+            $table->string('cs_name')->nullable();
             $table->string('last_step')->nullable();
-
             $table->string('step_cs_selesai')->nullable()->default('NO');
-
-            $table->string('level_customer')->nullable();
-
             $table->date('tanggal_step_cs_selesai')->nullable();
             $table->date('tanggal_update')->nullable();
-
-            $table->string('video_unboxing')->nullable();
+            
+            // E. SPECIAL CONDITIONS
             $table->string('reason_whitelist')->nullable();
             $table->string('reason_late_respons')->nullable();
-            $table->text('proof')->nullable();
-
-            /*
-            |--------------------------------------------------------------------------
-            | B. AUTOMATION RESULT
-            |--------------------------------------------------------------------------
-            */
-
+            $table->string('video_unboxing')->nullable();
+            $table->string('proof_attachment')->nullable();
+            $table->string('level_customer')->nullable(); // Alias for complaint_power string
+            $table->string('complaint_power')->nullable();
+            
+            // F. AUTOMATION & CALCULATED FIELDS
             $table->string('cycle')->nullable();
-            $table->string('status')->nullable()->index();
+            $table->string('status')->nullable()->default('Pending')->index();
             $table->string('priority')->nullable()->index();
             $table->string('category_customer')->nullable();
             $table->string('oos')->nullable();
             $table->string('riwayat_oos')->nullable();
+            $table->string('report_category')->nullable();
+            $table->string('auto_sync_sla')->nullable();
+            $table->integer('sla')->default(0);
 
+            // G. SYSTEM FIELDS
             $table->timestamps();
             $table->softDeletes();
 
-            $table->index(['cs_user_id', 'status']);
-            $table->index(['brand_id', 'priority']);
+            // Additional Indexes for High performance
+            $table->index(['brand_id', 'status']);
             $table->index(['platform_id', 'status']);
             $table->index(['tanggal_complaint', 'status']);
         });

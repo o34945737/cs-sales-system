@@ -8,17 +8,11 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('complaints', function (Blueprint $table) {
-            // Add FK for part_of_bad instead of string field
-            $table->foreignId('part_of_bad_id')->nullable()->after('part_of_bad')->constrained('part_of_bads')->nullOnDelete();
-        });
+        // Handled by 2026_03_30_100000_create_complaints_table.php
     }
 
     public function down(): void
     {
-        Schema::table('complaints', function (Blueprint $table) {
-            $table->dropForeignKeyIfExists(['part_of_bad_id']);
-            $table->dropColumn('part_of_bad_id');
-        });
+        // No action
     }
 };

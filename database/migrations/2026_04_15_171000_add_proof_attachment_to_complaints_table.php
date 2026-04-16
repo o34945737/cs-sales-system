@@ -8,19 +8,11 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('complaints', function (Blueprint $table) {
-            if (!Schema::hasColumn('complaints', 'proof_attachment')) {
-                $table->string('proof_attachment')->nullable()->after('proof');
-            }
-        });
+        // Handled by consolidated primary migration 2026_03_30_100000_create_complaints_table.php
     }
 
     public function down(): void
     {
-        Schema::table('complaints', function (Blueprint $table) {
-            if (Schema::hasColumn('complaints', 'proof_attachment')) {
-                $table->dropColumn('proof_attachment');
-            }
-        });
+        // No action
     }
 };

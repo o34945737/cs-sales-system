@@ -8,16 +8,11 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('complaints', function (Blueprint $table) {
-            $table->string('brand')->nullable()->after('brand_id')->index();
-            $table->string('platform')->nullable()->after('platform_id')->index();
-        });
+        // Handled by 2026_03_30_100000_create_complaints_table.php
     }
 
     public function down(): void
     {
-        Schema::table('complaints', function (Blueprint $table) {
-            $table->dropColumn(['brand', 'platform']);
-        });
+        // No action
     }
 };

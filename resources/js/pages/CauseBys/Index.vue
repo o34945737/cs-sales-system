@@ -113,122 +113,107 @@ const statusBadgeClass = (active: boolean) => active ? 'bg-emerald-100 text-emer
     <AppLayout :breadcrumbs="breadcrumbs">
         <Head title="Cause By" />
 
-        <div class="space-y-6">
-            <div class="mx-auto max-w-7xl space-y-6">
+        <div class="space-y-4">
+            <div class="mx-auto max-w-7xl space-y-4">
                 <section class="app-table-shell overflow-hidden">
-                    <div class="grid gap-6 border-b border-[var(--app-border)] bg-[linear-gradient(135deg,_#eef4ff_0%,_#f8fbff_100%)] px-6 py-7 text-[var(--app-ink)] lg:grid-cols-[1.2fr,0.8fr]">
+                    <div class="grid gap-4 border-b border-[var(--app-border)] bg-[linear-gradient(135deg,_#eef4ff_0%,_#f8fbff_100%)] px-5 py-4 text-[var(--app-ink)] lg:grid-cols-[1.2fr,0.8fr]">
                         <div>
-                            <p class="text-xs font-semibold uppercase tracking-[0.28em] text-slate-400">Master Data</p>
-                            <h1 class="mt-3 text-3xl font-extrabold tracking-tight">Cause By Directory</h1>
-                            <p class="mt-3 max-w-2xl text-sm leading-6 text-slate-500">
-                                Kelola daftar cause by agar pilihan penanggung jawab penyebab case tetap konsisten di seluruh modul.
+                            <p class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Master Data</p>
+                            <h1 class="mt-1 text-xl font-black tracking-tight">Cause By Directory</h1>
+                            <p class="mt-1 text-xs font-medium text-slate-500">
+                                Kelola daftar penanggung jawab penyebab case untuk sinkronisasi operasional.
                             </p>
                         </div>
-
-                        <div v-if="canCreateCauseBys" class="flex items-start justify-end">
-                            <Button type="button" size="lg" class="rounded-2xl bg-[var(--app-primary)] text-white shadow-[0_14px_24px_rgba(53,103,232,0.24)] hover:bg-[var(--app-primary-dark)]" @click="openCreateModal">
-                                <Plus class="h-4 w-4" />
+ 
+                        <div v-if="canCreateCauseBys" class="flex items-center justify-end">
+                            <Button type="button" size="sm" class="h-9 rounded-xl bg-[var(--app-primary)] px-5 text-xs font-bold text-white shadow-lg hover:bg-[var(--app-primary-dark)]" @click="openCreateModal">
+                                <Plus class="h-3.5 w-3.5" />
                                 Tambah Cause By
                             </Button>
                         </div>
                     </div>
-
-                    <div class="grid gap-4 px-6 py-5 md:grid-cols-3">
-                        <article v-for="card in summaryCards" :key="card.label" class="rounded-3xl p-5 shadow-sm" :class="card.tone">
+ 
+                    <div class="grid gap-3.5 px-4 py-3.5 md:grid-cols-3">
+                        <article v-for="card in summaryCards" :key="card.label" class="rounded-xl p-3.5 shadow-sm" :class="card.tone">
                             <div class="flex items-start justify-between">
                                 <div>
-                                    <p class="text-xs font-semibold uppercase tracking-[0.24em] opacity-70">{{ card.label }}</p>
-                                    <p class="mt-4 text-3xl font-semibold">{{ card.value }}</p>
+                                    <p class="text-[9px] font-black uppercase tracking-[0.2em] opacity-70">{{ card.label }}</p>
+                                    <p class="mt-1.5 text-xl font-black">{{ card.value }}</p>
                                 </div>
-                                <component :is="card.icon" class="h-5 w-5 opacity-80" />
+                                <component :is="card.icon" class="h-4 w-4 opacity-80" />
                             </div>
                         </article>
                     </div>
                 </section>
-
-                <section class="app-table-shell p-6">
-                    <div class="grid gap-5 xl:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] xl:items-end">
-                        <div class="min-w-0 max-w-xl">
-                            <h2 class="text-xl font-semibold text-slate-900">Cause By List</h2>
-                            <p class="mt-1 max-w-md text-sm leading-6 text-slate-500">
-                                Master data ini dipakai untuk menjaga pilihan cause by tetap sinkron antara sub case dan complaint.
-                            </p>
+ 
+                <section class="app-table-shell p-5">
+                    <div class="grid gap-4 xl:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] xl:items-center">
+                        <div>
+                            <h2 class="text-base font-black text-slate-900 uppercase tracking-wide">Cause By List</h2>
                         </div>
-                        <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,0.8fr)]">
-                            <div class="relative">
-                                <Search class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                                <Input v-model="search" class="pl-10" placeholder="Cari cause by..." />
+                        <div class="grid gap-2 sm:grid-cols-2 lg:flex lg:justify-end">
+                            <div class="relative lg:w-64">
+                                <Search class="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+                                <Input v-model="search" class="h-9 pl-9 text-xs" placeholder="Cari..." />
                             </div>
-
-                            <select v-model="statusFilter" class="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm shadow-sm outline-none">
+ 
+                            <select v-model="statusFilter" class="h-9 min-w-[140px] rounded-xl border border-input bg-background px-3 text-xs font-bold text-slate-600 shadow-sm outline-none transition hover:border-slate-300">
                                 <option value="All">Semua status</option>
                                 <option value="Active">Active</option>
                                 <option value="Inactive">Inactive</option>
                             </select>
                         </div>
                     </div>
-
-                    <div class="mt-6 overflow-hidden rounded-[28px] border border-slate-200">
+ 
+                    <div class="mt-4 overflow-hidden rounded-xl border border-slate-100">
                         <div class="overflow-x-auto">
-                            <table class="min-w-full divide-y divide-slate-200 text-sm">
-                                <thead class="bg-slate-50/90">
-                                    <tr class="text-left text-slate-500">
-                                        <th class="px-5 py-4 font-medium">Cause By</th>
-                                        <th class="px-5 py-4 font-medium">Status</th>
-                                        <th class="px-5 py-4 font-medium">Created</th>
-                                        <th class="px-5 py-4 text-right font-medium">Action</th>
+                            <table class="min-w-full divide-y divide-slate-100 text-[13px]">
+                                <thead class="bg-slate-50/50">
+                                    <tr class="text-left text-[10px] font-black uppercase tracking-widest text-slate-400">
+                                        <th class="px-4 py-3">Cause By</th>
+                                        <th class="px-4 py-3">Status</th>
+                                        <th class="px-4 py-3 text-right">Action</th>
                                     </tr>
                                 </thead>
-                                <tbody class="divide-y divide-slate-100 bg-white">
-                                    <tr v-for="causeBy in rows" :key="causeBy.id" class="transition hover:bg-slate-50/70">
-                                        <td class="px-5 py-4">
-                                            <div class="flex items-center gap-3">
-                                                <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 text-slate-700">
-                                                    <ShieldCheck class="h-5 w-5" />
+                                <tbody class="divide-y divide-slate-50 bg-white">
+                                    <tr v-for="causeBy in rows" :key="causeBy.id" class="transition hover:bg-slate-50/50">
+                                        <td class="px-4 py-3">
+                                            <div class="flex items-center gap-2.5">
+                                                <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-50 text-slate-400">
+                                                    <ShieldCheck class="h-3.5 w-3.5" />
                                                 </div>
                                                 <div>
-                                                    <p class="font-medium text-slate-900">{{ causeBy.name }}</p>
-                                                    <p class="mt-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Master Cause By</p>
+                                                    <p class="font-bold text-slate-900 leading-tight">{{ causeBy.name }}</p>
+                                                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">ID: #{{ causeBy.id }}</p>
                                                 </div>
                                             </div>
                                         </td>
-                                        <td class="px-5 py-4">
-                                            <span class="inline-flex rounded-full px-3 py-1 text-xs font-semibold" :class="statusBadgeClass(causeBy.is_active)">
+                                        <td class="px-4 py-3">
+                                            <span class="inline-flex rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-wider shadow-sm" :class="statusBadgeClass(causeBy.is_active)">
                                                 {{ causeBy.is_active ? 'Active' : 'Inactive' }}
                                             </span>
                                         </td>
-                                        <td class="px-5 py-4 text-slate-500">{{ formatDate(causeBy.created_at) }}</td>
-                                        <td class="px-5 py-4">
-                                            <div class="flex justify-end gap-2">
-                                                <Button v-if="canUpdateCauseBys" type="button" variant="outline" size="sm" class="rounded-xl" @click="openEditModal(causeBy)">
-                                                    <PencilLine class="h-4 w-4" />
-                                                    Edit
+                                        <td class="px-4 py-3">
+                                            <div class="flex justify-end gap-1.5">
+                                                <Button v-if="canUpdateCauseBys" type="button" variant="ghost" size="sm" class="h-8 rounded-lg text-slate-400 hover:text-[var(--app-primary)] hover:bg-blue-50" @click="openEditModal(causeBy)">
+                                                    <PencilLine class="h-3.5 w-3.5" />
                                                 </Button>
-                                                <Button v-if="canDeleteCauseBys" type="button" variant="destructive" size="sm" class="rounded-xl" @click="openDeleteModal(causeBy)">
-                                                    <Trash2 class="h-4 w-4" />
-                                                    Delete
+                                                <Button v-if="canDeleteCauseBys" type="button" variant="ghost" size="sm" class="h-8 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50" @click="openDeleteModal(causeBy)">
+                                                    <Trash2 class="h-3.5 w-3.5" />
                                                 </Button>
                                             </div>
                                         </td>
                                     </tr>
                                     <tr v-if="rows.length === 0">
-                                        <td colspan="4" class="px-5 py-14 text-center">
-                                            <div class="mx-auto max-w-sm space-y-2">
-                                                <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-500">
-                                                    <ShieldCheck class="h-5 w-5" />
-                                                </div>
-                                                <p class="font-medium text-slate-900">Tidak ada cause by yang cocok</p>
-                                                <p class="text-sm text-slate-500">Coba ubah pencarian atau status filter untuk melihat data lain.</p>
-                                            </div>
-                                        </td>
+                                        <td colspan="3" class="px-4 py-10 text-center text-slate-400 font-bold">Tidak ada data ditemukan</td>
                                     </tr>
                                 </tbody>
                             </table>
                         </div>
                     </div>
-
-                    <div class="mt-5 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                        <p class="text-sm text-slate-500">Menampilkan {{ pageData.from || 0 }} - {{ pageData.to || 0 }} dari {{ pageData.total }} cause by</p>
+ 
+                    <div class="mt-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                        <p class="text-[11px] font-bold text-slate-400">Showing {{ pageData.from || 0 }}-{{ pageData.to || 0 }} of {{ pageData.total }} entries</p>
 
                         <div class="flex flex-wrap items-center gap-2">
                             <Button v-for="link in paginationLinks" :key="link.label + String(link.url)" type="button" variant="outline" size="sm" class="rounded-xl" :class="link.active ? 'border-slate-900 bg-slate-900 text-white hover:bg-slate-800 hover:text-white' : ''" @click="link.url && router.visit(link.url, { preserveScroll: true, preserveState: true })">
@@ -243,90 +228,96 @@ const statusBadgeClass = (active: boolean) => active ? 'bg-emerald-100 text-emer
         </div>
 
         <Dialog v-model:open="isCreateOpen">
-            <DialogContent class="max-w-xl rounded-[28px] border-0 p-0 shadow-[0_30px_80px_rgba(15,23,42,0.25)]">
-                <div class="overflow-hidden rounded-[28px]">
-                    <div class="bg-[linear-gradient(135deg,_#eef4ff_0%,_#dbeafe_100%)] px-6 py-6 text-[var(--app-ink)]">
-                        <DialogHeader>
-                            <DialogTitle class="text-2xl">Tambah Cause By</DialogTitle>
-                            <DialogDescription class="text-slate-500">Masukkan cause by baru agar siap dipakai sebagai master data.</DialogDescription>
-                        </DialogHeader>
-                    </div>
-                    <form class="space-y-5 bg-white px-6 py-6" @submit.prevent="submitCreate">
-                        <div class="grid gap-5">
-                            <div class="grid gap-2">
-                                <Label for="create-name">Nama Cause By</Label>
-                                <Input id="create-name" v-model="createForm.name" placeholder="Contoh: BRAND" />
-                                <InputError :message="createForm.errors.name" />
-                            </div>
-                            <div class="flex items-end rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-                                <label class="flex items-center gap-3 text-sm font-medium text-slate-700">
-                                    <input v-model="createForm.is_active" type="checkbox" class="h-4 w-4 rounded border-slate-300" />
-                                    Cause by aktif dan siap dipakai di modul lain
-                                </label>
-                            </div>
-                        </div>
-                        <DialogFooter class="border-t border-slate-100 pt-5">
-                            <Button type="button" variant="outline" class="rounded-xl" @click="isCreateOpen = false">Cancel</Button>
-                            <Button :disabled="createForm.processing" class="rounded-xl"><Plus class="h-4 w-4" />{{ createForm.processing ? 'Creating...' : 'Create Cause By' }}</Button>
-                        </DialogFooter>
-                    </form>
+            <DialogContent class="max-w-xl overflow-hidden rounded-[28px] border-0 p-0 shadow-[0_30px_80px_rgba(15,23,42,0.25)]">
+                <div class="bg-[#EEF2FF] px-7 py-8">
+                    <DialogHeader>
+                        <DialogTitle class="text-3xl font-black text-slate-900">Tambah Cause By</DialogTitle>
+                        <DialogDescription class="mt-2 text-base font-medium text-slate-500">Masukkan pihak penanggung jawab baru untuk pelaporan operasional yang akurat.</DialogDescription>
+                    </DialogHeader>
                 </div>
+
+                <form class="space-y-6 bg-white px-7 py-7" @submit.prevent="submitCreate">
+                    <div class="space-y-4">
+                        <div class="grid gap-2">
+                            <Label for="create-name" class="text-[13px] font-bold uppercase tracking-wide text-slate-700">Nama Cause By</Label>
+                            <Input id="create-name" v-model="createForm.name" placeholder="Contoh: BRAND" class="h-12 rounded-xl border-slate-200 bg-slate-50/50 px-4 text-sm transition focus:bg-white" />
+                            <InputError :message="createForm.errors.name" />
+                        </div>
+
+                        <div class="flex items-center gap-3 rounded-2xl border border-slate-100 bg-slate-50/50 px-4 py-4 transition hover:bg-slate-50">
+                            <input v-model="createForm.is_active" type="checkbox" class="h-5 w-5 rounded-md border-slate-300 text-[var(--app-primary)] focus:ring-[var(--app-primary)]" />
+                            <span class="text-sm font-semibold text-slate-600">Cause by aktif dan siap dipakai di modul operasional</span>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-end gap-3 border-t border-slate-100 pt-6">
+                        <Button type="button" variant="ghost" class="h-11 rounded-xl px-6 font-bold text-slate-500 hover:bg-slate-50" @click="isCreateOpen = false">Cancel</Button>
+                        <Button :disabled="createForm.processing" class="h-11 rounded-xl bg-[var(--app-primary)] px-6 font-bold text-white shadow-lg shadow-blue-500/20 hover:bg-[var(--app-primary-dark)]">
+                            <Plus class="mr-2 h-4 w-4" />
+                            {{ createForm.processing ? 'Creating...' : 'Create Cause By' }}
+                        </Button>
+                    </div>
+                </form>
             </DialogContent>
         </Dialog>
 
         <Dialog v-model:open="isEditOpen">
-            <DialogContent class="max-w-xl rounded-[28px] border-0 p-0 shadow-[0_30px_80px_rgba(15,23,42,0.25)]">
-                <div class="overflow-hidden rounded-[28px]">
-                    <div class="bg-[linear-gradient(135deg,_#eef4ff_0%,_#dbeafe_100%)] px-6 py-6 text-[var(--app-ink)]">
-                        <DialogHeader>
-                            <DialogTitle class="text-2xl">Edit Cause By</DialogTitle>
-                            <DialogDescription class="text-slate-500">Perbarui nama atau status aktif cause by agar master data tetap rapi.</DialogDescription>
-                        </DialogHeader>
-                    </div>
-                    <form v-if="activeCauseBy" class="space-y-5 bg-white px-6 py-6" @submit.prevent="submitEdit">
-                        <div class="grid gap-5">
-                            <div class="grid gap-2">
-                                <Label for="edit-name">Nama Cause By</Label>
-                                <Input id="edit-name" v-model="editForm.name" />
-                                <InputError :message="editForm.errors.name" />
-                            </div>
-                            <div class="flex items-end rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-                                <label class="flex items-center gap-3 text-sm font-medium text-slate-700">
-                                    <input v-model="editForm.is_active" type="checkbox" class="h-4 w-4 rounded border-slate-300" />
-                                    Cause by aktif
-                                </label>
-                            </div>
-                        </div>
-                        <DialogFooter class="border-t border-slate-100 pt-5">
-                            <Button type="button" variant="outline" class="rounded-xl" @click="isEditOpen = false">Cancel</Button>
-                            <Button :disabled="editForm.processing" class="rounded-xl"><PencilLine class="h-4 w-4" />{{ editForm.processing ? 'Saving...' : 'Save Changes' }}</Button>
-                        </DialogFooter>
-                    </form>
+            <DialogContent class="max-w-xl overflow-hidden rounded-[28px] border-0 p-0 shadow-[0_30px_80px_rgba(15,23,42,0.25)]">
+                <div class="bg-slate-900 px-7 py-8">
+                    <DialogHeader>
+                        <DialogTitle class="text-3xl font-black text-white">Edit Cause By</DialogTitle>
+                        <DialogDescription class="mt-2 text-base font-medium text-slate-400">Perbarui penanggung jawab agar atribusi masalah tetap konsisten.</DialogDescription>
+                    </DialogHeader>
                 </div>
+
+                <form v-if="activeCauseBy" class="space-y-6 bg-white px-7 py-7" @submit.prevent="submitEdit">
+                    <div class="space-y-4">
+                        <div class="grid gap-2">
+                            <Label for="edit-name" class="text-[13px] font-bold uppercase tracking-wide text-slate-700">Nama Cause By</Label>
+                            <Input id="edit-name" v-model="editForm.name" class="h-12 rounded-xl border-slate-200 bg-slate-50/50 px-4 text-sm transition focus:bg-white" />
+                            <InputError :message="editForm.errors.name" />
+                        </div>
+
+                        <div class="flex items-center gap-3 rounded-2xl border border-slate-100 bg-slate-50/50 px-4 py-4 transition hover:bg-slate-50">
+                            <input v-model="editForm.is_active" type="checkbox" class="h-5 w-5 rounded-md border-slate-300 text-[var(--app-primary)] focus:ring-[var(--app-primary)]" />
+                            <span class="text-sm font-semibold text-slate-600">Cause by aktif</span>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-end gap-3 border-t border-slate-100 pt-6">
+                        <Button type="button" variant="ghost" class="h-11 rounded-xl px-6 font-bold text-slate-500 hover:bg-slate-50" @click="isEditOpen = false">Cancel</Button>
+                        <Button :disabled="editForm.processing" class="h-11 rounded-xl bg-[var(--app-primary)] px-6 font-bold text-white shadow-lg shadow-blue-500/20 hover:bg-[var(--app-primary-dark)]">
+                            <PencilLine class="mr-2 h-4 w-4" />
+                            {{ editForm.processing ? 'Saving...' : 'Save Changes' }}
+                        </Button>
+                    </div>
+                </form>
             </DialogContent>
         </Dialog>
 
         <Dialog v-model:open="isDeleteOpen">
-            <DialogContent class="max-w-md rounded-[28px] border-0 p-0 shadow-[0_30px_80px_rgba(15,23,42,0.25)]">
-                <div class="overflow-hidden rounded-[28px] bg-white">
-                    <div class="bg-[linear-gradient(135deg,_#fff1f2_0%,_#ffe4e6_100%)] px-6 py-6 text-[var(--app-ink)]">
-                        <DialogHeader>
-                            <DialogTitle class="text-2xl">Hapus Cause By</DialogTitle>
-                            <DialogDescription class="text-rose-500">Tindakan ini tidak bisa dibatalkan. Pastikan cause by memang aman untuk dihapus dari master data.</DialogDescription>
-                        </DialogHeader>
+            <DialogContent class="max-w-md overflow-hidden rounded-[28px] border-0 p-0 shadow-[0_30px_80px_rgba(244,63,94,0.15)]">
+                <div class="bg-rose-50 px-7 py-8">
+                    <DialogHeader>
+                        <DialogTitle class="text-3xl font-black text-rose-950">Hapus Cause By</DialogTitle>
+                        <DialogDescription class="mt-2 text-base font-medium text-rose-600/80">Tindakan ini tidak bisa dibatalkan secara instan.</DialogDescription>
+                    </DialogHeader>
+                </div>
+
+                <div class="space-y-6 bg-white px-7 py-7">
+                    <div v-if="activeCauseBy" class="rounded-2xl border border-rose-100 bg-rose-50/30 p-5">
+                        <p class="text-sm font-bold text-rose-900 uppercase tracking-tight">Konfirmasi Cause By</p>
+                        <p class="mt-1 text-lg font-black text-rose-600">{{ activeCauseBy.name }}</p>
                     </div>
-                    <div class="space-y-5 px-6 py-6">
-                        <div v-if="activeCauseBy" class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                            <p class="font-medium text-slate-900">{{ activeCauseBy.name }}</p>
-                            <div class="mt-3 flex flex-wrap gap-2">
-                                <span class="inline-flex rounded-full px-3 py-1 text-xs font-semibold" :class="statusBadgeClass(activeCauseBy.is_active)">{{ activeCauseBy.is_active ? 'Active' : 'Inactive' }}</span>
-                            </div>
-                        </div>
-                        <InputError :message="deleteForm.errors.delete" />
-                        <DialogFooter>
-                            <Button type="button" variant="outline" class="rounded-xl" @click="closeDeleteModal">Cancel</Button>
-                            <Button type="button" variant="destructive" class="rounded-xl" :disabled="deleteForm.processing" @click="submitDelete"><Trash2 class="h-4 w-4" />{{ deleteForm.processing ? 'Deleting...' : 'Delete Cause By' }}</Button>
-                        </DialogFooter>
+
+                    <InputError :message="deleteForm.errors.delete" />
+
+                    <div class="flex items-center justify-end gap-3 border-t border-slate-100 pt-6">
+                        <Button type="button" variant="ghost" class="h-11 rounded-xl px-6 font-bold text-slate-500 hover:bg-slate-50" @click="closeDeleteModal">Cancel</Button>
+                        <Button type="button" class="h-11 rounded-xl bg-rose-600 px-6 font-bold text-white shadow-lg shadow-rose-500/20 hover:bg-rose-700" :disabled="deleteForm.processing" @click="submitDelete">
+                            <Trash2 class="mr-2 h-4 w-4" />
+                            {{ deleteForm.processing ? 'Deleting...' : 'Delete Cause By' }}
+                        </Button>
                     </div>
                 </div>
             </DialogContent>

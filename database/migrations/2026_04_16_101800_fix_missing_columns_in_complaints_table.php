@@ -6,11 +6,17 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
+    /**
+     * Run the migrations.
+     */
     public function up(): void
     {
-        // Handled by 2026_03_30_100000_create_complaints_table.php
+        // Handled by consolidated primary migration 2026_03_30_100000_create_complaints_table.php
     }
 
+    /**
+     * Reverse the migrations.
+     */
     public function down(): void
     {
         // No action

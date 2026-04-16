@@ -8,16 +8,11 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('complaint_powers', function (Blueprint $table) {
-            $table->id();
-            $table->string('name')->unique();
-            $table->boolean('is_active')->default(true);
-            $table->timestamps();
-        });
+        // Handled by 2026_03_29_000001_create_reason_late_responses_table.php
     }
 
     public function down(): void
     {
-        Schema::dropIfExists('complaint_powers');
+        // No action
     }
 };

@@ -8,15 +8,19 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('sku_codes', function (Blueprint $table) {
-            $table->id();
-            $table->string('sku')->unique();
-            $table->string('product_name');
-            $table->string('brand')->nullable();
-            $table->decimal('default_value_of_product', 15, 2)->nullable();
-            $table->boolean('is_active')->default(true);
-            $table->timestamps();
-        });
+        if (!Schema::hasTable('sku_codes')) {
+            Schema::create('sku_codes', function (Blueprint $table) {
+                $table->id();
+                $table->string('sku')->unique();
+                $table->string('product_name');
+                $table->string('brand')->nullable();
+                $table->integer('available_qty')->default(0);
+                $table->string('status_qty')->nullable();
+                $table->decimal('default_value_of_product', 15, 2)->nullable();
+                $table->boolean('is_active')->default(true);
+                $table->timestamps();
+            });
+        }
     }
 
     public function down(): void

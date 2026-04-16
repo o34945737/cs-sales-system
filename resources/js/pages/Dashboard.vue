@@ -116,36 +116,38 @@ const statusClass = (status: string | null) => {
                 <article
                     v-for="item in stats"
                     :key="item.label"
-                    class="app-grid-card flex items-center gap-4 px-5 py-5"
+                    class="app-grid-card flex items-center gap-3.5 px-4 py-4"
                 >
-                    <div class="flex h-14 w-14 items-center justify-center rounded-full" :class="iconToneClassMap[item.tone]">
-                        <component :is="iconMap[item.tone]" class="h-6 w-6" />
+                    <div class="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full" :class="iconToneClassMap[item.tone]">
+                        <component :is="iconMap[item.tone]" class="h-5 w-5" />
                     </div>
 
                     <div class="min-w-0">
-                        <p class="text-sm font-medium text-slate-400">{{ item.label }}</p>
-                        <p class="mt-1 text-4xl font-extrabold tracking-tight text-[var(--app-ink)]">{{ item.value }}</p>
-                        <p class="mt-1 text-sm font-medium text-slate-500">{{ item.helper }}</p>
+                        <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400">{{ item.label }}</p>
+                        <div class="mt-1 flex items-baseline gap-2">
+                            <p class="text-2xl font-black tracking-tight text-[var(--app-ink)]">{{ item.value }}</p>
+                            <p class="text-[11px] font-bold text-slate-400">{{ item.helper }}</p>
+                        </div>
                     </div>
                 </article>
             </section>
 
             <section class="grid gap-6 xl:grid-cols-[1.15fr,0.85fr]">
                 <div class="app-table-shell overflow-hidden">
-                    <div class="border-b border-[var(--app-border)] px-6 py-5">
-                        <div class="flex items-center gap-2 text-sm font-semibold text-rose-500">
-                            <Activity class="h-4 w-4" />
+                    <div class="border-b border-[var(--app-border)] px-5 py-4">
+                        <div class="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-rose-500">
+                            <Activity class="h-3.5 w-3.5" />
                             Live Monitoring
                         </div>
-                        <h2 class="mt-2 text-2xl font-extrabold tracking-tight text-[var(--app-ink)]">Recent Complaint Queue</h2>
-                        <p class="mt-1 text-sm text-slate-500">Pantau case terbaru tanpa mengubah flow complaint yang sudah berjalan.</p>
+                        <h2 class="mt-2 text-lg font-black tracking-tight text-[var(--app-ink)]">Recent Complaint Queue</h2>
+                        <p class="mt-1 text-xs font-medium text-slate-500">Pantau case terbaru tanpa mengubah flow yang sudah berjalan.</p>
                     </div>
 
-                    <div class="space-y-4 p-5">
+                    <div class="space-y-3 p-4">
                         <article
                             v-for="item in recentComplaints"
                             :key="item.id"
-                            class="group relative overflow-hidden rounded-[26px] border border-slate-100 bg-white px-5 py-5 shadow-sm transition-all hover:-translate-y-1 hover:shadow-md hover:border-indigo-500/20"
+                            class="group relative overflow-hidden rounded-[20px] border border-slate-100 bg-white px-4 py-4 shadow-sm transition-all hover:shadow-md hover:border-indigo-500/20"
                         >
                             <div class="absolute -right-6 -top-6 h-28 w-28 rounded-full bg-[var(--app-primary-soft)] transition-transform group-hover:scale-125 opacity-30"></div>
                             <div class="relative z-10 flex flex-wrap items-start justify-between gap-3">
@@ -164,23 +166,23 @@ const statusClass = (status: string | null) => {
                                 <p class="mt-1 text-sm text-slate-500">{{ item.brand || '-' }} / {{ item.platform || '-' }}</p>
                             </div>
 
-                            <div class="mt-5 grid gap-3 sm:grid-cols-3">
-                                <div class="rounded-2xl bg-slate-50 px-4 py-3">
-                                    <p class="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">Priority</p>
-                                    <p class="mt-2 text-sm font-bold text-[var(--app-ink)]">{{ item.priority || '-' }}</p>
+                            <div class="mt-4 grid gap-2 sm:grid-cols-3">
+                                <div class="rounded-xl border border-slate-50 bg-slate-50/50 px-3 py-2">
+                                    <p class="text-[9px] font-bold uppercase tracking-wider text-slate-400">Priority</p>
+                                    <p class="mt-0.5 text-xs font-black text-slate-700">{{ item.priority || '-' }}</p>
                                 </div>
-                                <div class="rounded-2xl bg-slate-50 px-4 py-3">
-                                    <p class="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">Agent</p>
-                                    <p class="mt-2 text-sm font-bold text-[var(--app-ink)]">{{ item.cs_name || 'Unassigned' }}</p>
+                                <div class="rounded-xl border border-slate-50 bg-slate-50/50 px-3 py-2">
+                                    <p class="text-[9px] font-bold uppercase tracking-wider text-slate-400">Agent</p>
+                                    <p class="mt-0.5 text-xs font-black text-slate-700">{{ item.cs_name || 'Unassigned' }}</p>
                                 </div>
-                                <div class="rounded-2xl bg-slate-50 px-4 py-3">
-                                    <p class="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">Updated</p>
-                                    <p class="mt-2 text-sm font-bold text-[var(--app-ink)]">{{ formatDate(item.updated_at) }}</p>
+                                <div class="rounded-xl border border-slate-50 bg-slate-50/50 px-3 py-2">
+                                    <p class="text-[9px] font-bold uppercase tracking-wider text-slate-400">Updated</p>
+                                    <p class="mt-0.5 text-xs font-black text-slate-700">{{ formatDate(item.updated_at) }}</p>
                                 </div>
                             </div>
                         </article>
 
-                        <div v-if="!recentComplaints.length" class="rounded-[26px] border border-dashed border-[var(--app-border)] bg-[var(--app-panel-soft)] px-5 py-10 text-center">
+                        <div v-if="!recentComplaints.length" class="rounded-[20px] border border-dashed border-[var(--app-border)] bg-[var(--app-panel-soft)] px-5 py-10 text-center">
                             <AlertCircle class="mx-auto h-10 w-10 text-slate-300" />
                             <p class="mt-4 text-lg font-bold text-[var(--app-ink)]">Belum ada complaint terbaru</p>
                             <p class="mt-2 text-sm text-slate-500">Queue akan muncul di sini begitu data mulai masuk.</p>
@@ -190,24 +192,24 @@ const statusClass = (status: string | null) => {
 
                 <div class="space-y-6">
                     <section class="app-table-shell overflow-hidden">
-                        <div class="border-b border-[var(--app-border)] px-6 py-5">
-                            <p class="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">Quick Access</p>
-                            <h2 class="mt-2 text-xl font-extrabold text-[var(--app-ink)]">Workspace Modules</h2>
+                        <div class="border-b border-[var(--app-border)] px-5 py-4">
+                            <p class="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Quick Access</p>
+                            <h2 class="mt-1 text-lg font-black text-[var(--app-ink)]">Workspace Modules</h2>
                         </div>
-
-                        <div class="space-y-3 p-5">
+ 
+                        <div class="space-y-2 p-4">
                             <Link
                                 v-for="link in quickLinks"
                                 :key="link.label"
                                 :href="link.href"
-                                class="group flex items-center justify-between rounded-[22px] border border-slate-100 bg-white px-5 py-4 shadow-[0_2px_10px_rgb(0,0,0,0.02)] transition-all hover:border-[var(--app-primary)]/30 hover:shadow-md"
+                                class="group flex items-center justify-between rounded-xl border border-slate-50 bg-white px-4 py-3 shadow-[0_2px_8px_rgb(0,0,0,0.01)] transition-all hover:border-[var(--app-primary)]/30 hover:shadow-sm"
                             >
                                 <div>
-                                    <p class="font-bold text-[var(--app-ink)]">{{ link.label }}</p>
-                                    <p class="mt-1 text-sm font-medium text-slate-500">{{ link.description }}</p>
+                                    <p class="text-[13px] font-bold text-[var(--app-ink)] leading-tight">{{ link.label }}</p>
+                                    <p class="mt-0.5 text-[11px] font-medium text-slate-400">{{ link.description }}</p>
                                 </div>
-                                <div class="flex h-10 w-10 items-center justify-center rounded-full bg-slate-50 text-slate-400 transition-colors group-hover:bg-[var(--app-primary-soft)] group-hover:text-[var(--app-primary)]">
-                                    <ChevronRight class="h-5 w-5 transition-transform group-hover:translate-x-1" />
+                                <div class="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-50 text-slate-400 transition-colors group-hover:bg-[var(--app-primary-soft)] group-hover:text-[var(--app-primary)]">
+                                    <ChevronRight class="h-4 w-4" />
                                 </div>
                             </Link>
                         </div>
@@ -220,7 +222,7 @@ const statusClass = (status: string | null) => {
                         </div>
 
                         <div class="space-y-3 p-5">
-                            <div class="flex items-center justify-between rounded-[22px] border border-slate-100 bg-white px-5 py-4 shadow-[0_2px_10px_rgb(0,0,0,0.02)] hover:bg-slate-50 transition-colors">
+                            <div class="flex items-center justify-between rounded-xl border border-slate-100 bg-white px-4 py-3.5 shadow-[0_2px_10px_rgb(0,0,0,0.02)] hover:bg-slate-50 transition-colors">
                                 <div class="flex items-center gap-3">
                                     <CircleDot class="h-4 w-4 text-emerald-500" />
                                     <span class="text-sm font-bold text-[var(--app-ink)]">Account Status</span>
@@ -228,7 +230,7 @@ const statusClass = (status: string | null) => {
                                 <span class="rounded-full bg-emerald-50 px-3 py-1 font-bold text-emerald-600">Active</span>
                             </div>
 
-                            <div class="flex items-center justify-between rounded-[22px] border border-slate-100 bg-white px-5 py-4 shadow-[0_2px_10px_rgb(0,0,0,0.02)] hover:bg-slate-50 transition-colors">
+                            <div class="flex items-center justify-between rounded-xl border border-slate-100 bg-white px-4 py-3.5 shadow-[0_2px_10px_rgb(0,0,0,0.02)] hover:bg-slate-50 transition-colors">
                                 <div class="flex items-center gap-3">
                                     <CircleDot class="h-4 w-4 text-blue-500" />
                                     <span class="text-sm font-bold text-[var(--app-ink)]">Primary Role</span>
@@ -236,7 +238,7 @@ const statusClass = (status: string | null) => {
                                 <span class="rounded-full bg-blue-50 px-3 py-1 font-bold text-blue-600">{{ page.props.auth.user?.roles?.[0] || 'Workspace' }}</span>
                             </div>
 
-                            <div class="flex items-center justify-between rounded-[22px] border border-slate-100 bg-white px-5 py-4 shadow-[0_2px_10px_rgb(0,0,0,0.02)] hover:bg-slate-50 transition-colors">
+                            <div class="flex items-center justify-between rounded-xl border border-slate-100 bg-white px-4 py-3.5 shadow-[0_2px_10px_rgb(0,0,0,0.02)] hover:bg-slate-50 transition-colors">
                                 <div class="flex items-center gap-3">
                                     <CircleDot class="h-4 w-4 text-violet-500" />
                                     <span class="text-sm font-bold text-[var(--app-ink)]">Accessible Modules</span>

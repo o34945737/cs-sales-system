@@ -8,18 +8,11 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('complaints', function (Blueprint $table) {
-            // Replace enum 'source' with FK to complaint_sources table
-            // Add new FK column first
-            $table->foreignId('complaint_source_id')->nullable()->after('source')->constrained('complaint_sources')->nullOnDelete();
-        });
+        // Handled by 2026_03_30_100000_create_complaints_table.php
     }
 
     public function down(): void
     {
-        Schema::table('complaints', function (Blueprint $table) {
-            $table->dropForeignKeyIfExists(['complaint_source_id']);
-            $table->dropColumn('complaint_source_id');
-        });
+        // No action
     }
 };

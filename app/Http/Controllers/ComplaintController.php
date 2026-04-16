@@ -61,11 +61,13 @@ class ComplaintController extends Controller
         $skuCodeOptions = SkuCode::query()
             ->where('is_active', true)
             ->orderBy('sku')
-            ->get(['sku', 'product_name', 'brand', 'default_value_of_product'])
+            ->get(['sku', 'product_name', 'brand', 'default_value_of_product', 'available_qty', 'status_qty'])
             ->map(fn(SkuCode $skuCode) => [
                 'sku' => $skuCode->sku,
                 'product_name' => $skuCode->product_name,
                 'brand' => $skuCode->brand,
+                'available_qty' => $skuCode->available_qty,
+                'status_qty' => $skuCode->status_qty,
                 'default_value_of_product' => $skuCode->default_value_of_product !== null
                     ? (float) $skuCode->default_value_of_product
                     : null,
@@ -284,13 +286,18 @@ class ComplaintController extends Controller
 
     public function store(Request $request)
     {
-        $request->validate($this->complaintRules($request), [
+        $rules = $this->complaintRules($request);
+        $request->validate($rules, [
             'tanggal_step_cs_selesai.required_if' => 'Tanggal harus diisi jika Step CS Selesai = YES.',
             'reason_whitelist.required_if' => 'Reason Whitelist wajib diisi jika Last Step = Claim Reject.',
             'reason_late_respons.required_if' => 'Reason Late Respons wajib diisi jika Whitelist = Late Respons.',
+            'jam_customer_complaint.date_format' => 'Format jam harus HH:mm atau HH:mm:ss.',
         ]);
 
         $data = collect($request->all())->except(['_token', 'video_unboxing', 'proof_attachment'])->toArray();
+
+        // Sync Foreign Keys based on provided names
+        $this->syncForeignKeys($data);
 
         try {
             if ($request->hasFile('video_unboxing')) {
@@ -302,13 +309,10 @@ class ComplaintController extends Controller
             }
 
             Complaint::create($data);
-        } catch (Throwable $exception) {
+        } catch (\Exception $exception) {
             report($exception);
 
-            return redirect()
-                ->back()
-                ->withInput()
-                ->with('error', 'Complaint gagal dibuat. Silakan coba lagi.');
+            return back()->withErrors(['general' => 'Database Error: ' . $exception->getMessage()])->withInput();
         }
 
         return redirect()->back()->with('success', 'Complaint berhasil dibuat.');
@@ -316,13 +320,18 @@ class ComplaintController extends Controller
 
     public function update(Request $request, Complaint $complaint)
     {
-        $request->validate($this->complaintRules($request, forUpdate: true), [
+        $rules = $this->complaintRules($request, forUpdate: true);
+        $request->validate($rules, [
             'tanggal_step_cs_selesai.required_if' => 'Tanggal harus diisi jika Step CS Selesai = YES.',
             'reason_whitelist.required_if' => 'Reason Whitelist wajib diisi jika Last Step = Claim Reject.',
             'reason_late_respons.required_if' => 'Reason Late Respons wajib diisi jika Whitelist = Late Respons.',
+            'jam_customer_complaint.date_format' => 'Format jam harus HH:mm atau HH:mm:ss.',
         ]);
 
         $data = collect($request->all())->except(['_token', '_method', 'video_unboxing', 'proof_attachment'])->toArray();
+        
+        // Sync Foreign Keys based on provided names
+        $this->syncForeignKeys($data);
 
         try {
             if ($request->hasFile('video_unboxing')) {
@@ -334,16 +343,35 @@ class ComplaintController extends Controller
             }
 
             $complaint->update($data);
-        } catch (Throwable $exception) {
+        } catch (\Exception $exception) {
             report($exception);
 
-            return redirect()
-                ->back()
-                ->withInput()
-                ->with('error', 'Complaint gagal diperbarui. Silakan coba lagi.');
+            return back()->withErrors(['general' => 'Database Error: ' . $exception->getMessage()])->withInput();
         }
 
         return redirect()->back()->with('success', 'Complaint berhasil diperbarui.');
+    }
+
+    private function syncForeignKeys(array &$data)
+    {
+        if (isset($data['brand'])) {
+            $data['brand_id'] = Brand::where('name', $data['brand'])->value('id');
+        }
+        if (isset($data['platform'])) {
+            $data['platform_id'] = Platform::where('name', $data['platform'])->value('id');
+        }
+        if (isset($data['sku'])) {
+            $data['sku_code_id'] = SkuCode::where('sku', $data['sku'])->value('id');
+        }
+        if (isset($data['sub_case'])) {
+            $data['sub_case_id'] = SubCase::where('name', $data['sub_case'])->value('id');
+        }
+        if (isset($data['last_step'])) {
+            $data['last_step_id'] = LastStep::where('name', $data['last_step'])->value('id');
+        }
+        if (isset($data['cs_name'])) {
+            $data['cs_user_id'] = User::where('name', $data['cs_name'])->value('id');
+        }
     }
 
     public function destroy(Complaint $complaint)
@@ -442,7 +470,7 @@ class ComplaintController extends Controller
             'source' => [$required, 'string', Rule::in($sourceOptions)],
             'tanggal_complaint' => [$required, 'date'],
             'tanggal_order' => [$required, 'date'],
-            'jam_customer_complaint' => [$required, 'date_format:H:i:s'],
+            'jam_customer_complaint' => [$required, 'string'], // Simplified validation to allow multiple formats
             'brand' => [$brandRequirement, 'string', Rule::in($brandOptions)],
             'platform' => [$required, 'string', Rule::in($platformOptions)],
             'order_id' => [$required, 'string'],
