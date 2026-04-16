@@ -36,15 +36,13 @@ class BadReviewController extends Controller
             ->pluck('name')
             ->all();
 
-        $causeByOptions = SubCase::query()
-            ->where('is_active', true)
-            ->orderBy('default_cause_by')
-            ->distinct('default_cause_by')
-            ->pluck('default_cause_by')
-            ->filter(function ($item) {
-                return !is_null($item);
-            })
-            ->all();
+        $causeByOptions = [
+            '?', 'J&T', 'SAP EXPRESS', 'ANTERAJA', 'LEX', 'POS', 
+            'NINJA', 'SICEPAT', 'KURIR REKOMENDASI', 'SPX', 
+            'INDOPAKET', 'GTL', 'CUSTOM LOGISTICS', 'GRAB', 
+            'JNE', 'GOJEK', 'CS', 'Chat++', 'STREAMER', 'KAE', 
+            'WH', 'PART', 'BRAND', 'CUSTOMER', 'PROMO'
+        ];
 
         $skuCodeOptions = SkuCode::query()
             ->where('is_active', true)
@@ -87,11 +85,20 @@ class BadReviewController extends Controller
             $baseQuery->where('brand', $request->brand);
         }
 
-        // Filter by Priority (Star)
-        if ($request->filled('priority') && $request->priority !== 'All') {
-            $baseQuery->where('star', (int)$request->priority);
+        // Filter by Platform
+        if ($request->filled('platform') && $request->platform !== 'All') {
+            $baseQuery->where('platform', $request->platform);
         }
 
+        // Filter by Star (Angka)
+        if ($request->filled('star') && $request->star !== 'All') {
+            $baseQuery->where('star', (int)$request->star);
+        }
+
+        // Filter by Priority
+        if ($request->filled('priority') && $request->priority !== 'All') {
+            $baseQuery->where('priority', $request->priority);
+        }
         // Filter by Status
         if ($request->filled('status') && $request->status !== 'All') {
             $baseQuery->where('status', $request->status);
@@ -134,6 +141,12 @@ class BadReviewController extends Controller
         // Pagination
         $badReviews = $baseQuery->paginate(15)->appends($request->query());
 
+        // Priority Summary (Static list P1-P7 for example, or dynamic based on master)
+        $priorityLevels = ['P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7'];
+        $prioritySummary = collect($priorityLevels)->mapWithKeys(function($p) use ($allBadReviews) {
+            return [$p => $allBadReviews->where('priority', $p)->count()];
+        })->all();
+
         return Inertia::render('BadReviews/Index', [
             'badReviews' => $badReviews,
             'brandOptions' => $brandOptions,
@@ -145,7 +158,9 @@ class BadReviewController extends Controller
             'statusSummary' => $statusSummary,
             'starSummary' => $starSummary,
             'csSummary' => $csSummary,
-            'filters' => $request->only(['search', 'brand', 'priority', 'status', 'cs_name']),
+            'prioritySummary' => $prioritySummary,
+            'autoCauseByMap' => SubCase::where('is_active', true)->get(['name', 'default_cause_by']),
+            'filters' => $request->only(['search', 'brand', 'platform', 'priority', 'status', 'cs_name', 'star']),
         ]);
     }
 
@@ -153,6 +168,7 @@ class BadReviewController extends Controller
     {
         $validated = $request->validate([
             'tanggal_review' => 'required|date',
+            'month' => 'nullable|string',
             'brand' => 'required|string',
             'platform' => 'required|string',
             'order_id' => 'required|string',
@@ -161,10 +177,12 @@ class BadReviewController extends Controller
             'product_name' => 'nullable|string',
             'sku' => 'nullable|string',
             'category_review' => 'required|string',
+            'cause_by' => 'required|string',
             'review_notes' => 'required|string',
             'progress' => 'required|string|in:Follow Up Customer,Auto Reply',
-            'tanggal_update' => 'required|date_format:Y-m-d H:i',
+            'tanggal_update' => 'required',
             'cs_name' => 'required|string',
+            'priority' => 'required|string',
         ]);
 
         try {
@@ -179,6 +197,7 @@ class BadReviewController extends Controller
     {
         $validated = $request->validate([
             'tanggal_review' => 'required|date',
+            'month' => 'nullable|string',
             'brand' => 'required|string',
             'platform' => 'required|string',
             'order_id' => 'required|string',
@@ -187,10 +206,12 @@ class BadReviewController extends Controller
             'product_name' => 'nullable|string',
             'sku' => 'nullable|string',
             'category_review' => 'required|string',
+            'cause_by' => 'required|string',
             'review_notes' => 'required|string',
             'progress' => 'required|string|in:Follow Up Customer,Auto Reply',
-            'tanggal_update' => 'required|date_format:Y-m-d H:i',
+            'tanggal_update' => 'required',
             'cs_name' => 'required|string',
+            'priority' => 'required|string',
         ]);
 
         try {
