@@ -37,7 +37,7 @@ return new class extends Migration
             
             // C. PRODUCT & CASE DETAILS (SNAPSHOTS)
             $table->string('sku')->nullable()->index();
-            $table->string('product_name')->nullable();
+            $table->string('product_name')->nullable()->index();
             $table->decimal('value_of_product', 15, 2)->nullable();
             $table->string('sub_case')->nullable();
             $table->string('cause_by')->nullable();
@@ -47,11 +47,11 @@ return new class extends Migration
             $table->text('summary_case')->nullable();
             $table->longText('update_long_text')->nullable();
             $table->string('part_of_bad')->nullable();
-            $table->string('cs_name')->nullable();
+            $table->string('cs_name')->nullable()->index();
             $table->string('last_step')->nullable();
             $table->string('step_cs_selesai')->nullable()->default('NO');
-            $table->date('tanggal_step_cs_selesai')->nullable();
-            $table->date('tanggal_update')->nullable();
+            $table->date('tanggal_step_cs_selesai')->nullable()->index();
+            $table->date('tanggal_update')->nullable()->index();
             
             // E. SPECIAL CONDITIONS
             $table->string('reason_whitelist')->nullable();
@@ -76,10 +76,12 @@ return new class extends Migration
             $table->timestamps();
             $table->softDeletes();
 
-            // Additional Indexes for High performance
-            $table->index(['brand_id', 'status']);
-            $table->index(['platform_id', 'status']);
-            $table->index(['tanggal_complaint', 'status']);
+            // High performance composite indexes for operational dashboard
+            $table->index(['brand_id', 'status', 'priority'], 'idx_complaints_brand_status_priority');
+            $table->index(['platform_id', 'status', 'priority'], 'idx_complaints_platform_status_priority');
+            $table->index(['cs_name', 'status'], 'idx_complaints_cs_status');
+            $table->index(['tanggal_complaint', 'status', 'priority'], 'idx_complaints_date_status_priority');
+            $table->index(['created_at', 'status'], 'idx_complaints_created_status');
         });
     }
 

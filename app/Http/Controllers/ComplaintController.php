@@ -133,8 +133,12 @@ class ComplaintController extends Controller
                         ->orWhere('username', 'like', "%{$search}%")
                         ->orWhere('brand', 'like', "%{$search}%")
                         ->orWhere('platform', 'like', "%{$search}%")
+                        ->orWhere('source', 'like', "%{$search}%")
+                        ->orWhere('product_name', 'like', "%{$search}%")
                         ->orWhere('summary_case', 'like', "%{$search}%")
-                        ->orWhere('cs_name', 'like', "%{$search}%");
+                        ->orWhere('cs_name', 'like', "%{$search}%")
+                        ->orWhere('status', 'like', "%{$search}%")
+                        ->orWhere('priority', 'like', "%{$search}%");
                 });
             }
 

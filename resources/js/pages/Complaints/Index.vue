@@ -831,29 +831,8 @@ const sectionChecks = computed(() => [
         <div class="pb-20">
             <div class="mx-auto flex max-w-[90rem] flex-col gap-10 px-4 font-sans sm:px-6 lg:px-8">
                 <div class="space-y-10">
-                    <!-- 2. Header & Quick Actions -->
-                    <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                        <div class="max-w-xl">
-                            <div class="inline-flex items-center gap-2 rounded-full bg-blue-50 px-2 py-0.5 text-[9px] font-black uppercase tracking-widest text-[var(--app-primary)] ring-1 ring-blue-100">
-                                <AlertCircle class="h-2.5 w-2.5" />
-                                Operational Support Center
-                            </div>
-                            <h1 class="mt-2 text-xl font-black tracking-tight text-slate-900 lg:text-2xl">Complaints <span class="text-[var(--app-primary)]">Command.</span></h1>
-                            <p class="mt-1 text-[13px] font-medium leading-relaxed text-slate-500">
-                                Visualisasi data komplain secara real-time dengan integrasi inventory dan SLA tracking otomatis.
-                            </p>
-                        </div>
-                        <button
-                            type="button"
-                            class="group flex h-9 items-center justify-center gap-2 rounded-xl bg-[var(--app-primary)] px-5 text-xs font-bold text-white shadow-lg transition-all hover:bg-[var(--app-primary-dark)] hover:-translate-y-0.5 active:scale-[0.98]"
-                            @click="openCreateModal"
-                        >
-                            <Plus class="h-3.5 w-3.5 stroke-[3px]" />
-                            <span>Create Ticket</span>
-                        </button>
-                    </div>
 
-                     <!-- 1. Top Metric Bar (Standard UX) -->
+                    <!-- 1. Top Metric Bar (Standard UX) -->
                     <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                         <article
                             v-for="card in overviewCards"
@@ -873,64 +852,65 @@ const sectionChecks = computed(() => [
                         </article>
                     </div>
 
-                    <!-- 3. Unified Filters & Search Row -->
-                    <div class="rounded-3xl border border-slate-100 bg-slate-50/30 p-1.5 shadow-sm">
-                        <div class="flex flex-col gap-1.5 lg:flex-row lg:items-center">
-                            <div class="relative flex-1 group">
-                                <Search class="pointer-events-none absolute left-4 top-1/2 h-4.5 w-4.5 -translate-y-1/2 text-slate-400 group-focus-within:text-[var(--app-primary)] transition-colors" />
-                                <input
-                                    v-model="search"
-                                    type="text"
-                                    placeholder="Search order ID, resi, or username..."
-                                    class="h-11 w-full rounded-2xl border border-slate-200/60 bg-white pl-11 pr-4 text-[13px] font-bold text-slate-700 outline-none transition-all focus:border-[var(--app-primary)] focus:ring-4 focus:ring-blue-50 placeholder:font-medium placeholder:text-slate-400"
-                                />
+                    <!-- 2. Independent Filter Bar (Return to Original Position) -->
+                    <div class="rounded-3xl border border-slate-100 bg-slate-50/50 p-2 shadow-sm ring-1 ring-slate-100/10">
+                        <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                            <div class="flex items-center gap-3 px-3">
+                                <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-white shadow-sm ring-1 ring-slate-200/50 text-blue-500">
+                                    <AlertCircle class="h-4 w-4" />
+                                </div>
+                                <div>
+                                    <p class="text-[10px] font-black uppercase tracking-widest text-slate-400 leading-none">Global Filters</p>
+                                    <p class="mt-1 text-[13px] font-black text-slate-900 leading-none">Refine Workspace</p>
+                                </div>
                             </div>
-                            
-                            <div class="flex flex-wrap items-center gap-1.5 p-0.5">
+
+                            <div class="flex flex-wrap items-center gap-2 pr-1">
                                 <!-- Brand Select -->
-                                <div class="relative min-w-[130px]">
+                                <div class="relative min-w-[140px]">
                                     <select 
                                         :value="currentBrand"
-                                        class="h-9 w-full appearance-none rounded-xl border border-slate-200/50 bg-white pl-3 pr-8 text-[11px] font-bold text-slate-600 outline-none transition hover:border-slate-300 focus:ring-4 focus:ring-blue-50"
+                                        class="h-10 w-full appearance-none rounded-xl border border-slate-200/60 bg-white pl-4 pr-10 text-[11px] font-black uppercase tracking-wider text-slate-600 outline-none transition-all hover:border-slate-300 focus:ring-4 focus:ring-blue-50/50 shadow-sm"
                                         @change="setBrandFilter($event.target.value)"
                                     >
                                         <option v-for="option in complaintBrandFilterOptions" :key="option" :value="option">
-                                            {{ option === 'All' ? 'All Platforms' : option }}
+                                            {{ option === 'All' ? 'ANY BRAND' : option }}
                                         </option>
                                     </select>
-                                    <ChevronDown class="pointer-events-none absolute right-2.5 top-1/2 h-3 w-3 -translate-y-1/2 text-slate-400" />
+                                    <ChevronDown class="pointer-events-none absolute right-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
                                 </div>
 
                                 <!-- Priority Select -->
                                 <div class="relative min-w-[130px]">
                                     <select 
                                         :value="currentPriority"
-                                        class="h-9 w-full appearance-none rounded-xl border border-slate-200/50 bg-white pl-3 pr-8 text-[11px] font-bold text-slate-600 outline-none transition hover:border-slate-300 focus:ring-4 focus:ring-blue-50"
+                                        class="h-10 w-full appearance-none rounded-xl border border-slate-200/60 bg-white pl-4 pr-10 text-[11px] font-black uppercase tracking-wider text-slate-600 outline-none transition-all hover:border-slate-300 focus:ring-4 focus:ring-blue-50/50 shadow-sm"
                                         @change="setPriorityFilter($event.target.value)"
                                     >
                                         <option v-for="priority in priorityCards" :key="priority.key" :value="priority.key">
-                                            {{ priority.label }}
+                                            {{ priority.label === 'Semua' ? 'ANY PRIORITY' : priority.label }}
                                         </option>
                                     </select>
-                                    <ChevronDown class="pointer-events-none absolute right-2.5 top-1/2 h-3 w-3 -translate-y-1/2 text-slate-400" />
+                                    <ChevronDown class="pointer-events-none absolute right-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
                                 </div>
 
                                 <!-- Status Select -->
                                 <div class="relative min-w-[130px]">
                                     <select 
                                         :value="currentStatus"
-                                        class="h-9 w-full appearance-none rounded-xl border border-slate-200/50 bg-white pl-3 pr-8 text-[11px] font-bold text-slate-600 outline-none transition hover:border-slate-300 focus:ring-4 focus:ring-blue-50"
+                                        class="h-10 w-full appearance-none rounded-xl border border-slate-200/60 bg-white pl-4 pr-10 text-[11px] font-black uppercase tracking-wider text-slate-600 outline-none transition-all hover:border-slate-300 focus:ring-4 focus:ring-blue-50/50 shadow-sm"
                                         @change="setStatus($event.target.value)"
                                     >
                                         <option v-for="status in statusCards" :key="status.key" :value="status.key">
-                                            {{ status.label }}
+                                            {{ status.label === 'Semua' ? 'ANY STATUS' : status.label }}
                                         </option>
                                     </select>
-                                    <ChevronDown class="pointer-events-none absolute right-2.5 top-1/2 h-3 w-3 -translate-y-1/2 text-slate-400" />
+                                    <ChevronDown class="pointer-events-none absolute right-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
                                 </div>
                             </div>
                         </div>
                     </div>
+
 
                     <div class="grid grid-cols-1 lg:grid-cols-[320px,1fr] gap-8">
                         <!-- DESIGNER SIDEBAR: CS Grouping Desk -->
@@ -992,26 +972,48 @@ const sectionChecks = computed(() => [
                         <div class="min-w-0 space-y-8">
                             <section class="app-table-shell p-0">
                                 <div
-                                    class="flex flex-col gap-4 border-b border-[var(--app-border)] px-5 py-4 lg:flex-row lg:items-center lg:justify-between"
+                                    class="flex flex-col gap-6 border-b border-slate-100 px-6 py-7 lg:flex-row lg:items-center lg:justify-between"
                                 >
                                     <div class="min-w-0">
-                                        <p class="text-[10px] font-bold uppercase tracking-[0.3em] text-[var(--app-primary)]">Operational Database</p>
-                                        <h2 class="mt-1 text-xl font-black text-slate-900">Current Tickets</h2>
-                                        <p class="mt-0.5 text-[13px] font-medium text-slate-500">
-                                            Monitoring penuh dengan metrik prioritas real-time.
-                                        </p>
+                                        <div class="inline-flex items-center gap-2 rounded-full bg-blue-50 px-2 py-0.5 text-[9px] font-black uppercase tracking-widest text-[var(--app-primary)]">
+                                             Operational Database
+                                        </div>
+                                        <h2 class="mt-1 text-2xl font-black text-slate-900 tracking-tight">Current Tickets</h2>
+                                        <div class="mt-2.5 flex items-center gap-2">
+                                            <div class="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-[10px] font-black text-slate-500 ring-1 ring-slate-200/50">
+                                                 <span>SHOWING {{ complaintPage.from || 0 }}-{{ complaintPage.to || 0 }} OF {{ complaintPage.total || 0 }}</span>
+                                            </div>
+                                            <div
+                                                class="rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-widest"
+                                                :class="activeFilterCount ? 'border-amber-200 bg-amber-50 text-amber-600 shadow-sm shadow-amber-500/5' : 'border-slate-100 bg-white text-slate-400'"
+                                            >
+                                                {{ activeFilterCount ? `${activeFilterCount} Active Filters` : 'No Filter' }}
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div class="flex flex-wrap items-center gap-2.5">
-                                        <div class="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1.5 text-[11px] font-black text-slate-500">
-                                            <div class="h-1 w-1 rounded-full bg-slate-400"></div>
-                                            <span>SHOWING {{ complaintPage.from || 0 }}-{{ complaintPage.to || 0 }} OF {{ complaintPage.total || 0 }}</span>
+                                    
+                                    <div class="flex flex-1 flex-col gap-4 lg:max-w-xl lg:flex-row lg:items-center lg:justify-end">
+                                        <!-- High Fidelity Search Bar -->
+                                        <div class="relative flex-1 group">
+                                            <div class="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
+                                                <Search class="h-4.5 w-4.5 text-slate-400 group-focus-within:text-[var(--app-primary)] transition-colors" />
+                                            </div>
+                                            <input
+                                                v-model="search"
+                                                type="text"
+                                                placeholder="Quick search tickets..."
+                                                class="h-12 w-full rounded-2xl border-slate-200/60 bg-slate-50/50 pl-11 pr-4 text-[13px] font-bold text-slate-700 placeholder:font-medium placeholder:text-slate-400 outline-none transition-all focus:border-[var(--app-primary)] focus:bg-white focus:ring-[6px] focus:ring-blue-500/5 shadow-inner"
+                                            />
                                         </div>
-                                        <div
-                                            class="rounded-full border px-3 py-1.5 text-[11px] font-black uppercase tracking-wider"
-                                            :class="activeFilterCount ? 'border-amber-200 bg-amber-50 text-amber-600' : 'border-slate-100 bg-white text-slate-400'"
+
+                                        <button
+                                            type="button"
+                                            class="group flex h-12 items-center justify-center gap-2 rounded-2xl bg-[var(--app-primary)] px-6 text-[14px] font-black text-white shadow-[0_15px_30px_rgba(53,103,232,0.25)] transition-all hover:bg-[var(--app-primary-dark)] hover:-translate-y-1 hover:shadow-[0_20px_40px_rgba(53,103,232,0.35)] active:scale-[0.98]"
+                                            @click="openCreateModal"
                                         >
-                                            {{ activeFilterCount ? `${activeFilterCount} Active Filters` : 'No Filter Active' }}
-                                        </div>
+                                            <Plus class="h-5 w-5 stroke-[4px]" />
+                                            <span class="hidden xl:inline">Create Ticket</span>
+                                        </button>
                                     </div>
                                 </div>
 
