@@ -83,6 +83,7 @@ Route::middleware(['auth', 'active', 'password.reset.required'])->group(function
     });
 
     Route::middleware('permission:access complaints')->group(function () {
+        Route::get('complaints/history/{username}', [ComplaintController::class, 'getCustomerHistory'])->name('complaints.history');
         Route::resource('complaints', ComplaintController::class);
     });
 

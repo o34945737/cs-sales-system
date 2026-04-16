@@ -27,7 +27,8 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
-import { computed, ref, watch } from 'vue';
+import { computed, ref, watch, onMounted } from 'vue';
+import axios from 'axios';
 
 const DEFAULT_SOURCE_OPTIONS = ['After Sales', 'Pre Sales', 'Brand', 'KAE', 'Socmed'];
 const DEFAULT_COMPLAINT_POWER_OPTIONS = ['Hard Complaint', 'Normal Complaint'];
@@ -403,6 +404,32 @@ watch(
     { immediate: true, deep: true },
 );
 
+// Real-time History Check from Server
+const fetchCustomerHistory = debounce(async (username: string) => {
+    if (!username) {
+        form.category_customer = '';
+        return;
+    }
+
+    try {
+        const response = await axios.get(route('complaints.history', username));
+        if (response.data && response.data.label) {
+            form.category_customer = response.data.label;
+        } else {
+            form.category_customer = '';
+        }
+    } catch (error) {
+        console.error('Failed to fetch customer history:', error);
+    }
+}, 500);
+
+watch(
+    () => form.username,
+    (newUsername) => {
+        fetchCustomerHistory(newUsername);
+    }
+);
+
 watch(
     () => form.last_step,
     (val) => {
@@ -416,12 +443,7 @@ watch(
     }
 );
 
-watch(
-    () => form.username,
-    () => {
-        form.category_customer = customerHistoryCount.value;
-    }
-);
+
 
 watch(
     () => form.reason_whitelist,
@@ -493,23 +515,6 @@ const reportCategoryPreview = computed(() => {
     return `${form.sub_case} by ${form.cause_by}`;
 });
 
-const categoryCustomerPreview = computed(() => {
-    if (!form.username) {
-        return '';
-    }
-
-    const repeatedCount = complaintRows.value.filter((item) => item.username && item.username.toLowerCase() === form.username.toLowerCase()).length;
-
-    if (repeatedCount === 0) {
-        return '';
-    }
-
-    if (repeatedCount === 1) {
-        return 'Customer ini complaint ke 2';
-    }
-
-    return `Customer ini complaint ke ${repeatedCount + 1}x`;
-});
 
 const oosPreview = computed(() => {
     if (!form.order_id) {
@@ -619,7 +624,7 @@ const submitForm = () => {
                 priority: priorityPreview.value,
                 auto_sync_sla: autoSyncSlaPreview.value,
                 report_category: reportCategoryPreview.value || null,
-                category_customer: categoryCustomerPreview.value || null,
+                category_customer: data.category_customer || null,
                 complaint_power,
                 level_customer: complaint_power,
                 oos: oosValue,
@@ -698,13 +703,6 @@ const computedSLAStatus = computed(() => {
     return `${diffDays} Days`;
 });
 
-const customerHistoryCount = computed(() => {
-    if (!form.username) return null;
-    const count = props.complaints.data.filter(c => c.username === form.username).length;
-    if (count === 0) return '';
-    if (count === 1) return 'Customer ini complaint ke 2';
-    return `Customer ini complaint ke ${count + 1}x`;
-});
 
 const automationResults = computed(() => {
     const res = {
@@ -1165,7 +1163,10 @@ const sectionChecks = computed(() => [
                                             <td class="px-4 py-3">
                                                 <div class="space-y-0.5">
                                                     <p class="truncate text-[13px] font-bold text-[var(--app-ink)]">{{ item.username || '-' }}</p>
-                                                    <p class="line-clamp-1 text-[11px] font-medium text-slate-400">
+                                                    <p v-if="item.category_customer" class="text-[10px] font-black text-blue-600 uppercase tracking-tight">
+                                                        {{ item.category_customer }}
+                                                    </p>
+                                                    <p v-else class="line-clamp-1 text-[11px] font-medium text-slate-400">
                                                         {{ item.product_name || item.summary_case || '-' }}
                                                     </p>
                                                 </div>
@@ -1282,7 +1283,6 @@ const sectionChecks = computed(() => [
                 </div>
             </div>
         </div>
-    </div>
 
             <transition name="fade">
                 <div v-if="detailItem" class="fixed inset-0 z-40 bg-slate-950/20 backdrop-blur-[1px]" @click.self="closeDetail">
@@ -1330,6 +1330,9 @@ const sectionChecks = computed(() => [
                                 <div class="rounded-3xl border border-slate-100 p-5 shadow-sm">
                                     <p class="text-[10px] font-bold uppercase tracking-[0.2rem] text-slate-400">Customer Identity</p>
                                     <p class="mt-3 text-lg font-black text-[var(--app-ink)]">{{ detailItem.username || '-' }}</p>
+                                    <p v-if="detailItem.category_customer" class="mt-1 text-[11px] font-black uppercase text-blue-600 tracking-wider">
+                                        {{ detailItem.category_customer }}
+                                    </p>
                                     <div class="mt-1 flex items-center gap-2 text-[13px] font-medium text-slate-500">
                                         <span>{{ detailItem.brand || '-' }}</span>
                                         <span class="h-1 w-1 rounded-full bg-slate-300"></span>
@@ -1899,8 +1902,12 @@ const sectionChecks = computed(() => [
 
                                             <div class="space-y-1.5">
                                                 <label class="block text-[13px] font-bold uppercase tracking-wide text-slate-700">Username*</label>
-                                                <input v-model="form.username" type="text" :class="controlClass('username')" />
-                                                <p v-if="fieldError('username')" class="text-xs font-medium text-rose-600">
+                                                <input v-model="form.username" type="text" :class="controlClass('username')" placeholder="Gunakan username marketplace..." />
+                                                <div v-if="form.category_customer" class="mt-2 flex items-center gap-2 rounded-xl bg-blue-50/50 px-3 py-2 ring-1 ring-blue-100">
+                                                    <Users class="h-3.5 w-3.5 text-blue-500" />
+                                                    <span class="text-[11px] font-black uppercase tracking-wider text-blue-600">{{ form.category_customer }}</span>
+                                                </div>
+                                                <p v-if="fieldError('username')" class="mt-2 text-xs font-medium text-rose-600">
                                                     {{ fieldError('username') }}
                                                 </p>
                                             </div>
@@ -2061,6 +2068,7 @@ const sectionChecks = computed(() => [
                 </div>
                 </div>
             </transition>
+        </div>
     </AppLayout>
 </template>
 

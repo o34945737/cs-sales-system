@@ -312,6 +312,17 @@ class ComplaintController extends Controller
                 $data['proof_attachment'] = $request->file('proof_attachment')->store('complaints/proofs', 'public');
             }
 
+            // --- AUTO CALCULATION: Category Customer ---
+            $existingCount = Complaint::where('username', $data['username'])->count();
+            if ($existingCount === 1) {
+                $data['category_customer'] = 'Customer ini complaint ke 2';
+            } elseif ($existingCount >= 2) {
+                $newCount = $existingCount + 1;
+                $data['category_customer'] = "Customer ini complaint ke {$newCount}x";
+            } else {
+                $data['category_customer'] = null; // First time
+            }
+
             Complaint::create($data);
         } catch (\Exception $exception) {
             report($exception);
@@ -320,6 +331,28 @@ class ComplaintController extends Controller
         }
 
         return redirect()->back()->with('success', 'Complaint berhasil dibuat.');
+    }
+
+    /**
+     * API Endpoint for real-time customer history check
+     */
+    public function getCustomerHistory($username)
+    {
+        $count = Complaint::where('username', $username)->count();
+        
+        $label = '';
+        if ($count === 1) {
+            $label = 'Customer ini complaint ke 2';
+        } elseif ($count >= 2) {
+            $newCount = $count + 1;
+            $label = "Customer ini complaint ke {$newCount}x";
+        }
+
+        return response()->json([
+            'username' => $username,
+            'count' => $count,
+            'label' => $label
+        ]);
     }
 
     public function update(Request $request, Complaint $complaint)
