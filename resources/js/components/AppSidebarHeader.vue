@@ -78,9 +78,7 @@ const currentUser = computed(() => page.props.auth.user);
                     :href="route('dashboard')"
                     class="group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-[14px] bg-gradient-to-r from-[var(--app-primary)] to-[var(--app-primary-dark)] px-4 py-2 text-sm font-bold text-white shadow-[0_8px_16px_rgba(53,103,232,0.2)] transition-all hover:scale-[1.02] active:scale-95"
                 >
-                    <div
-                        class="absolute inset-0 translate-y-full bg-gradient-to-t from-white/20 to-transparent opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100"
-                    ></div>
+                    <div class="absolute inset-0 translate-y-full bg-gradient-to-t from-white/20 to-transparent opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100"></div>
                     <PanelTopOpen class="relative z-10 h-4 w-4 transition-transform group-hover:-translate-y-0.5" />
                     <span class="relative z-10">Dashboard</span>
                 </Link>

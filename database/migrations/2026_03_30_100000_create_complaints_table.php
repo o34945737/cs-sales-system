@@ -65,7 +65,7 @@ return new class extends Migration
             $table->string('cycle')->nullable();
             $table->string('status')->nullable()->default('Pending')->index();
             $table->string('priority')->nullable()->index();
-            $table->string('category_customer')->nullable();
+            $table->string('history')->nullable();
             $table->string('oos')->nullable();
             $table->string('riwayat_oos')->nullable();
             $table->string('report_category')->nullable();

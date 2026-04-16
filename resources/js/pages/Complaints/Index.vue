@@ -209,8 +209,10 @@ const visitIndex = (overrides = {}, options = {}) => {
             search: search.value || undefined,
             status: filterState.value.status && filterState.value.status !== 'All' ? filterState.value.status : undefined,
             cs_name: filterState.value.cs_name || undefined,
-            brand: filterState.value.brand && filterState.value.brand !== 'All' ? filterState.value.brand : undefined,
             priority: filterState.value.priority && filterState.value.priority !== 'All' ? filterState.value.priority : undefined,
+            source: filterState.value.source && filterState.value.source !== 'All' ? filterState.value.source : undefined,
+            platform: filterState.value.platform && filterState.value.platform !== 'All' ? filterState.value.platform : undefined,
+            history: filterState.value.history && filterState.value.history !== 'All' ? filterState.value.history : undefined,
             sort: filterState.value.sort || 'tanggal_complaint',
             order: filterState.value.order || 'desc',
             ...overrides,
@@ -228,6 +230,9 @@ const setStatus = (status) => visitIndex({ status: status === 'All' ? undefined 
 const setCsFilter = (name) => visitIndex({ cs_name: name || undefined, page: 1 }, { replace: false });
 const setBrandFilter = (brand) => visitIndex({ brand: brand === 'All' ? undefined : brand, page: 1 }, { replace: false });
 const setPriorityFilter = (priority) => visitIndex({ priority: priority === 'All' ? undefined : priority, page: 1 }, { replace: false });
+const setSourceFilter = (source) => visitIndex({ source: source === 'All' ? undefined : source, page: 1 }, { replace: false });
+const setPlatformFilter = (platform) => visitIndex({ platform: platform === 'All' ? undefined : platform, page: 1 }, { replace: false });
+const setHistoryFilter = (history) => visitIndex({ history: history === 'All' ? undefined : history, page: 1 }, { replace: false });
 const sortBy = (field) =>
     visitIndex({ sort: field, order: filterState.value.sort === field && filterState.value.order === 'asc' ? 'desc' : 'asc' }, { replace: false });
 
@@ -279,12 +284,16 @@ const currentStatus = computed(() => filterState.value.status || 'All');
 const currentCs = computed(() => filterState.value.cs_name || '');
 const currentBrand = computed(() => filterState.value.brand || 'All');
 const currentPriority = computed(() => filterState.value.priority || 'All');
+const currentSource = computed(() => filterState.value.source || 'All');
+const currentPlatform = computed(() => filterState.value.platform || 'All');
+const currentHistory = computed(() => filterState.value.history || 'All');
+
 const hasActiveFilters = computed(() =>
-    Boolean(search.value || currentStatus.value !== 'All' || currentCs.value || currentBrand.value !== 'All' || currentPriority.value !== 'All'),
+    Boolean(search.value || currentStatus.value !== 'All' || currentCs.value || currentBrand.value !== 'All' || currentPriority.value !== 'All' || currentSource.value !== 'All' || currentPlatform.value !== 'All' || currentHistory.value !== 'All'),
 );
 const activeFilterCount = computed(
     () =>
-        [Boolean(search.value), currentStatus.value !== 'All', Boolean(currentCs.value), currentBrand.value !== 'All', currentPriority.value !== 'All'].filter(
+        [Boolean(search.value), currentStatus.value !== 'All', Boolean(currentCs.value), currentBrand.value !== 'All', currentPriority.value !== 'All', currentSource.value !== 'All', currentPlatform.value !== 'All', currentHistory.value !== 'All'].filter(
             Boolean,
         ).length,
 );
@@ -298,6 +307,9 @@ const resetFilters = () => {
             cs_name: undefined,
             brand: undefined,
             priority: undefined,
+            source: undefined,
+            platform: undefined,
+            history: undefined,
             page: 1,
         },
         { replace: false },
@@ -376,7 +388,7 @@ const createInitialFormState = () => ({
     report_category: '',
     video_unboxing: null,
     username: '',
-    category_customer: '',
+    history: '',
     oos: '',
     reason_whitelist: '',
     reason_late_respons: '',
@@ -407,16 +419,16 @@ watch(
 // Real-time History Check from Server
 const fetchCustomerHistory = debounce(async (username: string) => {
     if (!username) {
-        form.category_customer = '';
+        form.history = '';
         return;
     }
 
     try {
         const response = await axios.get(route('complaints.history', username));
         if (response.data && response.data.label) {
-            form.category_customer = response.data.label;
+            form.history = response.data.label;
         } else {
-            form.category_customer = '';
+            form.history = '';
         }
     } catch (error) {
         console.error('Failed to fetch customer history:', error);
@@ -624,7 +636,7 @@ const submitForm = () => {
                 priority: priorityPreview.value,
                 auto_sync_sla: autoSyncSlaPreview.value,
                 report_category: reportCategoryPreview.value || null,
-                category_customer: data.category_customer || null,
+                history: data.history || null,
                 complaint_power,
                 level_customer: complaint_power,
                 oos: oosValue,
@@ -907,6 +919,49 @@ const sectionChecks = computed(() => [
                                     <ChevronDown class="pointer-events-none absolute right-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
                                 </div>
 
+                                <!-- Source Select -->
+                                <div class="relative min-w-[130px]">
+                                    <select
+                                        :value="currentSource"
+                                        class="h-10 w-full appearance-none rounded-xl border border-slate-200/60 bg-white pl-4 pr-10 text-[11px] font-black uppercase tracking-wider text-slate-600 outline-none transition-all hover:border-slate-300 focus:ring-4 focus:ring-blue-50/50 shadow-sm"
+                                        @change="setSourceFilter($event.target.value)"
+                                    >
+                                        <option value="All">ANY SOURCE</option>
+                                        <option v-for="source in props.sourceOptions" :key="source" :value="source">
+                                            {{ source }}
+                                        </option>
+                                    </select>
+                                    <ChevronDown class="pointer-events-none absolute right-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+                                </div>
+
+                                <!-- Platform Select -->
+                                <div class="relative min-w-[130px]">
+                                    <select
+                                        :value="currentPlatform"
+                                        class="h-10 w-full appearance-none rounded-xl border border-slate-200/60 bg-white pl-4 pr-10 text-[11px] font-black uppercase tracking-wider text-slate-600 outline-none transition-all hover:border-slate-300 focus:ring-4 focus:ring-blue-50/50 shadow-sm"
+                                        @change="setPlatformFilter($event.target.value)"
+                                    >
+                                        <option value="All">ANY PLATFORM</option>
+                                        <option v-for="platform in props.platformOptions" :key="platform" :value="platform">
+                                            {{ platform }}
+                                        </option>
+                                    </select>
+                                    <ChevronDown class="pointer-events-none absolute right-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+                                </div>
+
+                                <!-- History/Repeat Select -->
+                                <div class="relative min-w-[150px]">
+                                    <select
+                                        :value="currentHistory"
+                                        class="h-10 w-full appearance-none rounded-xl border border-slate-200/60 bg-white pl-4 pr-10 text-[11px] font-black uppercase tracking-wider text-blue-600 outline-none transition-all hover:border-blue-300 focus:ring-4 focus:ring-blue-50/50 shadow-sm ring-1 ring-blue-100"
+                                        @change="setHistoryFilter($event.target.value)"
+                                    >
+                                        <option value="All">ALL CUSTOMERS</option>
+                                        <option value="Repeat">REPEAT CUSTOMERS ONLY</option>
+                                    </select>
+                                    <ChevronDown class="pointer-events-none absolute right-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-blue-400" />
+                                </div>
+
                                 <!-- Status Select -->
                                 <div class="relative min-w-[130px]">
                                     <select
@@ -1121,18 +1176,24 @@ const sectionChecks = computed(() => [
                                 <table class="w-full min-w-[1080px] table-fixed divide-y divide-[var(--line)]">
                                     <thead class="bg-slate-50/80">
                                         <tr class="text-left text-[10px] font-black uppercase tracking-widest text-slate-400">
-                                            <th class="w-[12%] py-3 pl-5 pr-4">Source</th>
-                                            <th class="w-[14%] px-4 py-3">
+                                            <th class="w-[10%] py-3 pl-5 pr-4">Source</th>
+                                            <th class="w-[12%] px-4 py-3">
                                                 <button type="button" class="group inline-flex items-center gap-2 transition hover:text-[var(--app-primary)]" @click="sortBy('tanggal_complaint')">
                                                     Tanggal
                                                     <ArrowUpDown class="h-3 w-3 transition-transform group-hover:scale-125" />
                                                 </button>
                                             </th>
-                                            <th class="w-[15%] px-4 py-3">Order ID</th>
-                                            <th class="w-[20%] px-4 py-3">Customer</th>
-                                            <th class="w-[12%] px-4 py-3">Agent</th>
-                                            <th class="w-[10%] px-4 py-3 text-center">Status</th>
-                                            <th class="w-[8%] px-4 py-3 text-center">Prty</th>
+                                            <th class="w-[12%] px-4 py-3">Order ID</th>
+                                            <th class="w-[15%] px-4 py-3">Customer</th>
+                                            <th class="w-[15%] px-4 py-3">
+                                                <button type="button" class="group inline-flex items-center gap-2 transition hover:text-[var(--app-primary)]" @click="sortBy('history')">
+                                                    History
+                                                    <ArrowUpDown class="h-3 w-3 transition-transform group-hover:scale-125" />
+                                                </button>
+                                            </th>
+                                            <th class="w-[10%] px-4 py-3">Agent</th>
+                                            <th class="w-[8%] px-4 py-3 text-center">Status</th>
+                                            <th class="w-[6%] px-4 py-3 text-center">Prty</th>
                                             <th class="w-[12%] py-3 pl-4 pr-5 text-right">Actions</th>
                                         </tr>
                                     </thead>
@@ -1163,13 +1224,18 @@ const sectionChecks = computed(() => [
                                             <td class="px-4 py-3">
                                                 <div class="space-y-0.5">
                                                     <p class="truncate text-[13px] font-bold text-[var(--app-ink)]">{{ item.username || '-' }}</p>
-                                                    <p v-if="item.category_customer" class="text-[10px] font-black text-blue-600 uppercase tracking-tight">
-                                                        {{ item.category_customer }}
-                                                    </p>
-                                                    <p v-else class="line-clamp-1 text-[11px] font-medium text-slate-400">
+                                                    <p class="line-clamp-1 text-[11px] font-medium text-slate-400">
                                                         {{ item.product_name || item.summary_case || '-' }}
                                                     </p>
                                                 </div>
+                                            </td>
+                                            <td class="px-4 py-3">
+                                                <div v-if="item.history" class="inline-flex items-center rounded-lg bg-blue-50 px-2 py-1 ring-1 ring-blue-100">
+                                                    <span class="text-[10px] font-black uppercase tracking-tight text-blue-600">
+                                                        {{ item.history }}
+                                                    </span>
+                                                </div>
+                                                <span v-else class="text-[11px] font-medium text-slate-300 italic">First Complaint</span>
                                             </td>
                                             <td class="px-4 py-3 text-[13px] font-bold text-slate-600">{{ item.cs_name || 'UNASSIGNED' }}</td>
                                             <td class="px-4 py-3 text-center">
@@ -1330,8 +1396,8 @@ const sectionChecks = computed(() => [
                                 <div class="rounded-3xl border border-slate-100 p-5 shadow-sm">
                                     <p class="text-[10px] font-bold uppercase tracking-[0.2rem] text-slate-400">Customer Identity</p>
                                     <p class="mt-3 text-lg font-black text-[var(--app-ink)]">{{ detailItem.username || '-' }}</p>
-                                    <p v-if="detailItem.category_customer" class="mt-1 text-[11px] font-black uppercase text-blue-600 tracking-wider">
-                                        {{ detailItem.category_customer }}
+                                    <p v-if="detailItem.history" class="mt-1 text-[11px] font-black uppercase text-blue-600 tracking-wider">
+                                        {{ detailItem.history }}
                                     </p>
                                     <div class="mt-1 flex items-center gap-2 text-[13px] font-medium text-slate-500">
                                         <span>{{ detailItem.brand || '-' }}</span>
@@ -1903,9 +1969,9 @@ const sectionChecks = computed(() => [
                                             <div class="space-y-1.5">
                                                 <label class="block text-[13px] font-bold uppercase tracking-wide text-slate-700">Username*</label>
                                                 <input v-model="form.username" type="text" :class="controlClass('username')" placeholder="Gunakan username marketplace..." />
-                                                <div v-if="form.category_customer" class="mt-2 flex items-center gap-2 rounded-xl bg-blue-50/50 px-3 py-2 ring-1 ring-blue-100">
+                                                <div v-if="form.history" class="mt-2 flex items-center gap-2 rounded-xl bg-blue-50/50 px-3 py-2 ring-1 ring-blue-100">
                                                     <Users class="h-3.5 w-3.5 text-blue-500" />
-                                                    <span class="text-[11px] font-black uppercase tracking-wider text-blue-600">{{ form.category_customer }}</span>
+                                                    <span class="text-[11px] font-black uppercase tracking-wider text-blue-600">{{ form.history }}</span>
                                                 </div>
                                                 <p v-if="fieldError('username')" class="mt-2 text-xs font-medium text-rose-600">
                                                     {{ fieldError('username') }}

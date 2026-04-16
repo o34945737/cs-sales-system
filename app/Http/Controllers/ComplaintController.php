@@ -117,6 +117,7 @@ class ComplaintController extends Controller
             'priority',
             'sla',
             'cs_name',
+            'history',
         ];
 
         $sortField = $request->get('sort', 'tanggal_complaint');
@@ -177,12 +178,39 @@ class ComplaintController extends Controller
             return $query;
         };
 
+        $applySourceFilter = function ($query) use ($request) {
+            if ($request->filled('source') && $request->source !== 'All') {
+                $query->where('source', $request->source);
+            }
+
+            return $query;
+        };
+
+        $applyPlatformFilter = function ($query) use ($request) {
+            if ($request->filled('platform') && $request->platform !== 'All') {
+                $query->where('platform', $request->platform);
+            }
+
+            return $query;
+        };
+
+        $applyHistoryFilter = function ($query) use ($request) {
+            if ($request->filled('history') && $request->history === 'Repeat') {
+                $query->where('history', '!=', 'Complaint ke 1')->whereNotNull('history');
+            }
+
+            return $query;
+        };
+
         $listQuery = Complaint::query();
         $applySearch($listQuery);
         $applyStatus($listQuery);
         $applyCsFilter($listQuery);
         $applyBrandFilter($listQuery);
         $applyPriorityFilter($listQuery);
+        $applySourceFilter($listQuery);
+        $applyPlatformFilter($listQuery);
+        $applyHistoryFilter($listQuery);
 
         if ($sortField === 'sla') {
             $listQuery->orderByRaw(
@@ -196,22 +224,31 @@ class ComplaintController extends Controller
         }
 
         $statusSummaryQuery = Complaint::query();
-        $applySearch($statusSummaryQuery);
+        $applyStatus($statusSummaryQuery);
         $applyCsFilter($statusSummaryQuery);
         $applyBrandFilter($statusSummaryQuery);
         $applyPriorityFilter($statusSummaryQuery);
+        $applySourceFilter($statusSummaryQuery);
+        $applyPlatformFilter($statusSummaryQuery);
+        $applyHistoryFilter($statusSummaryQuery);
 
         $csSummaryQuery = Complaint::query();
         $applySearch($csSummaryQuery);
         $applyStatus($csSummaryQuery);
         $applyBrandFilter($csSummaryQuery);
         $applyPriorityFilter($csSummaryQuery);
+        $applySourceFilter($csSummaryQuery);
+        $applyPlatformFilter($csSummaryQuery);
+        $applyHistoryFilter($csSummaryQuery);
 
         $prioritySummaryQuery = Complaint::query();
         $applySearch($prioritySummaryQuery);
         $applyStatus($prioritySummaryQuery);
         $applyCsFilter($prioritySummaryQuery);
         $applyBrandFilter($prioritySummaryQuery);
+        $applySourceFilter($prioritySummaryQuery);
+        $applyPlatformFilter($prioritySummaryQuery);
+        $applyHistoryFilter($prioritySummaryQuery);
 
         $statusSummary = [
             'all' => (clone $statusSummaryQuery)->count(),
@@ -226,6 +263,9 @@ class ComplaintController extends Controller
         $applyCsFilter($overviewQuery);
         $applyBrandFilter($overviewQuery);
         $applyPriorityFilter($overviewQuery);
+        $applySourceFilter($overviewQuery);
+        $applyPlatformFilter($overviewQuery);
+        $applyHistoryFilter($overviewQuery);
 
         return Inertia::render('Complaints/Index', [
             'complaints' => $listQuery->paginate(15)->withQueryString(),
@@ -237,6 +277,9 @@ class ComplaintController extends Controller
                 'sort' => $request->input('sort'),
                 'order' => $request->input('order'),
                 'cs_name' => $request->input('cs_name'),
+                'source' => $request->input('source'),
+                'platform' => $request->input('platform'),
+                'history' => $request->input('history'),
             ],
             'cs_summary' => $csSummaryQuery
                 ->select('cs_name', DB::raw('count(*) as total'))
@@ -310,17 +353,6 @@ class ComplaintController extends Controller
 
             if ($request->hasFile('proof_attachment')) {
                 $data['proof_attachment'] = $request->file('proof_attachment')->store('complaints/proofs', 'public');
-            }
-
-            // --- AUTO CALCULATION: Category Customer ---
-            $existingCount = Complaint::where('username', $data['username'])->count();
-            if ($existingCount === 1) {
-                $data['category_customer'] = 'Customer ini complaint ke 2';
-            } elseif ($existingCount >= 2) {
-                $newCount = $existingCount + 1;
-                $data['category_customer'] = "Customer ini complaint ke {$newCount}x";
-            } else {
-                $data['category_customer'] = null; // First time
             }
 
             Complaint::create($data);
@@ -524,6 +556,7 @@ class ComplaintController extends Controller
             'last_step' => [$required, 'string', Rule::in($lastStepOptions)],
             'step_cs_selesai' => [$required, 'string', Rule::in(['YES', 'NO'])],
             'complaint_power' => empty($complaintPowerOptions) ? [$required, 'string'] : [$required, 'string', Rule::in($complaintPowerOptions)],
+            'history' => ['nullable', 'string'],
             'level_customer' => empty($complaintPowerOptions) ? ['nullable', 'string'] : ['nullable', 'string', Rule::in($complaintPowerOptions)],
             'tanggal_update' => [$required, 'date'],
             'tanggal_step_cs_selesai' => ['required_if:step_cs_selesai,YES', 'nullable', 'date'],

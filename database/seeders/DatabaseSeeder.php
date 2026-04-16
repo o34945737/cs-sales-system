@@ -26,6 +26,7 @@ class DatabaseSeeder extends Seeder
         $this->call(LastStepSeeder::class);
         $this->call(ReasonWhitelistSeeder::class);
         $this->call(ReasonLateResponseSeeder::class);
+        $this->call(ComplaintSeeder::class);
 
         $admin = User::query()->updateOrCreate(
             ['email' => 'admin@example.com'],

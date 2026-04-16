@@ -181,19 +181,12 @@ class Complaint extends Model
                 $model->tanggal_step_cs_selesai = null;
             }
 
-            // 7. Category Customer (Penghitungan riwayat username)
-            if (empty($model->category_customer) && $model->username) {
-                // Hanya jalankan logic ini bila record baru dibuat (bukan update data lama)
+            // 7. History (Penghitungan riwayat username)
+            if (empty($model->history) && $model->username) {
                 if (!$model->exists) {
                     $count = self::where('username', $model->username)->count();
-                    if ($count == 1) {
-                        $model->category_customer = "Customer ini complaint ke 2";
-                    } elseif ($count >= 2) {
-                        $c = $count + 1;
-                        $model->category_customer = "Customer ini complaint ke {$c}x";
-                    } else {
-                        $model->category_customer = null; // complaint pertama kali
-                    }
+                    $newCount = $count + 1;
+                    $model->history = "Complaint ke {$newCount}";
                 }
             }
 
