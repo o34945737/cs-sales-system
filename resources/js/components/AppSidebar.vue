@@ -55,6 +55,10 @@ const mainNavItems = computed<NavItem[]>(() => {
         items.push({ title: 'Dashboard', href: '/dashboard', icon: LayoutGrid });
     }
 
+    if (page.props.auth.can.view_users) {
+        items.push({ title: 'Management Users', href: '/users', icon: Users });
+    }
+
     return items;
 });
 
@@ -81,9 +85,6 @@ const masterDataComplainItems = computed<NavItem[]>(() => {
         items.push({ title: 'Part Of Bad', href: '/part-of-bads', icon: Archive });
     }
 
-    if (page.props.auth.can.view_users) {
-        items.push({ title: 'Management Users', href: '/users', icon: Users });
-    }
 
     if (page.props.auth.can.view_last_steps) {
         items.push({ title: 'Last Steps', href: '/last-steps', icon: ListChecks });

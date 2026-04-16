@@ -111,7 +111,7 @@ const complaintPage = computed(() => ({
     ...(props.complaints || {}),
 }));
 const complaintRows = computed(() => (Array.isArray(complaintPage.value.data) ? complaintPage.value.data : []));
-const paginationLinks = computed(() => (Array.isArray(complaintPage.value.links) ? complaintPage.value.links.filter((link) => link?.url) : []));
+const paginationLinks = computed(() => (Array.isArray(complaintPage.value.links) ? complaintPage.value.links : []));
 const filterState = computed(() => (props.filters && !Array.isArray(props.filters) ? props.filters : {}));
 const csSummary = computed(() => props.cs_summary || []);
 const statusSummary = computed(() => props.status_summary || {});
@@ -831,26 +831,6 @@ const sectionChecks = computed(() => [
         <div class="pb-20">
             <div class="mx-auto flex max-w-[90rem] flex-col gap-10 px-4 font-sans sm:px-6 lg:px-8">
                 <div class="space-y-10">
-                    <!-- 1. Top Metric Bar (Standard UX) -->
-                    <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                        <article
-                            v-for="card in overviewCards"
-                            :key="card.label"
-                            class="group relative overflow-hidden rounded-xl border border-slate-100 bg-white p-4 shadow-sm transition-all hover:shadow-md hover:-translate-y-0.5"
-                        >
-                            <div class="absolute -right-4 -top-4 h-24 w-24 rounded-full bg-[var(--app-primary)]/5 blur-2xl"></div>
-                            <div class="relative z-10">
-                                <p class="text-[9px] font-black uppercase tracking-[0.15rem] text-slate-400">{{ card.label }}</p>
-                                <div class="mt-1.5 flex items-end justify-between">
-                                    <p class="text-2xl font-black tracking-tight text-slate-900">{{ card.value }}</p>
-                                    <div class="flex h-6 w-6 items-center justify-center rounded-lg bg-slate-50 text-slate-400">
-                                        <Activity class="h-3 w-3" />
-                                    </div>
-                                </div>
-                            </div>
-                        </article>
-                    </div>
-
                     <!-- 2. Header & Quick Actions -->
                     <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                         <div class="max-w-xl">
@@ -873,16 +853,36 @@ const sectionChecks = computed(() => [
                         </button>
                     </div>
 
+                     <!-- 1. Top Metric Bar (Standard UX) -->
+                    <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                        <article
+                            v-for="card in overviewCards"
+                            :key="card.label"
+                            class="group relative overflow-hidden rounded-xl border border-slate-100 bg-white p-4 shadow-sm transition-all hover:shadow-md hover:-translate-y-0.5"
+                        >
+                            <div class="absolute -right-4 -top-4 h-24 w-24 rounded-full bg-[var(--app-primary)]/5 blur-2xl"></div>
+                            <div class="relative z-10">
+                                <p class="text-[9px] font-black uppercase tracking-[0.15rem] text-slate-400">{{ card.label }}</p>
+                                <div class="mt-1.5 flex items-end justify-between">
+                                    <p class="text-2xl font-black tracking-tight text-slate-900">{{ card.value }}</p>
+                                    <div class="flex h-6 w-6 items-center justify-center rounded-lg bg-slate-50 text-slate-400">
+                                        <Activity class="h-3 w-3" />
+                                    </div>
+                                </div>
+                            </div>
+                        </article>
+                    </div>
+
                     <!-- 3. Unified Filters & Search Row -->
                     <div class="rounded-3xl border border-slate-100 bg-slate-50/30 p-1.5 shadow-sm">
                         <div class="flex flex-col gap-1.5 lg:flex-row lg:items-center">
-                            <div class="relative flex-1">
-                                <Search class="pointer-events-none absolute left-4.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                            <div class="relative flex-1 group">
+                                <Search class="pointer-events-none absolute left-4 top-1/2 h-4.5 w-4.5 -translate-y-1/2 text-slate-400 group-focus-within:text-[var(--app-primary)] transition-colors" />
                                 <input
                                     v-model="search"
                                     type="text"
                                     placeholder="Search order ID, resi, or username..."
-                                    class="h-11 w-full rounded-2xl border-none bg-transparent pl-11 pr-4 text-[13px] text-slate-700 outline-none transition focus:ring-0"
+                                    class="h-11 w-full rounded-2xl border border-slate-200/60 bg-white pl-11 pr-4 text-[13px] font-bold text-slate-700 outline-none transition-all focus:border-[var(--app-primary)] focus:ring-4 focus:ring-blue-50 placeholder:font-medium placeholder:text-slate-400"
                                 />
                             </div>
                             
@@ -1189,13 +1189,6 @@ const sectionChecks = computed(() => [
                                         <h3 class="text-2xl font-black tracking-tight text-[var(--app-ink)]">
                                             {{ hasActiveFilters ? 'No Results Found' : 'Clean Slate' }}
                                         </h3>
-                                        <p class="text-[13px] font-bold uppercase tracking-wide leading-relaxed text-slate-400">
-                                            {{
-                                                hasActiveFilters
-                                                    ? 'We couldn\'t find any complaints matching your current filters. Try resetting them or adjusting your search.'
-                                                    : 'Your workspace is currently empty. Start by adding your first complaint to see it in action.'
-                                            }}
-                                        </p>
                                     </div>
                                     <div class="flex flex-col items-center gap-3 pt-4">
                                         <button
@@ -1218,25 +1211,32 @@ const sectionChecks = computed(() => [
                                 </div>
                             </div>
 
-                            <div class="flex flex-col gap-4 border-t border-[var(--line)] px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
-                                <p class="text-sm text-slate-400">
-                                    Listing {{ complaintPage.from || 0 }}-{{ complaintPage.to || 0 }} / Total {{ complaintPage.total || 0 }} index
+                            <div class="flex flex-col gap-5 border-t border-slate-100 bg-slate-50/30 px-6 py-6 sm:flex-row sm:items-center sm:justify-between">
+                                <p class="text-[13px] font-bold text-slate-400">
+                                    <span class="text-slate-900">Listing {{ complaintPage.from || 0 }} - {{ complaintPage.to || 0 }}</span>
+                                    <span class="mx-2 text-slate-300">/</span>
+                                    Total {{ complaintPage.total || 0 }} Tiket
                                 </p>
 
-                                <div class="flex flex-wrap gap-2">
-                                    <button
-                                        v-for="link in paginationLinks"
-                                        :key="`${link.label}-${link.url}`"
-                                        type="button"
-                                        class="rounded-2xl border px-4 py-2 text-sm font-semibold transition"
-                                        :class="
-                                            link.active
-                                                ? 'border-[var(--accent)] bg-[var(--accent)] text-white'
-                                                : 'hover:border-[var(--accent)]/40 border-[var(--line)] bg-white text-slate-600'
-                                        "
-                                        @click="router.visit(link.url, { preserveScroll: true, preserveState: true, replace: true })"
-                                        v-html="link.label"
-                                    ></button>
+                                <div class="flex flex-wrap items-center gap-1.5">
+                                    <template v-for="(link, index) in paginationLinks" :key="index">
+                                        <button
+                                            v-if="link.url || link.active"
+                                            type="button"
+                                            class="flex h-10 min-w-[40px] items-center justify-center rounded-xl px-3 text-[13px] font-black transition-all"
+                                            :class="
+                                                link.active
+                                                    ? 'bg-[var(--app-primary)] text-white shadow-lg shadow-blue-500/20'
+                                                    : link.url
+                                                        ? 'bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50 ring-1 ring-slate-200/60'
+                                                        : 'cursor-not-allowed bg-slate-50 text-slate-300'
+                                            "
+                                            :disabled="!link.url"
+                                            @click="link.url && router.visit(link.url, { preserveScroll: true, preserveState: true, replace: true })"
+                                        >
+                                            <span v-html="link.label"></span>
+                                        </button>
+                                    </template>
                                 </div>
                             </div>
                         </section>
