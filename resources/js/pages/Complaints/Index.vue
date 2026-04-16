@@ -21,6 +21,7 @@ import { computed, ref, watch } from 'vue';
 const DEFAULT_SOURCE_OPTIONS = ['After Sales', 'Pre Sales', 'Brand', 'KAE', 'Socmed'];
 const DEFAULT_COMPLAINT_POWER_OPTIONS = ['Hard Complaint', 'Normal Complaint'];
 const DEFAULT_STEP_STATUS_OPTIONS = ['YES', 'NO'];
+const DEFAULT_PRIORITY_OPTIONS = ['Cool', 'Mines', 'P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7'];
 
 const uniqueOptions = (values) => [...new Set(values.filter(Boolean))];
 const pickPreferredOption = (options, preferred = '') => {
@@ -83,12 +84,14 @@ const props = defineProps({
     skuCodeOptions: Array,
     sourceOptions: Array,
     complaintPowerOptions: Array,
-    stepStatusOptions: Array,
+    partOfBadOptions: Array,
     subCaseOptions: Array,
     causeByOptions: Array,
     lastStepOptions: Array,
     reasonWhitelistOptions: Array,
     reasonLateResponseOptions: Array,
+    priority_summary: Object,
+    oosOrderIds: Array,
     autoCauseByMap: Object,
 });
 
@@ -101,6 +104,7 @@ const paginationLinks = computed(() => (Array.isArray(complaintPage.value.links)
 const filterState = computed(() => (props.filters && !Array.isArray(props.filters) ? props.filters : {}));
 const csSummary = computed(() => props.cs_summary || []);
 const statusSummary = computed(() => props.status_summary || {});
+const prioritySummary = computed(() => (props.priority_summary && !Array.isArray(props.priority_summary) ? props.priority_summary : {}));
 const overview = computed(() => props.overview || {});
 const sourceOptions = computed(() =>
     Array.isArray(props.sourceOptions) && props.sourceOptions.length ? props.sourceOptions : DEFAULT_SOURCE_OPTIONS,
@@ -114,15 +118,15 @@ const complaintPowerOptions = computed(() =>
         value,
     })),
 );
-const stepStatusOptions = computed(() =>
-    Array.isArray(props.stepStatusOptions) && props.stepStatusOptions.length ? props.stepStatusOptions : DEFAULT_STEP_STATUS_OPTIONS,
-);
+const stepStatusOptions = computed(() => DEFAULT_STEP_STATUS_OPTIONS);
 const masterBrandOptions = computed(() => (Array.isArray(props.brandOptions) ? props.brandOptions : []));
 const masterPlatformOptions = computed(() => (Array.isArray(props.platformOptions) ? props.platformOptions : []));
 const masterSkuCodeOptions = computed(() => (Array.isArray(props.skuCodeOptions) ? props.skuCodeOptions : []));
+const partOfBadOptions = computed(() => (Array.isArray(props.partOfBadOptions) ? props.partOfBadOptions : []));
 const subCaseOptions = computed(() => (Array.isArray(props.subCaseOptions) ? props.subCaseOptions : []));
 const csNameOptions = computed(() => (Array.isArray(props.csNameOptions) ? props.csNameOptions : []));
 const causeByOptions = computed(() => (Array.isArray(props.causeByOptions) ? props.causeByOptions : ['?']));
+const oosOrderIds = computed(() => (Array.isArray(props.oosOrderIds) ? props.oosOrderIds.filter(Boolean) : []));
 const lastStepOptions = computed(() => {
     if (Array.isArray(props.lastStepOptions) && props.lastStepOptions.length) {
         return props.lastStepOptions;
@@ -176,6 +180,8 @@ const visitIndex = (overrides = {}, options = {}) => {
             search: search.value || undefined,
             status: filterState.value.status && filterState.value.status !== 'All' ? filterState.value.status : undefined,
             cs_name: filterState.value.cs_name || undefined,
+            brand: filterState.value.brand && filterState.value.brand !== 'All' ? filterState.value.brand : undefined,
+            priority: filterState.value.priority && filterState.value.priority !== 'All' ? filterState.value.priority : undefined,
             sort: filterState.value.sort || 'tanggal_complaint',
             order: filterState.value.order || 'desc',
             ...overrides,
@@ -191,6 +197,8 @@ watch(
 
 const setStatus = (status) => visitIndex({ status: status === 'All' ? undefined : status, page: 1 }, { replace: false });
 const setCsFilter = (name) => visitIndex({ cs_name: name || undefined, page: 1 }, { replace: false });
+const setBrandFilter = (brand) => visitIndex({ brand: brand === 'All' ? undefined : brand, page: 1 }, { replace: false });
+const setPriorityFilter = (priority) => visitIndex({ priority: priority === 'All' ? undefined : priority, page: 1 }, { replace: false });
 const sortBy = (field) =>
     visitIndex({ sort: field, order: filterState.value.sort === field && filterState.value.order === 'asc' ? 'desc' : 'asc' }, { replace: false });
 
@@ -229,10 +237,28 @@ const statusCards = computed(() => [
     { key: 'Whitelist', label: 'Whitelist', value: statusSummary.value.whitelist || 0, icon: ShieldAlert },
 ]);
 
+const priorityCards = computed(() => [
+    { key: 'All', label: 'Semua Priority', value: overview.value.total || 0 },
+    ...DEFAULT_PRIORITY_OPTIONS.map((priority) => ({
+        key: priority,
+        label: priority,
+        value: prioritySummary.value[priority] || 0,
+    })),
+]);
+
 const currentStatus = computed(() => filterState.value.status || 'All');
 const currentCs = computed(() => filterState.value.cs_name || '');
-const hasActiveFilters = computed(() => Boolean(search.value || currentStatus.value !== 'All' || currentCs.value));
-const activeFilterCount = computed(() => [Boolean(search.value), currentStatus.value !== 'All', Boolean(currentCs.value)].filter(Boolean).length);
+const currentBrand = computed(() => filterState.value.brand || 'All');
+const currentPriority = computed(() => filterState.value.priority || 'All');
+const hasActiveFilters = computed(() =>
+    Boolean(search.value || currentStatus.value !== 'All' || currentCs.value || currentBrand.value !== 'All' || currentPriority.value !== 'All'),
+);
+const activeFilterCount = computed(
+    () =>
+        [Boolean(search.value), currentStatus.value !== 'All', Boolean(currentCs.value), currentBrand.value !== 'All', currentPriority.value !== 'All'].filter(
+            Boolean,
+        ).length,
+);
 
 const resetFilters = () => {
     search.value = '';
@@ -241,6 +267,8 @@ const resetFilters = () => {
             search: undefined,
             status: undefined,
             cs_name: undefined,
+            brand: undefined,
+            priority: undefined,
             page: 1,
         },
         { replace: false },
@@ -250,6 +278,7 @@ const resetFilters = () => {
 const complaintBrandOptions = computed(() =>
     masterBrandOptions.value.length ? masterBrandOptions.value : uniqueOptions(complaintRows.value.map((item) => item.brand)),
 );
+const complaintBrandFilterOptions = computed(() => ['All', ...complaintBrandOptions.value]);
 
 const complaintPlatformOptions = computed(() =>
     masterPlatformOptions.value.length ? masterPlatformOptions.value : uniqueOptions(complaintRows.value.map((item) => item.platform)),
@@ -477,9 +506,9 @@ const oosPreview = computed(() => {
         return '';
     }
 
-    const hasOosHistory = complaintRows.value.some((item) => item.order_id === form.order_id && (item.oos || item.riwayat_oos === 'Ada Riwayat OOS'));
+    const hasOosHistory = oosOrderIds.value.includes(form.order_id);
 
-    return hasOosHistory ? 'Ada Riwayat OOS' : 'Tidak Ada Riwayat OOS';
+    return hasOosHistory ? 'Ada Riwayat OOS' : '';
 });
 
 const causeByLocked = computed(() => Boolean(autoCauseByMap.value[form.sub_case]));
@@ -570,6 +599,11 @@ const priorityClass = (priority) =>
         : priority === 'Cool'
           ? 'bg-emerald-50 text-emerald-700'
           : 'bg-slate-100 text-slate-700';
+
+const priorityFilterClass = (priority) =>
+    currentPriority.value === priority
+        ? 'border-[var(--app-primary)] bg-[var(--app-primary)] text-white shadow-[0_8px_15px_rgba(53,103,232,0.15)]'
+        : 'border-slate-100 bg-white text-slate-700 shadow-sm hover:border-[var(--app-primary)]/30 hover:bg-slate-50';
 
 const statusDotClass = (status) => (status === 'Solved' ? 'bg-emerald-500' : status === 'Whitelist' ? 'bg-rose-500' : 'bg-amber-500');
 
@@ -798,7 +832,7 @@ const sectionChecks = computed(() => [
 
                                     <div class="rounded-[28px] border border-[var(--line)] bg-[var(--panel-soft)] p-4">
                                         <p class="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">Cari Dan Tambah</p>
-                                        <div class="mt-3 flex flex-col gap-3 sm:flex-row">
+                                        <div class="mt-3 grid gap-3 lg:grid-cols-[minmax(0,1fr)_220px_auto]">
                                             <label class="relative flex-1">
                                                 <Search class="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
                                                 <input
@@ -806,6 +840,21 @@ const sectionChecks = computed(() => [
                                                     type="text"
                                                     placeholder="Cari order ID, resi, username, atau brand"
                                                     class="w-full rounded-[22px] border border-[var(--line)] bg-white py-3 pl-12 pr-4 text-sm text-slate-700 outline-none transition focus:border-[var(--accent)]"
+                                                />
+                                            </label>
+
+                                            <label class="relative">
+                                                <select
+                                                    :value="currentBrand"
+                                                    class="w-full appearance-none rounded-[22px] border border-[var(--line)] bg-white px-4 py-3 pr-12 text-sm text-slate-700 outline-none transition focus:border-[var(--accent)]"
+                                                    @change="setBrandFilter($event.target.value)"
+                                                >
+                                                    <option v-for="option in complaintBrandFilterOptions" :key="option" :value="option">
+                                                        {{ option === 'All' ? 'Semua Brand' : option }}
+                                                    </option>
+                                                </select>
+                                                <ChevronDown
+                                                    class="pointer-events-none absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400"
                                                 />
                                             </label>
 
@@ -835,6 +884,39 @@ const sectionChecks = computed(() => [
                                             {{ card.value }}
                                         </p>
                                     </article>
+                                </div>
+
+                                <div class="rounded-[28px] border border-[var(--line)] bg-white p-4">
+                                    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                        <div>
+                                            <p class="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">Filter Priority</p>
+                                            <p class="mt-1 text-sm text-slate-500">Pilih priority untuk memfokuskan queue kerja CS.</p>
+                                        </div>
+                                        <span
+                                            class="w-fit rounded-full bg-[var(--accent-soft)] px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--accent)]"
+                                        >
+                                            {{ currentPriority }}
+                                        </span>
+                                    </div>
+
+                                    <div class="mt-4 flex flex-wrap gap-3">
+                                        <button
+                                            v-for="priority in priorityCards"
+                                            :key="priority.key"
+                                            type="button"
+                                            class="group inline-flex items-center gap-3 rounded-[20px] border px-4 py-3 text-left transition-colors"
+                                            :class="priorityFilterClass(priority.key)"
+                                            @click="setPriorityFilter(priority.key)"
+                                        >
+                                            <span class="text-sm font-bold">{{ priority.label }}</span>
+                                            <span
+                                                class="rounded-full px-2.5 py-1 text-xs font-bold"
+                                                :class="currentPriority === priority.key ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'"
+                                            >
+                                                {{ priority.value }}
+                                            </span>
+                                        </button>
+                                    </div>
                                 </div>
 
                                 <div class="rounded-[28px] border border-[var(--line)] bg-white p-4">
@@ -913,8 +995,18 @@ const sectionChecks = computed(() => [
                                     </span>
                                     <span v-if="currentCs" class="rounded-full bg-[var(--accent-soft)] px-3 py-1.5 text-[var(--accent)]"
                                         >CS: {{ currentCs }}</span>
+                                    <span
+                                        v-if="currentBrand !== 'All'"
+                                        class="rounded-full bg-[var(--accent-soft)] px-3 py-1.5 text-[var(--accent)]"
+                                        >Brand: {{ currentBrand }}</span
+                                    >
                                     <span v-if="currentStatus !== 'All'" class="rounded-full bg-[var(--accent-soft)] px-3 py-1.5 text-[var(--accent)]"
                                         >Status: {{ currentStatus }}</span>
+                                    <span
+                                        v-if="currentPriority !== 'All'"
+                                        class="rounded-full bg-[var(--accent-soft)] px-3 py-1.5 text-[var(--accent)]"
+                                        >Priority: {{ currentPriority }}</span
+                                    >
                                     <button
                                         v-if="hasActiveFilters"
                                         type="button"
@@ -1442,6 +1534,12 @@ const sectionChecks = computed(() => [
                                                     <p class="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">SKU Snapshot</p>
                                                     <div class="mt-4 space-y-3">
                                                         <div>
+                                                            <p class="text-xs text-slate-400">Value of Product</p>
+                                                            <p class="mt-1 text-sm font-semibold text-slate-900">
+                                                                {{ formatCurrency(form.value_of_product) }}
+                                                            </p>
+                                                        </div>
+                                                        <div>
                                                             <p class="text-xs text-slate-400">Available Qty</p>
                                                             <p class="mt-1 text-sm font-semibold text-slate-900">{{ form.available_qty || '-' }}</p>
                                                         </div>
@@ -1492,17 +1590,35 @@ const sectionChecks = computed(() => [
                                         </div>
 
                                         <div class="space-y-6">
-                                            <div class="grid gap-5 sm:grid-cols-2">
+                                            <div class="grid gap-5 sm:grid-cols-3">
                                                 <div class="space-y-2">
                                                     <label class="block text-[15px] font-medium text-slate-700">Proof</label>
                                                     <input v-model="form.proof" type="text" :class="controlClass('proof')" />
                                                 </div>
 
-                                                 <div class="space-y-2">
+                                                <div class="space-y-2">
                                                     <label class="block text-[15px] font-medium text-slate-700">Summary Case*</label>
                                                     <input v-model="form.summary_case" type="text" :class="controlClass('summary_case')" />
                                                     <p v-if="fieldError('summary_case')" class="text-xs font-medium text-rose-600">
                                                         {{ fieldError('summary_case') }}
+                                                    </p>
+                                                </div>
+
+                                                <div class="space-y-2">
+                                                    <label class="block text-[15px] font-medium text-slate-700">Part of Bad</label>
+                                                    <div class="relative">
+                                                        <select v-model="form.part_of_bad" :class="controlClass('part_of_bad', 'select')">
+                                                            <option value="">Pilih part of bad</option>
+                                                            <option v-for="option in partOfBadOptions" :key="option" :value="option">
+                                                                {{ option }}
+                                                            </option>
+                                                        </select>
+                                                        <ChevronDown
+                                                            class="pointer-events-none absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400"
+                                                        />
+                                                    </div>
+                                                    <p v-if="fieldError('part_of_bad')" class="text-xs font-medium text-rose-600">
+                                                        {{ fieldError('part_of_bad') }}
                                                     </p>
                                                 </div>
                                             </div>

@@ -205,7 +205,7 @@ class Complaint extends Model
                     $model->oos = 'Ada Riwayat OOS';
                     $model->riwayat_oos = 'Ada Riwayat OOS';
                 } else {
-                    $model->oos = 'Tidak Ada Riwayat OOS';
+                    $model->oos = null;
                     $model->riwayat_oos = null;
                 }
             }

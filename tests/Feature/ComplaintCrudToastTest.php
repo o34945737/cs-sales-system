@@ -5,8 +5,8 @@ use App\Models\CauseBy;
 use App\Models\Complaint;
 use App\Models\ComplaintPower;
 use App\Models\ComplaintSource;
-use App\Models\ComplaintStepStatus;
 use App\Models\LastStep;
+use App\Models\Oos;
 use App\Models\Platform;
 use App\Models\ReasonLateResponse;
 use App\Models\ReasonWhitelist;
@@ -40,16 +40,6 @@ beforeEach(function () {
 
     ComplaintPower::create([
         'name' => 'Normal Complaint',
-        'is_active' => true,
-    ]);
-
-    ComplaintStepStatus::create([
-        'name' => 'YES',
-        'is_active' => true,
-    ]);
-
-    ComplaintStepStatus::create([
-        'name' => 'NO',
         'is_active' => true,
     ]);
 
@@ -152,7 +142,8 @@ test('complaint create redirects back with a toast success message', function ()
         'username' => 'customer.test',
         'status' => 'Pending',
         'priority' => 'P1',
-        'oos' => 'Tidak Ada Riwayat OOS',
+        'oos' => null,
+        'riwayat_oos' => null,
     ]);
 });
 
@@ -242,6 +233,38 @@ test('complaint can autofill product fields from active sku master', function ()
     ]);
 });
 
+test('complaint marks oos history only when order exists in oos data', function () {
+    $user = User::factory()->create(['name' => 'CS Test']);
+    $user->assignRole('CS');
+
+    Oos::create([
+        'tanggal_input' => '2026-04-14',
+        'order_id' => 'ORD-OOS-1',
+        'brand' => 'ANTA',
+        'platform' => 'SHOPEE',
+        'product_name' => 'Sepatu Running',
+        'sku' => 'SKU-1001',
+    ]);
+
+    $response = $this
+        ->actingAs($user)
+        ->from('/complaints')
+        ->post('/complaints', complaintPayload([
+            'order_id' => 'ORD-OOS-1',
+            'resi' => 'RESI-OOS-1',
+        ]));
+
+    $response
+        ->assertRedirect('/complaints')
+        ->assertSessionHas('success', 'Complaint berhasil dibuat.');
+
+    $this->assertDatabaseHas('complaints', [
+        'order_id' => 'ORD-OOS-1',
+        'oos' => 'Ada Riwayat OOS',
+        'riwayat_oos' => 'Ada Riwayat OOS',
+    ]);
+});
+
 test('complaint delete redirects back with a toast success message', function () {
     $user = User::factory()->create(['name' => 'CS Test']);
     $user->assignRole('CS');
@@ -263,4 +286,32 @@ test('complaint delete redirects back with a toast success message', function ()
     $this->assertDatabaseMissing('complaints', [
         'id' => $complaint->id,
     ]);
+});
+
+test('complaint index can filter by brand and priority', function () {
+    $user = User::factory()->create(['name' => 'CS Test']);
+    $user->assignRole('CS');
+
+    Complaint::create(complaintPayload([
+        'order_id' => 'ORD-P1-ANTA',
+        'resi' => 'RESI-P1-ANTA',
+        'brand' => 'ANTA',
+        'last_step' => 'Follow Up WH',
+    ]));
+
+    Complaint::create(complaintPayload([
+        'order_id' => 'ORD-COOL-KAPPA',
+        'resi' => 'RESI-COOL-KAPPA',
+        'brand' => 'KAPPA',
+        'last_step' => 'Seller Win',
+    ]));
+
+    $response = $this
+        ->actingAs($user)
+        ->get('/complaints?brand=ANTA&priority=P1');
+
+    $response
+        ->assertOk()
+        ->assertSee('ORD-P1-ANTA')
+        ->assertDontSee('ORD-COOL-KAPPA');
 });

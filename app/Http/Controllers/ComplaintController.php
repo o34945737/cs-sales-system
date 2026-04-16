@@ -7,8 +7,8 @@ use App\Models\CauseBy;
 use App\Models\Complaint;
 use App\Models\ComplaintPower;
 use App\Models\ComplaintSource;
-use App\Models\ComplaintStepStatus;
 use App\Models\LastStep;
+use App\Models\Oos;
 use App\Models\PartOfBad;
 use App\Models\Platform;
 use App\Models\ReasonLateResponse;
@@ -26,17 +26,14 @@ class ComplaintController extends Controller
 {
     public function index(Request $request)
     {
+        $priorityOrder = ['Cool', 'Mines', 'P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7'];
+
         $sourceOptions = ComplaintSource::query()
             ->where('is_active', true)
             ->orderBy('name')
             ->pluck('name')
             ->all();
         $complaintPowerOptions = ComplaintPower::query()
-            ->where('is_active', true)
-            ->orderBy('name')
-            ->pluck('name')
-            ->all();
-        $stepStatusOptions = ComplaintStepStatus::query()
             ->where('is_active', true)
             ->orderBy('name')
             ->pluck('name')
@@ -158,13 +155,36 @@ class ComplaintController extends Controller
             return $query;
         };
 
+        $applyBrandFilter = function ($query) use ($request) {
+            if ($request->filled('brand') && $request->brand !== 'All') {
+                $query->where('brand', $request->brand);
+            }
+
+            return $query;
+        };
+
+        $applyPriorityFilter = function ($query) use ($request) {
+            if ($request->filled('priority') && $request->priority !== 'All') {
+                $query->where('priority', $request->priority);
+            }
+
+            return $query;
+        };
+
         $listQuery = Complaint::query();
         $applySearch($listQuery);
         $applyStatus($listQuery);
         $applyCsFilter($listQuery);
+        $applyBrandFilter($listQuery);
+        $applyPriorityFilter($listQuery);
 
         if ($sortField === 'sla') {
-            $listQuery->orderByRaw('COALESCE(DATEDIFF(COALESCE(tanggal_update, CURRENT_DATE), tanggal_complaint), 0) ' . $sortOrder);
+            $listQuery->orderByRaw(
+                "COALESCE(CASE
+                    WHEN status = 'Solved' AND tanggal_update IS NOT NULL THEN DATEDIFF(tanggal_update, tanggal_complaint)
+                    ELSE DATEDIFF(CURRENT_DATE, tanggal_complaint)
+                END, 0) {$sortOrder}"
+            );
         } else {
             $listQuery->orderBy($sortField, $sortOrder);
         }
@@ -172,10 +192,20 @@ class ComplaintController extends Controller
         $statusSummaryQuery = Complaint::query();
         $applySearch($statusSummaryQuery);
         $applyCsFilter($statusSummaryQuery);
+        $applyBrandFilter($statusSummaryQuery);
+        $applyPriorityFilter($statusSummaryQuery);
 
         $csSummaryQuery = Complaint::query();
         $applySearch($csSummaryQuery);
         $applyStatus($csSummaryQuery);
+        $applyBrandFilter($csSummaryQuery);
+        $applyPriorityFilter($csSummaryQuery);
+
+        $prioritySummaryQuery = Complaint::query();
+        $applySearch($prioritySummaryQuery);
+        $applyStatus($prioritySummaryQuery);
+        $applyCsFilter($prioritySummaryQuery);
+        $applyBrandFilter($prioritySummaryQuery);
 
         $statusSummary = [
             'all' => (clone $statusSummaryQuery)->count(),
@@ -186,13 +216,18 @@ class ComplaintController extends Controller
 
         $overviewQuery = Complaint::query();
         $applySearch($overviewQuery);
+        $applyStatus($overviewQuery);
         $applyCsFilter($overviewQuery);
+        $applyBrandFilter($overviewQuery);
+        $applyPriorityFilter($overviewQuery);
 
         return Inertia::render('Complaints/Index', [
             'complaints' => $listQuery->paginate(15)->withQueryString(),
             'filters' => [
                 'search' => $request->input('search'),
                 'status' => $request->input('status'),
+                'brand' => $request->input('brand'),
+                'priority' => $request->input('priority'),
                 'sort' => $request->input('sort'),
                 'order' => $request->input('order'),
                 'cs_name' => $request->input('cs_name'),
@@ -208,31 +243,20 @@ class ComplaintController extends Controller
                 'pending' => (clone $overviewQuery)->where('status', 'Pending')->count(),
                 'solved' => (clone $overviewQuery)->where('status', 'Solved')->count(),
                 'whitelist' => (clone $overviewQuery)->where('status', 'Whitelist')->count(),
-                'agents' => Complaint::query()
-                    ->when($request->filled('search'), function ($query) use ($request) {
-                        $search = trim((string) $request->search);
-
-                        $query->where(function ($q) use ($search) {
-                            $q->where('order_id', 'like', "%{$search}%")
-                                ->orWhere('resi', 'like', "%{$search}%")
-                                ->orWhere('username', 'like', "%{$search}%")
-                                ->orWhere('brand', 'like', "%{$search}%")
-                                ->orWhere('platform', 'like', "%{$search}%")
-                                ->orWhere('summary_case', 'like', "%{$search}%")
-                                ->orWhere('cs_name', 'like', "%{$search}%");
-                        });
-                    })
+                'agents' => (clone $overviewQuery)
                     ->distinct('cs_name')
                     ->whereNotNull('cs_name')
                     ->count('cs_name'),
             ],
+            'priority_summary' => collect($priorityOrder)
+                ->mapWithKeys(fn(string $priority) => [$priority => (clone $prioritySummaryQuery)->where('priority', $priority)->count()])
+                ->all(),
             'brandOptions' => $brandOptions,
             'csNameOptions' => $csNameOptions,
             'platformOptions' => $platformOptions,
             'skuCodeOptions' => $skuCodeOptions,
             'sourceOptions' => $sourceOptions,
             'complaintPowerOptions' => $complaintPowerOptions,
-            'stepStatusOptions' => $stepStatusOptions,
             'partOfBadOptions' => $partOfBadOptions,
             'subCaseOptions' => $subCaseOptions,
             'causeByOptions' => array_values(array_unique(array_merge(
@@ -248,6 +272,12 @@ class ComplaintController extends Controller
                 ->orderBy('name')
                 ->get(['name', 'default_cause_by'])
                 ->mapWithKeys(fn(SubCase $subCase) => [$subCase->name => $subCase->default_cause_by])
+                ->all(),
+            'oosOrderIds' => Oos::query()
+                ->whereNotNull('order_id')
+                ->distinct()
+                ->orderBy('order_id')
+                ->pluck('order_id')
                 ->all(),
         ]);
     }
@@ -341,11 +371,6 @@ class ComplaintController extends Controller
             ->orderBy('name')
             ->pluck('name')
             ->all();
-        $stepStatusOptions = ComplaintStepStatus::query()
-            ->where('is_active', true)
-            ->orderBy('name')
-            ->pluck('name')
-            ->all();
         $partOfBadOptions = PartOfBad::query()
             ->where('is_active', true)
             ->orderBy('name')
@@ -432,7 +457,7 @@ class ComplaintController extends Controller
             'part_of_bad' => empty($partOfBadOptions) ? ['nullable', 'string'] : ['nullable', 'string', Rule::in($partOfBadOptions)],
             'cs_name' => [$required, 'string', Rule::in($csNameOptions)],
             'last_step' => [$required, 'string', Rule::in($lastStepOptions)],
-            'step_cs_selesai' => empty($stepStatusOptions) ? [$required, Rule::in(['YES', 'NO'])] : [$required, Rule::in($stepStatusOptions)],
+            'step_cs_selesai' => [$required, 'string', Rule::in(['YES', 'NO'])],
             'complaint_power' => empty($complaintPowerOptions) ? [$required, 'string'] : [$required, 'string', Rule::in($complaintPowerOptions)],
             'level_customer' => empty($complaintPowerOptions) ? ['nullable', 'string'] : ['nullable', 'string', Rule::in($complaintPowerOptions)],
             'tanggal_update' => [$required, 'date'],
