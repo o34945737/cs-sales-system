@@ -248,7 +248,7 @@ const closeSidebar = () => emit('close');
                         @click="toggleMasterDataComplain"
                     >
                         <Tags class="h-5 w-5 shrink-0" />
-                        <span class="flex-1 truncate">Master Data Complain</span>
+                        <span class="flex-1 truncate">Master Data</span>
                         <ChevronDown class="h-4 w-4 shrink-0 transition" :class="masterDataComplainOpen ? 'rotate-180' : ''" />
                     </button>
 
