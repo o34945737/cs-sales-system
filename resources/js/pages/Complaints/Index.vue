@@ -1287,14 +1287,17 @@ const sectionChecks = computed(() => [
                                 <table class="w-full min-w-[1080px] table-fixed divide-y divide-[var(--line)]">
                                     <thead class="bg-slate-50/80">
                                         <tr class="text-left text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">
-                                            <th class="w-10 py-3 pl-5 flex items-center justify-center">
-                                                <input
-                                                    type="checkbox"
-                                                    class="h-4 w-4 rounded-md border-slate-300 text-[var(--app-primary)] focus:ring-[var(--app-primary)] transition-all cursor-pointer"
-                                                    :checked="complaintRows.length > 0 && selectedIds.length === complaintRows.length"
-                                                    @change="toggleSelectAll"
-                                                />
+                                            <th class="w-14 py-3 pl-5">
+                                                <div class="flex items-center justify-center">
+                                                    <input
+                                                        type="checkbox"
+                                                        class="h-4 w-4 rounded-md border-slate-300 text-[var(--app-primary)] focus:ring-[var(--app-primary)] transition-all cursor-pointer"
+                                                        :checked="complaintRows.length > 0 && selectedIds.length === complaintRows.length"
+                                                        @change="toggleSelectAll"
+                                                    />
+                                                </div>
                                             </th>
+                                            <th class="w-12 py-3 px-2 text-center">No</th>
                                             <th class="w-[8%] py-3 px-4">Source</th>
                                             <th class="w-[12%] px-4 py-3">Complaint Date</th>
                                             <th class="w-[10%] px-4 py-3">Order Date</th>
@@ -1309,18 +1312,25 @@ const sectionChecks = computed(() => [
 
                                     <tbody class="divide-y divide-[var(--line)] bg-white">
                                         <tr
-                                            v-for="item in complaintRows"
+                                            v-for="(item, index) in complaintRows"
                                             :key="item.id"
                                             class="group align-top transition-colors hover:bg-slate-50/70"
                                             :class="selectedIds.includes(item.id) ? 'bg-blue-50/30' : ''"
                                         >
-                                            <td class="py-3 pl-5 flex items-center justify-center">
-                                                <input
-                                                    type="checkbox"
-                                                    class="h-4 w-4 rounded-md border-slate-300 text-[var(--app-primary)] focus:ring-[var(--app-primary)] transition-all cursor-pointer checkbox-row"
-                                                    :checked="selectedIds.includes(item.id)"
-                                                    @change="toggleSelect(item.id)"
-                                                />
+                                            <td class="w-14 py-3 pl-5">
+                                                <div class="flex items-center justify-center">
+                                                    <input
+                                                        type="checkbox"
+                                                        class="h-4 w-4 rounded-md border-slate-300 text-[var(--app-primary)] focus:ring-[var(--app-primary)] transition-all cursor-pointer checkbox-row"
+                                                        :checked="selectedIds.includes(item.id)"
+                                                        @change="toggleSelect(item.id)"
+                                                    />
+                                                </div>
+                                            </td>
+                                            <td class="w-12 py-3 px-2 text-center align-middle">
+                                                <span class="text-[10px] font-black text-slate-400">
+                                                    {{ (complaintPage.current_page - 1) * complaintPage.per_page + index + 1 }}
+                                                </span>
                                             </td>
                                             <td class="px-4 py-3">
                                                 <div class="flex flex-col gap-0.5 min-w-0">
