@@ -57,8 +57,6 @@ return new class extends Migration
             $table->string('reason_whitelist')->nullable();
             $table->string('reason_late_respons')->nullable();
             $table->string('video_unboxing')->nullable();
-            $table->string('proof_attachment')->nullable();
-            $table->string('level_customer')->nullable(); // Alias for complaint_power string
             $table->string('complaint_power')->nullable();
             
             // F. AUTOMATION & CALCULATED FIELDS
@@ -67,7 +65,6 @@ return new class extends Migration
             $table->string('priority')->nullable()->index();
             $table->string('history')->nullable();
             $table->string('oos')->nullable();
-            $table->string('riwayat_oos')->nullable();
             $table->string('report_category')->nullable();
             $table->string('auto_sync_sla')->nullable();
             $table->integer('sla')->default(0);

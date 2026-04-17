@@ -136,6 +136,10 @@ class ComplaintController extends Controller
                         ->orWhere('platform', 'like', "%{$search}%")
                         ->orWhere('source', 'like', "%{$search}%")
                         ->orWhere('product_name', 'like', "%{$search}%")
+                        ->orWhere('sku', 'like', "%{$search}%")
+                        ->orWhere('sub_case', 'like', "%{$search}%")
+                        ->orWhere('cause_by', 'like', "%{$search}%")
+                        ->orWhere('part_of_bad', 'like', "%{$search}%")
                         ->orWhere('summary_case', 'like', "%{$search}%")
                         ->orWhere('cs_name', 'like', "%{$search}%")
                         ->orWhere('status', 'like', "%{$search}%")
@@ -202,6 +206,14 @@ class ComplaintController extends Controller
             return $query;
         };
 
+        $applySubCaseFilter = function ($query) use ($request) {
+            if ($request->filled('sub_case') && $request->sub_case !== 'All') {
+                $query->where('sub_case', $request->sub_case);
+            }
+
+            return $query;
+        };
+
         $listQuery = Complaint::query();
         $applySearch($listQuery);
         $applyStatus($listQuery);
@@ -211,6 +223,7 @@ class ComplaintController extends Controller
         $applySourceFilter($listQuery);
         $applyPlatformFilter($listQuery);
         $applyHistoryFilter($listQuery);
+        $applySubCaseFilter($listQuery);
 
         if ($sortField === 'sla') {
             $listQuery->orderByRaw(
@@ -231,6 +244,7 @@ class ComplaintController extends Controller
         $applySourceFilter($statusSummaryQuery);
         $applyPlatformFilter($statusSummaryQuery);
         $applyHistoryFilter($statusSummaryQuery);
+        $applySubCaseFilter($statusSummaryQuery);
 
         $csSummaryQuery = Complaint::query();
         $applySearch($csSummaryQuery);
@@ -240,6 +254,7 @@ class ComplaintController extends Controller
         $applySourceFilter($csSummaryQuery);
         $applyPlatformFilter($csSummaryQuery);
         $applyHistoryFilter($csSummaryQuery);
+        $applySubCaseFilter($csSummaryQuery);
 
         $prioritySummaryQuery = Complaint::query();
         $applySearch($prioritySummaryQuery);
@@ -249,6 +264,7 @@ class ComplaintController extends Controller
         $applySourceFilter($prioritySummaryQuery);
         $applyPlatformFilter($prioritySummaryQuery);
         $applyHistoryFilter($prioritySummaryQuery);
+        $applySubCaseFilter($prioritySummaryQuery);
 
         $statusSummary = [
             'all' => (clone $statusSummaryQuery)->count(),
@@ -266,6 +282,7 @@ class ComplaintController extends Controller
         $applySourceFilter($overviewQuery);
         $applyPlatformFilter($overviewQuery);
         $applyHistoryFilter($overviewQuery);
+        $applySubCaseFilter($overviewQuery);
 
         return Inertia::render('Complaints/Index', [
             'complaints' => $listQuery->paginate(15)->withQueryString(),
@@ -280,6 +297,7 @@ class ComplaintController extends Controller
                 'source' => $request->input('source'),
                 'platform' => $request->input('platform'),
                 'history' => $request->input('history'),
+                'sub_case' => $request->input('sub_case'),
             ],
             'cs_summary' => $csSummaryQuery
                 ->select('cs_name', DB::raw('count(*) as total'))
@@ -454,6 +472,24 @@ class ComplaintController extends Controller
         }
 
         return redirect()->back()->with('success', 'Complaint berhasil dihapus.');
+    }
+
+    public function bulkDestroy(Request $request)
+    {
+        $request->validate([
+            'ids' => ['required', 'array'],
+            'ids.*' => ['exists:complaints,id']
+        ]);
+
+        try {
+            Complaint::whereIn('id', $request->ids)->delete();
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return redirect()->back()->with('error', 'Gagal menghapus beberapa data. Silakan coba lagi.');
+        }
+
+        return redirect()->back()->with('success', 'Semua data yang dipilih berhasil dihapus.');
     }
 
     private function complaintRules(Request $request, bool $forUpdate = false): array

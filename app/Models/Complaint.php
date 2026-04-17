@@ -196,10 +196,8 @@ class Complaint extends Model
                 $existsInOos = \App\Models\Oos::where('order_id', $model->order_id)->exists();
                 if ($existsInOos) {
                     $model->oos = 'Ada Riwayat OOS';
-                    $model->riwayat_oos = 'Ada Riwayat OOS';
                 } else {
                     $model->oos = null;
-                    $model->riwayat_oos = null;
                 }
             }
         });

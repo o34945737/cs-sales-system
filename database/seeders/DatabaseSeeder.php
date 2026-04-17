@@ -32,7 +32,7 @@ class DatabaseSeeder extends Seeder
             ['email' => 'admin@example.com'],
             [
                 'name' => 'Super Admin',
-                'password' => 'password',
+                'password' => '12345678',
                 'is_active' => true,
             ]
         );
@@ -42,7 +42,7 @@ class DatabaseSeeder extends Seeder
             ['email' => 'test@example.com'],
             [
                 'name' => 'Test User',
-                'password' => 'password',
+                'password' => '12345678',
                 'is_active' => true,
             ]
         );

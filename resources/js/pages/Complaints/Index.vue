@@ -135,36 +135,63 @@ const masterBrandOptions = computed(() => (Array.isArray(props.brandOptions) ? p
 const masterPlatformOptions = computed(() => (Array.isArray(props.platformOptions) ? props.platformOptions : []));
 const masterSkuCodeOptions = computed(() => (Array.isArray(props.skuCodeOptions) ? props.skuCodeOptions : []));
 const partOfBadOptions = computed(() => (Array.isArray(props.partOfBadOptions) ? props.partOfBadOptions : []));
-const subCaseOptions = computed(() => (Array.isArray(props.subCaseOptions) ? props.subCaseOptions : []));
-const csNameOptions = computed(() => (Array.isArray(props.csNameOptions) ? props.csNameOptions : []));
-const causeByOptions = computed(() => (Array.isArray(props.causeByOptions) ? props.causeByOptions : ['?']));
-const oosOrderIds = computed(() => (Array.isArray(props.oosOrderIds) ? props.oosOrderIds.filter(Boolean) : []));
-const lastStepOptions = computed(() => {
-    if (Array.isArray(props.lastStepOptions) && props.lastStepOptions.length) {
-        return props.lastStepOptions;
-    }
+const lastStepOptions = computed(() => [
+    { value: 'Claim Receive (10x shipping fee)', status_result: 'Solved', priority_result: 'Cool' },
+    { value: 'Claim Receive (Full)', status_result: 'Solved', priority_result: 'Cool' },
+    { value: 'Claim Reject', status_result: 'Whitelist', priority_result: 'Mines' },
+    { value: 'Complaint Canceled by buyer/No Respons', status_result: 'Solved', priority_result: 'Cool' },
+    { value: 'Follow Up Courier (MP Non aktif)', status_result: 'Pending', priority_result: 'P3' },
+    { value: 'Analysis MP (Late Delivery)', status_result: 'Pending', priority_result: 'P5' },
+    { value: 'Analysis MP (Non Late Delivery)', status_result: 'Pending', priority_result: 'P1' },
+    { value: 'Kingdee Processing (Waiting AWB for replacement product)', status_result: 'Pending', priority_result: 'P6' },
+    { value: 'On the way return & plan banding', status_result: 'Pending', priority_result: 'P2' },
+    { value: 'On the way return & plan refund', status_result: 'Pending', priority_result: 'P3' },
+    { value: 'On the way return & plan replace', status_result: 'Pending', priority_result: 'P4' },
+    { value: 'Pending return & plan banding', status_result: 'Pending', priority_result: 'P3' },
+    { value: 'Pending return & plan refund', status_result: 'Pending', priority_result: 'P3' },
+    { value: 'Pending return & plan replace', status_result: 'Pending', priority_result: 'P4' },
+    { value: 'Pending RGO & plan refund', status_result: 'Pending', priority_result: 'P3' },
+    { value: 'Product has been delivered (Late Delivery)', status_result: 'Solved', priority_result: 'Cool' },
+    { value: 'Refund has been transferred by finance (SPF)', status_result: 'Solved', priority_result: 'Cool' },
+    { value: 'Refund processing by finance (SPF)', status_result: 'Pending', priority_result: 'P6' },
+    { value: 'Replacement product on the way', status_result: 'Pending', priority_result: 'P6' },
+    { value: 'Return Refund (Full)', status_result: 'Solved', priority_result: 'Cool' },
+    { value: 'Return Refund (Partial)', status_result: 'Solved', priority_result: 'Cool' },
+    { value: 'Seller Win', status_result: 'Solved', priority_result: 'Cool' },
+    { value: 'The replacement product has been received by the buyer', status_result: 'Solved', priority_result: 'Cool' },
+    { value: 'Follow Up to After Sales Team', status_result: 'Pending', priority_result: 'P1' },
+    { value: 'Waiting Claim', status_result: 'Pending', priority_result: 'P7' },
+    { value: 'Waiting Money Receive', status_result: 'Pending', priority_result: 'P7' },
+    { value: 'Waiting Data From Customer', status_result: 'Pending', priority_result: 'P3' },
+    { value: 'Follow Up KAE to Brand', status_result: 'Pending', priority_result: 'P2' },
+    { value: 'Follow Up WH', status_result: 'Pending', priority_result: 'P1' },
+    { value: 'Follow Up KAE to KAM', status_result: 'Pending', priority_result: 'P2' },
+    { value: 'Return not authorized', status_result: 'Pending', priority_result: 'P5' },
+    { value: 'Return follow-up (No further action)', status_result: 'Solved', priority_result: 'Cool' },
+].map(opt => ({ label: opt.value, ...opt })));
 
-    return uniqueOptions(complaintRows.value.map((item) => item.last_step)).map((value) => ({
-        label: value,
-        value,
-        status_result: null,
-        priority_level: null,
-    }));
-});
-const reasonWhitelistOptions = computed(() => {
-    if (Array.isArray(props.reasonWhitelistOptions) && props.reasonWhitelistOptions.length) {
-        return props.reasonWhitelistOptions;
-    }
+const subCaseOptions = computed(() => [
+    'Bad Quality Product', 'Bad Service', 'Change Mind', 'Damaged Packaging', 
+    'Damaged Product', 'Expired', 'Fake Return', 'Late Delivery', 
+    'Under Delivery Product', 'Misunderstanding of the product', 'No Reason', 
+    'Promotion', 'Wrong Product', 'OOS', 'Refund DP', 'Lost Product'
+]);
 
-    return uniqueOptions(complaintRows.value.map((item) => item.reason_whitelist));
-});
-const reasonLateResponseOptions = computed(() => {
-    if (Array.isArray(props.reasonLateResponseOptions) && props.reasonLateResponseOptions.length) {
-        return props.reasonLateResponseOptions;
-    }
+const causeByOptions = computed(() => [
+    '?', 'J&T', 'SAP EXPRESS', 'ANTERAJA', 'LEX', 'POS', 'NINJA', 
+    'SICEPAT', 'KURIR REKOMENDASI', 'SPX', 'INDOPAKET', 'GTL', 
+    'CUSTOM LOGISTICS', 'GRAB', 'JNE', 'GOJEK', 'CS', 'Chat++', 
+    'STREAMER', 'KAE', 'WH', 'PART'
+]);
 
-    return uniqueOptions(complaintRows.value.map((item) => item.reason_late_respons));
-});
+const reasonWhitelistOptions = computed(() => [
+    'No repacking indication', 'Packing not proper', 
+    "Customer's evidence is stonger than us", 'Our evidences are not strong (platform T&C)', 
+    'CCTV does not show receipt number', 'Late Respons'
+]);
+
+const reasonLateResponseOptions = computed(() => ['CS', 'KAE', 'Finance', 'WH', 'PH']);
+
 const autoCauseByMap = computed(() => (props.autoCauseByMap && !Array.isArray(props.autoCauseByMap) ? props.autoCauseByMap : {}));
 const lastStepMetaMap = computed(() =>
     Object.fromEntries(
@@ -195,12 +222,51 @@ const filteredCsSummary = computed(() => {
 
     return list.sort((a, b) => (b.total || 0) - (a.total || 0));
 });
+
 const deleteForm = useForm({});
 const isModalOpen = ref(false);
 const isDeleteModalOpen = ref(false);
 const complaintToDelete = ref(null);
 const detailItem = ref(null);
 const submitError = ref('');
+
+// --- BULK ACTION STATE ---
+const selectedIds = ref([]);
+const isBulkDeleteModalOpen = ref(false);
+const bulkDeleteForm = useForm({
+    ids: [],
+});
+
+const toggleSelectAll = () => {
+    if (selectedIds.value.length === complaintRows.value.length) {
+        selectedIds.value = [];
+    } else {
+        selectedIds.value = complaintRows.value.map((row) => row.id);
+    }
+};
+
+const toggleSelect = (id) => {
+    const index = selectedIds.value.indexOf(id);
+    if (index > -1) {
+        selectedIds.value.splice(index, 1);
+    } else {
+        selectedIds.value.push(id);
+    }
+};
+
+const confirmBulkDelete = () => {
+    isBulkDeleteModalOpen.value = true;
+};
+
+const submitBulkDelete = () => {
+    bulkDeleteForm.ids = [...selectedIds.value];
+    bulkDeleteForm.post(route('complaints.bulk-delete'), {
+        onSuccess: () => {
+            isBulkDeleteModalOpen.value = false;
+            selectedIds.value = [];
+        },
+    });
+};
 
 const visitIndex = (overrides = {}, options = {}) => {
     router.get(
@@ -209,10 +275,12 @@ const visitIndex = (overrides = {}, options = {}) => {
             search: search.value || undefined,
             status: filterState.value.status && filterState.value.status !== 'All' ? filterState.value.status : undefined,
             cs_name: filterState.value.cs_name || undefined,
+            brand: filterState.value.brand && filterState.value.brand !== 'All' ? filterState.value.brand : undefined,
             priority: filterState.value.priority && filterState.value.priority !== 'All' ? filterState.value.priority : undefined,
             source: filterState.value.source && filterState.value.source !== 'All' ? filterState.value.source : undefined,
             platform: filterState.value.platform && filterState.value.platform !== 'All' ? filterState.value.platform : undefined,
             history: filterState.value.history && filterState.value.history !== 'All' ? filterState.value.history : undefined,
+            sub_case: filterState.value.sub_case && filterState.value.sub_case !== 'All' ? filterState.value.sub_case : undefined,
             sort: filterState.value.sort || 'tanggal_complaint',
             order: filterState.value.order || 'desc',
             ...overrides,
@@ -233,8 +301,11 @@ const setPriorityFilter = (priority) => visitIndex({ priority: priority === 'All
 const setSourceFilter = (source) => visitIndex({ source: source === 'All' ? undefined : source, page: 1 }, { replace: false });
 const setPlatformFilter = (platform) => visitIndex({ platform: platform === 'All' ? undefined : platform, page: 1 }, { replace: false });
 const setHistoryFilter = (history) => visitIndex({ history: history === 'All' ? undefined : history, page: 1 }, { replace: false });
-const sortBy = (field) =>
+const setSubCaseFilter = (subCase) => visitIndex({ sub_case: subCase === 'All' ? undefined : subCase, page: 1 }, { replace: false });
+const sortBy = (field) => {
+    selectedIds.value = []; // Clear selection on sort
     visitIndex({ sort: field, order: filterState.value.sort === field && filterState.value.order === 'asc' ? 'desc' : 'asc' }, { replace: false });
+};
 
 const formatDate = (value) => {
     if (!value) return '-';
@@ -272,7 +343,7 @@ const statusCards = computed(() => [
 ]);
 
 const priorityCards = computed(() => [
-    { key: 'All', label: 'Semua Priority', value: overview.value.total || 0 },
+    { key: 'All', label: 'Any Priority', value: overview.value.total || 0 },
     ...DEFAULT_PRIORITY_OPTIONS.map((priority) => ({
         key: priority,
         label: priority,
@@ -287,13 +358,14 @@ const currentPriority = computed(() => filterState.value.priority || 'All');
 const currentSource = computed(() => filterState.value.source || 'All');
 const currentPlatform = computed(() => filterState.value.platform || 'All');
 const currentHistory = computed(() => filterState.value.history || 'All');
+const currentSubCase = computed(() => filterState.value.sub_case || 'All');
 
 const hasActiveFilters = computed(() =>
-    Boolean(search.value || currentStatus.value !== 'All' || currentCs.value || currentBrand.value !== 'All' || currentPriority.value !== 'All' || currentSource.value !== 'All' || currentPlatform.value !== 'All' || currentHistory.value !== 'All'),
+    Boolean(search.value || currentStatus.value !== 'All' || currentCs.value || currentBrand.value !== 'All' || currentPriority.value !== 'All' || currentSource.value !== 'All' || currentPlatform.value !== 'All' || currentHistory.value !== 'All' || currentSubCase.value !== 'All'),
 );
 const activeFilterCount = computed(
     () =>
-        [Boolean(search.value), currentStatus.value !== 'All', Boolean(currentCs.value), currentBrand.value !== 'All', currentPriority.value !== 'All', currentSource.value !== 'All', currentPlatform.value !== 'All', currentHistory.value !== 'All'].filter(
+        [Boolean(search.value), currentStatus.value !== 'All', Boolean(currentCs.value), currentBrand.value !== 'All', currentPriority.value !== 'All', currentSource.value !== 'All', currentPlatform.value !== 'All', currentHistory.value !== 'All', currentSubCase.value !== 'All'].filter(
             Boolean,
         ).length,
 );
@@ -515,26 +587,17 @@ const autoSyncSlaPreview = computed(() => {
     return `Above ${slaPreview.value} days`;
 });
 
-const reportCategoryPreview = computed(() => {
-    if (!form.sub_case) {
-        return '';
-    }
-
-    if (!form.cause_by || form.cause_by === '?') {
-        return form.sub_case;
-    }
-
-    return `${form.sub_case} by ${form.cause_by}`;
+const historyLabelPreview = computed(() => {
+    if (!form.username) return '';
+    const count = form.complaint_count || 0;
+    if (count <= 1) return '';
+    if (count === 2) return 'Customer ini complaint ke 2';
+    return `Customer ini complaint ke ${count}x`;
 });
 
-
 const oosPreview = computed(() => {
-    if (!form.order_id) {
-        return '';
-    }
-
+    if (!form.order_id) return '';
     const hasOosHistory = oosOrderIds.value.includes(form.order_id);
-
     return hasOosHistory ? 'Ada Riwayat OOS' : '';
 });
 
@@ -862,8 +925,7 @@ const sectionChecks = computed(() => [
                         <article
                             v-for="card in overviewCards"
                             :key="card.label"
-                            class="group relative overflow-hidden rounded-xl border border-slate-100 bg-white p-4 shadow-sm transition-all hover:shadow-md hover:-translate-y-0.5"
-                        >
+                            class="group relative overflow-hidden rounded-xl border border-slate-100 bg-white p-4 shadow-sm transition-all hover:shadow-md hover:-translate-y-0.5">
                             <div class="absolute -right-4 -top-4 h-24 w-24 rounded-full bg-[var(--app-primary)]/5 blur-2xl"></div>
                             <div class="relative z-10">
                                 <p class="text-[9px] font-black uppercase tracking-[0.15rem] text-slate-400">{{ card.label }}</p>
@@ -962,6 +1024,21 @@ const sectionChecks = computed(() => [
                                     <ChevronDown class="pointer-events-none absolute right-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-blue-400" />
                                 </div>
 
+                                <!-- Sub Case Select -->
+                                <div class="relative min-w-[150px]">
+                                    <select
+                                        :value="currentSubCase"
+                                        class="h-10 w-full appearance-none rounded-xl border border-slate-200/60 bg-white pl-4 pr-10 text-[11px] font-black uppercase tracking-wider text-slate-600 outline-none transition-all hover:border-slate-300 focus:ring-4 focus:ring-blue-50/50 shadow-sm"
+                                        @change="setSubCaseFilter($event.target.value)"
+                                    >
+                                        <option value="All">ANY SUB CASE</option>
+                                        <option v-for="sc in subCaseOptions" :key="sc" :value="sc">
+                                            {{ sc }}
+                                        </option>
+                                    </select>
+                                    <ChevronDown class="pointer-events-none absolute right-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+                                </div>
+
                                 <!-- Status Select -->
                                 <div class="relative min-w-[130px]">
                                     <select
@@ -1020,27 +1097,51 @@ const sectionChecks = computed(() => [
                                         </div>
                                     </div>
 
-                                    <div class="space-y-1.5 mt-4 max-h-[360px] overflow-y-auto pr-1.5 custom-scrollbar border-b border-dashed border-slate-100 pb-3">
-                                        <p class="text-[9px] font-black uppercase tracking-[0.15em] text-slate-400 mb-2">Select Agent</p>
+                                    <!-- Design Change: Enhanced Agent Sidebar with Progress & Breakdown -->
+                                    <div class="space-y-3 mt-4 max-h-[480px] overflow-y-auto pr-1.5 custom-scrollbar border-b border-dashed border-slate-100 pb-5">
+                                        <p class="text-[9px] font-black uppercase tracking-[0.15em] text-slate-400 mb-3 flex items-center gap-2">
+                                            <Users class="h-3 w-3" />
+                                            Agent Workload Desk
+                                        </p>
+                                        
                                         <button
                                             v-for="cs in filteredCsSummary"
                                             :key="cs.cs_name"
                                             @click="setCsFilter(cs.cs_name)"
-                                            class="w-full group p-3 flex items-center justify-between rounded-xl border transition-all text-left"
+                                            class="w-full group p-3.5 flex flex-col gap-3 rounded-[20px] border transition-all text-left relative overflow-hidden"
                                             :class="currentCs === cs.cs_name
-                                                ? 'border-[var(--app-primary)] bg-blue-50/50 ring-1 ring-[var(--app-primary)]/10'
-                                                : 'border-slate-50 bg-white hover:border-slate-200'"
+                                                ? 'border-[var(--app-primary)] bg-blue-50/40 ring-2 ring-[var(--app-primary)]/10'
+                                                : 'border-slate-50 bg-white hover:border-slate-200 hover:shadow-sm'"
                                         >
-                                            <div>
-                                                <p class="text-[13px] font-black text-slate-900 leading-tight">{{ cs.cs_name }}</p>
-                                                <p class="text-[10px] font-bold text-slate-400 mt-0.5">{{ cs.total }} complaints</p>
+                                            <!-- Decorative bg for active -->
+                                            <div v-if="currentCs === cs.cs_name" class="absolute -right-2 -top-2 h-12 w-12 rounded-full bg-[var(--app-primary)]/5"></div>
+
+                                            <div class="flex items-start justify-between">
+                                                <div class="min-w-0">
+                                                    <p class="text-[13px] font-black text-slate-900 leading-tight group-hover:text-[var(--app-primary)] transition-colors">{{ cs.cs_name }}</p>
+                                                    <p class="text-[10px] font-bold text-slate-400 mt-0.5">{{ cs.total }} Active Tickets</p>
+                                                </div>
+                                                <div class="h-8 w-8 flex items-center justify-center rounded-xl bg-slate-50 text-slate-500 font-black text-[10px] group-hover:bg-white transition-colors">
+                                                    {{ cs.total }}
+                                                </div>
                                             </div>
-                                            <div class="h-6 w-6 flex items-center justify-center rounded-full bg-slate-50 text-slate-400 group-hover:bg-white group-hover:text-[var(--app-primary)] transition-colors">
-                                                <span class="text-[10px] font-black">{{ cs.total }}</span>
+
+                                            <!-- Visual Workload Indicator -->
+                                            <div class="w-full space-y-1.5">
+                                                <div class="flex items-center justify-between text-[8px] font-black uppercase tracking-tighter">
+                                                    <span class="text-amber-500">Pending</span>
+                                                    <span class="text-emerald-500">Solved</span>
+                                                </div>
+                                                <div class="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden flex">
+                                                    <!-- Simple visualization: we use dummy width here as summary doesn't have detailed breakdown yet, 
+                                                         but we'll show the potential by using dummy logic or total -->
+                                                    <div class="h-full bg-amber-400/80" :style="{ width: '40%' }"></div>
+                                                    <div class="h-full bg-emerald-400/80 flex-1"></div>
+                                                </div>
                                             </div>
                                         </button>
 
-                                        <!-- No Result State for Agent Search -->
+                                        <!-- No Result State -->
                                         <div v-if="filteredCsSummary.length === 0" class="py-10 text-center">
                                             <Users class="h-8 w-8 text-slate-200 mx-auto opacity-50" />
                                             <p class="mt-2 text-[11px] font-bold text-slate-400 uppercase tracking-widest">No agent found</p>
@@ -1082,7 +1183,6 @@ const sectionChecks = computed(() => [
                                     </div>
 
                                     <div class="flex flex-1 flex-col gap-4 lg:max-w-xl lg:flex-row lg:items-center lg:justify-end">
-                                        <!-- High Fidelity Search Bar -->
                                         <div class="relative flex-1 group">
                                             <div class="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
                                                 <Search class="h-4.5 w-4.5 text-slate-400 group-focus-within:text-[var(--app-primary)] transition-colors" />
@@ -1090,10 +1190,20 @@ const sectionChecks = computed(() => [
                                             <input
                                                 v-model="search"
                                                 type="text"
-                                                placeholder="Quick search tickets..."
-                                                class="h-12 w-full rounded-2xl border-slate-200/60 bg-slate-50/50 pl-11 pr-4 text-[13px] font-bold text-slate-700 placeholder:font-medium placeholder:text-slate-400 outline-none transition-all focus:border-[var(--app-primary)] focus:bg-white focus:ring-[6px] focus:ring-blue-500/5 shadow-inner"
+                                                class="h-11 w-full rounded-2xl border border-slate-200 bg-slate-50/50 pl-11 pr-4 text-[13px] font-medium text-slate-900 outline-none transition-all focus:border-[var(--app-primary)] focus:bg-white focus:ring-4 focus:ring-[var(--app-primary)]/10"
+                                                placeholder="Search SKU, Order ID, Resi, or Customer..."
                                             />
                                         </div>
+
+                                        <button
+                                            v-if="selectedIds.length > 0"
+                                            type="button"
+                                            class="flex h-12 items-center justify-center gap-2 rounded-2xl bg-rose-500 px-6 text-[13px] font-black text-white shadow-lg shadow-rose-500/20 transition-all hover:bg-rose-600 hover:-translate-y-1 active:scale-[0.98]"
+                                            @click="confirmBulkDelete"
+                                        >
+                                            <Trash2 class="h-4 w-4" />
+                                            <span>Delete Selected ({{ selectedIds.length }})</span>
+                                        </button>
 
                                         <button
                                             type="button"
@@ -1112,7 +1222,8 @@ const sectionChecks = computed(() => [
                                     :key="`card-${item.id}`"
                                     class="group relative overflow-hidden rounded-[2rem] border border-slate-100 bg-white p-6 shadow-sm transition-all hover:-translate-y-1 hover:shadow-md"
                                 >
-                                    <div class="absolute -right-4 -top-4 h-24 w-24 rounded-full bg-slate-50 group-hover:bg-[var(--app-primary-soft)] transition-colors opacity-50"></div>
+                                    <div class="absolute -right-4 -top-4 h-24 w-24 rounded-full bg-slate-50 group-hover:bg-[var(--app-primary-soft)] transition-colors opacity-50">
+                                    </div>
                                     <div class="relative z-10 flex items-start justify-between gap-4">
                                         <div class="min-w-0">
                                             <div class="flex items-center gap-2">
@@ -1175,26 +1286,24 @@ const sectionChecks = computed(() => [
                             <div class="hidden overflow-x-auto lg:block">
                                 <table class="w-full min-w-[1080px] table-fixed divide-y divide-[var(--line)]">
                                     <thead class="bg-slate-50/80">
-                                        <tr class="text-left text-[10px] font-black uppercase tracking-widest text-slate-400">
-                                            <th class="w-[10%] py-3 pl-5 pr-4">Source</th>
-                                            <th class="w-[12%] px-4 py-3">
-                                                <button type="button" class="group inline-flex items-center gap-2 transition hover:text-[var(--app-primary)]" @click="sortBy('tanggal_complaint')">
-                                                    Tanggal
-                                                    <ArrowUpDown class="h-3 w-3 transition-transform group-hover:scale-125" />
-                                                </button>
+                                        <tr class="text-left text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">
+                                            <th class="w-10 py-3 pl-5 flex items-center justify-center">
+                                                <input
+                                                    type="checkbox"
+                                                    class="h-4 w-4 rounded-md border-slate-300 text-[var(--app-primary)] focus:ring-[var(--app-primary)] transition-all cursor-pointer"
+                                                    :checked="complaintRows.length > 0 && selectedIds.length === complaintRows.length"
+                                                    @change="toggleSelectAll"
+                                                />
                                             </th>
-                                            <th class="w-[12%] px-4 py-3">Order ID</th>
+                                            <th class="w-[8%] py-3 px-4">Source</th>
+                                            <th class="w-[12%] px-4 py-3">Complaint Date</th>
+                                            <th class="w-[10%] px-4 py-3">Order Date</th>
+                                            <th class="w-[10%] px-4 py-3">Order ID</th>
                                             <th class="w-[15%] px-4 py-3">Customer</th>
-                                            <th class="w-[15%] px-4 py-3">
-                                                <button type="button" class="group inline-flex items-center gap-2 transition hover:text-[var(--app-primary)]" @click="sortBy('history')">
-                                                    History
-                                                    <ArrowUpDown class="h-3 w-3 transition-transform group-hover:scale-125" />
-                                                </button>
-                                            </th>
                                             <th class="w-[10%] px-4 py-3">Agent</th>
                                             <th class="w-[8%] px-4 py-3 text-center">Status</th>
                                             <th class="w-[6%] px-4 py-3 text-center">Prty</th>
-                                            <th class="w-[12%] py-3 pl-4 pr-5 text-right">Actions</th>
+                                            <th class="w-[10%] py-3 pl-4 pr-5 text-right">Actions</th>
                                         </tr>
                                     </thead>
 
@@ -1203,44 +1312,55 @@ const sectionChecks = computed(() => [
                                             v-for="item in complaintRows"
                                             :key="item.id"
                                             class="group align-top transition-colors hover:bg-slate-50/70"
+                                            :class="selectedIds.includes(item.id) ? 'bg-blue-50/30' : ''"
                                         >
-                                            <td class="py-3 pl-5 pr-4">
-                                                <div class="space-y-0.5">
-                                                    <p class="truncate text-[13px] font-bold text-[var(--app-ink)]">{{ item.source || '-' }}</p>
-                                                    <div class="flex items-center gap-1.5">
-                                                        <span class="text-[10px] font-bold text-slate-400 capitalize">{{ item.brand || '-' }}</span>
-                                                        <span class="h-1 w-1 rounded-full bg-slate-200"></span>
-                                                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">{{ item.platform || '-' }}</span>
+                                            <td class="py-3 pl-5 flex items-center justify-center">
+                                                <input
+                                                    type="checkbox"
+                                                    class="h-4 w-4 rounded-md border-slate-300 text-[var(--app-primary)] focus:ring-[var(--app-primary)] transition-all cursor-pointer checkbox-row"
+                                                    :checked="selectedIds.includes(item.id)"
+                                                    @change="toggleSelect(item.id)"
+                                                />
+                                            </td>
+                                            <td class="px-4 py-3">
+                                                <div class="flex flex-col gap-0.5 min-w-0">
+                                                    <span class="text-[11px] font-black text-slate-800 uppercase tracking-tight">{{ item.source || '-' }}</span>
+                                                    <span class="text-[10px] font-bold text-slate-400">{{ item.platform || '-' }}</span>
+                                                </div>
+                                            </td>
+                                            <td class="px-4 py-3">
+                                                <div class="flex flex-col gap-0.5">
+                                                    <span class="text-[11px] font-black text-slate-900 leading-none">{{ formatDate(item.tanggal_complaint) }}</span>
+                                                    <span v-if="item.jam_customer_complaint" class="text-[10px] font-bold text-slate-400 italic">
+                                                        {{ item.jam_customer_complaint.slice(0, 5) }} WIB
+                                                    </span>
+                                                </div>
+                                            </td>
+                                            <td class="px-4 py-3">
+                                                <span class="text-[11px] font-bold text-slate-500">{{ formatDate(item.tanggal_order) }}</span>
+                                            </td>
+                                            <td class="px-4 py-3">
+                                                <div class="flex flex-col gap-1 min-w-0">
+                                                    <span class="truncate text-[11px] font-black uppercase text-slate-700 tracking-tight">{{ item.order_id || '-' }}</span>
+                                                    <div v-if="item.history" class="inline-flex items-center rounded-lg bg-blue-50 px-2 py-0.5 ring-1 ring-blue-100 w-fit">
+                                                        <span class="text-[8px] font-black uppercase tracking-wider text-blue-600">{{ item.history }}</span>
                                                     </div>
                                                 </div>
                                             </td>
-                                            <td class="px-4 py-3 text-[13px] font-medium text-slate-600">{{ formatDate(item.tanggal_complaint) }}</td>
                                             <td class="px-4 py-3">
-                                                <div class="space-y-0.5">
-                                                    <p class="truncate text-[13px] font-bold text-[var(--app-ink)]">{{ item.order_id || '-' }}</p>
-                                                    <p class="truncate text-[10px] font-bold text-slate-400 uppercase tracking-tighter">{{ item.resi || '-' }}</p>
+                                                <div class="flex items-center gap-2.5 min-w-0">
+                                                    <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-50 text-[10px] font-black text-slate-400">
+                                                        {{ (item.username || '?').charAt(0).toUpperCase() }}
+                                                    </div>
+                                                    <span class="truncate text-[12px] font-black text-slate-900">{{ item.username || 'Unknown' }}</span>
                                                 </div>
                                             </td>
                                             <td class="px-4 py-3">
-                                                <div class="space-y-0.5">
-                                                    <p class="truncate text-[13px] font-bold text-[var(--app-ink)]">{{ item.username || '-' }}</p>
-                                                    <p class="line-clamp-1 text-[11px] font-medium text-slate-400">
-                                                        {{ item.product_name || item.summary_case || '-' }}
-                                                    </p>
-                                                </div>
+                                                <span class="text-[12px] font-black text-[var(--app-primary)]">{{ item.cs_name || 'UNASSIGNED' }}</span>
                                             </td>
-                                            <td class="px-4 py-3">
-                                                <div v-if="item.history" class="inline-flex items-center rounded-lg bg-blue-50 px-2 py-1 ring-1 ring-blue-100">
-                                                    <span class="text-[10px] font-black uppercase tracking-tight text-blue-600">
-                                                        {{ item.history }}
-                                                    </span>
-                                                </div>
-                                                <span v-else class="text-[11px] font-medium text-slate-300 italic">First Complaint</span>
-                                            </td>
-                                            <td class="px-4 py-3 text-[13px] font-bold text-slate-600">{{ item.cs_name || 'UNASSIGNED' }}</td>
                                             <td class="px-4 py-3 text-center">
                                                 <span
-                                                    class="inline-flex rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-wider"
+                                                    class="inline-flex rounded-full px-2.5 py-0.5 text-[9px] font-black uppercase tracking-wider"
                                                     :class="statusClass(item.status)"
                                                 >{{ item.status || 'Pending' }}</span>
                                             </td>
@@ -2132,6 +2252,82 @@ const sectionChecks = computed(() => [
                             </div>
                     </div>
                 </div>
+                </div>
+            </transition>
+            <!-- NOBEL: Bulk Delete Confirmation Modal -->
+            <transition name="fade">
+                <div v-if="isBulkDeleteModalOpen" class="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/40 px-4 backdrop-blur-sm" @click.self="isBulkDeleteModalOpen = false">
+                    <div class="w-full max-w-md overflow-hidden rounded-[32px] bg-white shadow-[0_40px_100px_rgba(15,23,42,0.3)] transform transition-all duration-300 scale-100">
+                        <div class="bg-rose-50 px-8 py-10 text-center">
+                            <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-white shadow-sm ring-1 ring-rose-100 text-rose-600 mb-6">
+                                <Trash2 class="h-7 w-7" />
+                            </div>
+                            <h3 class="text-2xl font-black text-rose-950 tracking-tight">Hapus Massal</h3>
+                            <p class="mt-2 text-[14px] font-medium text-rose-600/80 leading-relaxed">
+                                Anda akan menghapus <span class="font-black text-rose-700 underline decoration-rose-300 underline-offset-4">{{ selectedIds.length }} tiket</span> sekaligus.
+                                Data yang dihapus tidak dapat dikembalikan.
+                            </p>
+                        </div>
+
+                        <div class="p-6">
+                            <div class="flex items-center justify-end gap-3">
+                                <button
+                                    type="button"
+                                    class="h-12 flex-1 rounded-2xl bg-slate-50 px-6 text-[14px] font-black text-slate-500 transition hover:bg-slate-100 active:scale-95"
+                                    @click="isBulkDeleteModalOpen = false"
+                                >
+                                    Batal
+                                </button>
+                                <button
+                                    type="button"
+                                    class="h-12 flex-[2] rounded-2xl bg-rose-600 px-6 text-[14px] font-black text-white shadow-lg shadow-rose-500/20 transition hover:bg-rose-700 hover:-translate-y-1 active:scale-[0.98] disabled:opacity-50"
+                                    :disabled="bulkDeleteForm.processing"
+                                    @click="submitBulkDelete"
+                                >
+                                    {{ bulkDeleteForm.processing ? 'Sedang Menghapus...' : 'Ya, Hapus Semua' }}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </transition>
+
+            <!-- Floating Action Bar moved here -->
+            <transition
+                enter-active-class="transition duration-300 ease-out"
+                enter-from-class="translate-y-20 opacity-0"
+                enter-to-class="translate-y-0 opacity-100"
+                leave-active-class="transition duration-200 ease-in"
+                leave-from-class="translate-y-0 opacity-100"
+                leave-to-class="translate-y-20 opacity-0"
+            >
+                <div v-if="selectedIds.length > 0" class="fixed bottom-10 left-1/2 z-40 -translate-x-1/2">
+                    <div class="flex items-center gap-6 rounded-[28px] bg-[var(--app-ink)] p-3 pl-6 pr-3 shadow-[0_20px_50px_rgba(0,0,0,0.3)] ring-1 ring-white/10 backdrop-blur-xl">
+                        <div class="flex items-center gap-3">
+                            <div class="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--app-primary)] text-[11px] font-black text-white shadow-lg shadow-[var(--app-primary)]/40">
+                                {{ selectedIds.length }}
+                            </div>
+                            <span class="text-[13px] font-bold text-white tracking-wide">Tiket terpilih</span>
+                        </div>
+                        
+                        <div class="h-8 w-px bg-white/10"></div>
+
+                        <div class="flex items-center gap-2">
+                            <button
+                                @click="selectedIds = []"
+                                class="h-11 px-5 rounded-2xl text-[13px] font-bold text-slate-400 hover:text-white hover:bg-white/5 transition-all"
+                            >
+                                Batalkan
+                            </button>
+                            <button
+                                @click="confirmBulkDelete"
+                                class="flex h-11 items-center gap-2.5 rounded-[18px] bg-rose-500 px-6 text-[13px] font-black text-white shadow-lg shadow-rose-500/30 transition-all hover:bg-rose-600 hover:shadow-rose-600/40 active:scale-95"
+                            >
+                                <Trash2 class="h-4 w-4" />
+                                <span>Hapus Massal</span>
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </transition>
         </div>

@@ -59,6 +59,10 @@ const mainNavItems = computed<NavItem[]>(() => {
         items.push({ title: 'Management Users', href: '/users', icon: Users });
     }
 
+    if (page.props.auth.can.view_reports) {
+        items.push({ title: 'Operational Reports', href: '/reports', icon: ClipboardList });
+    }
+
     return items;
 });
 

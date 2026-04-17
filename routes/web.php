@@ -84,6 +84,9 @@ Route::middleware(['auth', 'active', 'password.reset.required'])->group(function
 
     Route::middleware('permission:access complaints')->group(function () {
         Route::get('complaints/history/{username}', [ComplaintController::class, 'getCustomerHistory'])->name('complaints.history');
+        Route::post('complaints/bulk-delete', [ComplaintController::class, 'bulkDestroy'])
+            ->middleware('permission:delete complaints')
+            ->name('complaints.bulk-delete');
         Route::resource('complaints', ComplaintController::class);
     });
 
