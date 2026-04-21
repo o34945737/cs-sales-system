@@ -1,14 +1,15 @@
 <script setup lang="ts">
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem, type SharedData } from '@/types';
 import { Head, router, useForm, usePage } from '@inertiajs/vue3';
+// @ts-ignore — no @types/lodash installed
 import debounce from 'lodash/debounce';
-import { Boxes, CheckCircle2, ChevronLeft, ChevronRight, PackageSearch, PencilLine, Plus, Search, Trash2, XCircle } from 'lucide-vue-next';
+import { Boxes, CheckCircle2, ChevronLeft, ChevronRight, PencilLine, Plus, Search, Tag, Trash2, XCircle } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 
 interface ManagedSkuCode {
@@ -16,6 +17,8 @@ interface ManagedSkuCode {
     sku: string;
     product_name: string;
     brand: string | null;
+    available_qty: number;
+    status_qty: string | null;
     default_value_of_product: number | null;
     is_active: boolean;
     created_at: string | null;
@@ -49,7 +52,7 @@ const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: '/dashboard' },
     { title: 'Master SKU Codes', href: '/sku-codes' },
 ];
-const page = usePage<SharedData>();
+const page = usePage<SharedData & Record<string, unknown>>();
 const search = ref(props.filters.search || '');
 const statusFilter = ref(props.filters.status || 'All');
 const isCreateOpen = ref(false);
@@ -65,6 +68,8 @@ const createForm = useForm({
     sku: '',
     product_name: '',
     brand: '',
+    available_qty: '',
+    status_qty: '',
     default_value_of_product: '',
     is_active: true,
 });
@@ -72,6 +77,8 @@ const editForm = useForm({
     sku: '',
     product_name: '',
     brand: '',
+    available_qty: '',
+    status_qty: '',
     default_value_of_product: '',
     is_active: true,
 });
@@ -113,7 +120,7 @@ watch(statusFilter, () => visitIndex({ page: 1 }, false));
 const toFormValue = (value: number | null | '') => (value === null || value === '' ? '' : String(value));
 
 const resetCreateForm = () => {
-    createForm.defaults({ sku: '', product_name: '', brand: '', default_value_of_product: '', is_active: true });
+    createForm.defaults({ sku: '', product_name: '', brand: '', available_qty: '', status_qty: '', default_value_of_product: '', is_active: true } as any);
     createForm.reset();
     createForm.clearErrors();
 };
@@ -129,9 +136,11 @@ const openEditModal = (skuCode: ManagedSkuCode) => {
         sku: skuCode.sku,
         product_name: skuCode.product_name,
         brand: skuCode.brand || '',
+        available_qty: skuCode.available_qty != null ? String(skuCode.available_qty) : '',
+        status_qty: skuCode.status_qty || '',
         default_value_of_product: toFormValue(skuCode.default_value_of_product),
         is_active: skuCode.is_active,
-    });
+    } as any);
     editForm.reset();
     editForm.clearErrors();
     isEditOpen.value = true;
@@ -149,9 +158,11 @@ const closeDeleteModal = () => {
     deleteForm.clearErrors();
 };
 
-const normalizePayload = (data: typeof createForm.data) => ({
+const normalizePayload = (data: ReturnType<typeof createForm.data>) => ({
     ...data,
     brand: data.brand || null,
+    available_qty: data.available_qty === '' ? 0 : Number(data.available_qty),
+    status_qty: data.status_qty || null,
     default_value_of_product: data.default_value_of_product === '' ? null : Number(data.default_value_of_product),
 });
 
@@ -171,7 +182,7 @@ const submitEdit = () => {
 
     editForm
         .transform((data) => normalizePayload(data))
-        .put(route('sku-codes.update', activeSkuCode.value.id), {
+        .put(route('sku-codes.update', { id: activeSkuCode.value.id }), {
             preserveScroll: true,
             onSuccess: () => {
                 isEditOpen.value = false;
@@ -183,7 +194,7 @@ const submitEdit = () => {
 
 const submitDelete = () => {
     if (!activeSkuCode.value) return;
-    deleteForm.delete(route('sku-codes.destroy', activeSkuCode.value.id), { preserveScroll: true, onSuccess: () => closeDeleteModal() });
+    deleteForm.delete(route('sku-codes.destroy', { id: activeSkuCode.value.id }), { preserveScroll: true, onSuccess: () => closeDeleteModal() });
 };
 
 const formatCurrency = (value: number | null) => {
@@ -263,6 +274,7 @@ const statusBadgeClass = (active: boolean) =>
                                     <tr class="text-left text-[10px] font-black uppercase tracking-widest text-slate-400">
                                         <th class="px-4 py-3">SKU & Product</th>
                                         <th class="px-4 py-3">Brand</th>
+                                        <th class="px-4 py-3">Qty</th>
                                         <th class="px-4 py-3">Value</th>
                                         <th class="px-4 py-3">Status</th>
                                         <th class="px-4 py-3 text-right">Action</th>
@@ -282,6 +294,10 @@ const statusBadgeClass = (active: boolean) =>
                                             </div>
                                         </td>
                                         <td class="px-4 py-3 font-semibold text-slate-600">{{ skuCode.brand || '-' }}</td>
+                                        <td class="px-4 py-3">
+                                            <p class="font-bold text-slate-900">{{ skuCode.available_qty ?? 0 }}</p>
+                                            <p class="text-[10px] font-medium text-slate-400 mt-0.5">{{ skuCode.status_qty || '-' }}</p>
+                                        </td>
                                         <td class="px-4 py-3 font-bold text-slate-900">{{ formatCurrency(skuCode.default_value_of_product) }}</td>
                                         <td class="px-4 py-3">
                                             <span
@@ -317,7 +333,7 @@ const statusBadgeClass = (active: boolean) =>
                                         </td>
                                     </tr>
                                     <tr v-if="skuCodeRows.length === 0">
-                                        <td colspan="5" class="px-4 py-10 text-center text-slate-400 font-bold">Tidak ada data ditemukan</td>
+                                        <td colspan="6" class="px-4 py-10 text-center text-slate-400 font-bold">Tidak ada data ditemukan</td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -382,6 +398,19 @@ const statusBadgeClass = (active: boolean) =>
                         <InputError :message="createForm.errors.product_name" />
                     </div>
 
+                    <div class="grid gap-6 sm:grid-cols-2">
+                        <div class="grid gap-2">
+                            <Label for="create-available-qty" class="text-[13px] font-bold uppercase tracking-wide text-slate-700">Available Qty</Label>
+                            <Input id="create-available-qty" v-model="createForm.available_qty" type="number" min="0" placeholder="0" class="h-12 rounded-xl border-slate-200 bg-slate-50/50 px-4 text-sm transition focus:bg-white" />
+                            <InputError :message="createForm.errors.available_qty" />
+                        </div>
+                        <div class="grid gap-2">
+                            <Label for="create-status-qty" class="text-[13px] font-bold uppercase tracking-wide text-slate-700">Status Qty</Label>
+                            <Input id="create-status-qty" v-model="createForm.status_qty" placeholder="Contoh: Normal / Kosong" class="h-12 rounded-xl border-slate-200 bg-slate-50/50 px-4 text-sm transition focus:bg-white" />
+                            <InputError :message="createForm.errors.status_qty" />
+                        </div>
+                    </div>
+
                     <div class="grid gap-2">
                         <Label for="create-default-value" class="text-[13px] font-bold uppercase tracking-wide text-slate-700">Default Value of Product (IDR)</Label>
                         <Input id="create-default-value" v-model="createForm.default_value_of_product" type="number" min="0" placeholder="0" class="h-12 rounded-xl border-slate-200 bg-slate-50/50 px-4 text-sm transition focus:bg-white" />
@@ -437,6 +466,19 @@ const statusBadgeClass = (active: boolean) =>
                         <InputError :message="editForm.errors.product_name" />
                     </div>
 
+                    <div class="grid gap-6 sm:grid-cols-2">
+                        <div class="grid gap-2">
+                            <Label for="edit-available-qty" class="text-[13px] font-bold uppercase tracking-wide text-slate-700">Available Qty</Label>
+                            <Input id="edit-available-qty" v-model="editForm.available_qty" type="number" min="0" class="h-12 rounded-xl border-slate-200 bg-slate-50/50 px-4 text-sm transition focus:bg-white" />
+                            <InputError :message="editForm.errors.available_qty" />
+                        </div>
+                        <div class="grid gap-2">
+                            <Label for="edit-status-qty" class="text-[13px] font-bold uppercase tracking-wide text-slate-700">Status Qty</Label>
+                            <Input id="edit-status-qty" v-model="editForm.status_qty" placeholder="Contoh: Normal / Kosong" class="h-12 rounded-xl border-slate-200 bg-slate-50/50 px-4 text-sm transition focus:bg-white" />
+                            <InputError :message="editForm.errors.status_qty" />
+                        </div>
+                    </div>
+
                     <div class="grid gap-2">
                         <Label for="edit-default-value" class="text-[13px] font-bold uppercase tracking-wide text-slate-700">Default Value of Product (IDR)</Label>
                         <Input id="edit-default-value" v-model="editForm.default_value_of_product" type="number" min="0" class="h-12 rounded-xl border-slate-200 bg-slate-50/50 px-4 text-sm transition focus:bg-white" />
@@ -479,7 +521,7 @@ const statusBadgeClass = (active: boolean) =>
                         </div>
                     </div>
 
-                    <InputError :message="deleteForm.errors.delete" />
+                    <InputError :message="(deleteForm.errors as Record<string, string>).delete" />
 
                     <div class="flex items-center justify-end gap-3 border-t border-slate-100 pt-6">
                         <Button type="button" variant="ghost" class="h-11 rounded-xl px-6 font-bold text-slate-500 hover:bg-slate-50" @click="closeDeleteModal">Cancel</Button>

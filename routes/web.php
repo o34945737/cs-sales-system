@@ -11,6 +11,7 @@ use App\Http\Controllers\ComplaintPowerController;
 use App\Http\Controllers\ComplaintSourceController;
 use App\Http\Controllers\ComplaintStepStatusController;
 use App\Http\Controllers\CauseByController;
+use App\Http\Controllers\JetTrackEntryController;
 use App\Http\Controllers\LogisticController;
 use App\Http\Controllers\LastStepController;
 use App\Http\Controllers\OosController;
@@ -18,6 +19,8 @@ use App\Http\Controllers\OosReasonController;
 use App\Http\Controllers\OosSolutionController;
 use App\Http\Controllers\OrderTrackingController;
 use App\Http\Controllers\OrderTrackingDataSourceController;
+use App\Http\Controllers\OrderTrackingErpStatusController;
+use App\Http\Controllers\OrderTrackingRgoEntryController;
 use App\Http\Controllers\PlatformController;
 use App\Http\Controllers\PartOfBadController;
 use App\Http\Controllers\ReasonLateResponseController;
@@ -101,6 +104,12 @@ Route::middleware(['auth', 'active', 'password.reset.required'])->group(function
     Route::middleware('permission:access oos')->group(function () {
         Route::resource('oos', OosController::class);
     });
+
+    Route::resource('order-tracking-erp-statuses', OrderTrackingErpStatusController::class)
+        ->parameters([
+            'order-tracking-erp-statuses' => 'order_tracking_erp_status',
+        ])
+        ->only(['index', 'store', 'update', 'destroy']);
 
     Route::prefix('brands')->name('brands.')->group(function () {
         Route::get('/', [BrandController::class, 'index'])
@@ -279,6 +288,36 @@ Route::middleware(['auth', 'active', 'password.reset.required'])->group(function
             ->name('update');
         Route::delete('/{orderTrackingDataSource}', [OrderTrackingDataSourceController::class, 'destroy'])
             ->middleware('permission:delete order tracking data sources')
+            ->name('destroy');
+    });
+
+    Route::prefix('order-tracking-rgo-entries')->name('order-tracking-rgo-entries.')->group(function () {
+        Route::get('/', [OrderTrackingRgoEntryController::class, 'index'])
+            ->middleware('permission:view order tracking rgo entries')
+            ->name('index');
+        Route::post('/', [OrderTrackingRgoEntryController::class, 'store'])
+            ->middleware('permission:create order tracking rgo entries')
+            ->name('store');
+        Route::put('/{orderTrackingRgoEntry}', [OrderTrackingRgoEntryController::class, 'update'])
+            ->middleware('permission:update order tracking rgo entries')
+            ->name('update');
+        Route::delete('/{orderTrackingRgoEntry}', [OrderTrackingRgoEntryController::class, 'destroy'])
+            ->middleware('permission:delete order tracking rgo entries')
+            ->name('destroy');
+    });
+
+    Route::prefix('jet-track-entries')->name('jet-track-entries.')->group(function () {
+        Route::get('/', [JetTrackEntryController::class, 'index'])
+            ->middleware('permission:view jet track entries')
+            ->name('index');
+        Route::post('/', [JetTrackEntryController::class, 'store'])
+            ->middleware('permission:create jet track entries')
+            ->name('store');
+        Route::put('/{jetTrackEntry}', [JetTrackEntryController::class, 'update'])
+            ->middleware('permission:update jet track entries')
+            ->name('update');
+        Route::delete('/{jetTrackEntry}', [JetTrackEntryController::class, 'destroy'])
+            ->middleware('permission:delete jet track entries')
             ->name('destroy');
     });
 

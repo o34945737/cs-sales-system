@@ -12,6 +12,9 @@ class BadReview extends Model
 
     protected $guarded = ['id'];
 
+    private const PROGRESS_PENDING = 'Follow Up Customer';
+    private const PROGRESS_SOLVED = 'Auto Reply';
+
     protected static function boot()
     {
         parent::boot();
@@ -23,10 +26,27 @@ class BadReview extends Model
                 $model->month = Carbon::parse($model->tanggal_review)->format('F Y');
             }
 
+            $skuCode = $model->sku
+                ? SkuCode::query()
+                    ->where('sku', $model->sku)
+                    ->where('is_active', true)
+                    ->first(['product_name', 'brand'])
+                : null;
+
+            if ($skuCode) {
+                if (blank($model->product_name) && filled($skuCode->product_name)) {
+                    $model->product_name = $skuCode->product_name;
+                }
+
+                if (blank($model->brand) && filled($skuCode->brand)) {
+                    $model->brand = $skuCode->brand;
+                }
+            }
+
             // 16. Status Automation
-            if ($model->progress === 'Follow Up Customer') {
+            if ($model->progress === self::PROGRESS_PENDING) {
                 $model->status = 'Pending';
-            } elseif ($model->progress === 'Auto Reply') {
+            } elseif ($model->progress === self::PROGRESS_SOLVED) {
                 $model->status = 'Solved';
             }
 

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/AppLayout.vue';
@@ -11,55 +11,85 @@ import debounce from 'lodash/debounce';
 import { CheckCircle2, ChevronLeft, ChevronRight, Database, PencilLine, Plus, Search, Trash2, XCircle } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 
-interface ManagedOrderTrackingDataSource { id: number; name: string; is_active: boolean; created_at: string | null; }
-interface PaginatorLink { active: boolean; label: string; url: string | null; }
-interface Paginator<T> { current_page: number; data: T[]; from: number | null; last_page: number; links: PaginatorLink[]; path: string; per_page: number; to: number | null; total: number; }
+interface ManagedJetTrackEntry {
+    id: number;
+    awb: string;
+    kondisi_barang: string;
+    notes: string | null;
+    is_active: boolean;
+    created_at: string | null;
+}
+
+interface PaginatorLink {
+    active: boolean;
+    label: string;
+    url: string | null;
+}
+
+interface Paginator<T> {
+    current_page: number;
+    data: T[];
+    from: number | null;
+    last_page: number;
+    links: PaginatorLink[];
+    path: string;
+    per_page: number;
+    to: number | null;
+    total: number;
+}
 
 const props = defineProps<{
-    orderTrackingDataSources: Paginator<ManagedOrderTrackingDataSource>;
-    filters: { search?: string | null; status?: string | null; };
-    metrics: { total: number; active: number; inactive: number; };
+    jetTrackEntries: Paginator<ManagedJetTrackEntry>;
+    filters: { search?: string | null; status?: string | null };
+    metrics: { total: number; active: number; inactive: number };
 }>();
 
-const breadcrumbs: BreadcrumbItem[] = [{ title: 'Dashboard', href: '/dashboard' }, { title: 'Tracking Data Sources', href: '/order-tracking-data-sources' }];
+const breadcrumbs: BreadcrumbItem[] = [
+    { title: 'Dashboard', href: '/dashboard' },
+    { title: 'Jet Track', href: '/jet-track-entries' },
+];
 const page = usePage<SharedData>();
 const search = ref(props.filters.search || '');
 const statusFilter = ref(props.filters.status || 'All');
 const isCreateOpen = ref(false);
 const isEditOpen = ref(false);
 const isDeleteOpen = ref(false);
-const activeDataSource = ref<ManagedOrderTrackingDataSource | null>(null);
+const activeEntry = ref<ManagedJetTrackEntry | null>(null);
 
-const canCreateDataSources = computed(() => page.props.auth.can.create_order_tracking_data_sources);
-const canUpdateDataSources = computed(() => page.props.auth.can.update_order_tracking_data_sources);
-const canDeleteDataSources = computed(() => page.props.auth.can.delete_order_tracking_data_sources);
+const canCreateEntries = computed(() => page.props.auth.can.create_jet_track_entries);
+const canUpdateEntries = computed(() => page.props.auth.can.update_jet_track_entries);
+const canDeleteEntries = computed(() => page.props.auth.can.delete_jet_track_entries);
 
-const createForm = useForm({ name: '', is_active: true });
-const editForm = useForm({ name: '', is_active: true });
+const createForm = useForm({ awb: '', kondisi_barang: '', notes: '', is_active: true });
+const editForm = useForm({ awb: '', kondisi_barang: '', notes: '', is_active: true });
 const deleteForm = useForm({});
 
-const pageData = computed(() => props.orderTrackingDataSources);
-const rows = computed(() => props.orderTrackingDataSources.data ?? []);
-const paginationLinks = computed(() => props.orderTrackingDataSources.links?.filter((link) => link.url) ?? []);
+const pageData = computed(() => props.jetTrackEntries);
+const rows = computed(() => props.jetTrackEntries.data ?? []);
+const paginationLinks = computed(() => props.jetTrackEntries.links?.filter((link) => link.url) ?? []);
 const summaryCards = computed(() => [
-    { label: 'Total Source', value: props.metrics.total, icon: Database, tone: 'bg-[var(--app-primary)] text-white shadow-[0_12px_24px_rgba(53,103,232,0.22)]' },
+    { label: 'Total AWB', value: props.metrics.total, icon: Database, tone: 'bg-[var(--app-primary)] text-white shadow-[0_12px_24px_rgba(53,103,232,0.22)]' },
     { label: 'Active', value: props.metrics.active, icon: CheckCircle2, tone: 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200' },
     { label: 'Inactive', value: props.metrics.inactive, icon: XCircle, tone: 'bg-rose-50 text-rose-700 ring-1 ring-rose-200' },
 ]);
 
 const visitIndex = (overrides: Record<string, unknown> = {}, replace = true) => {
-    router.get(route('order-tracking-data-sources.index'), {
-        search: search.value || undefined,
-        status: statusFilter.value !== 'All' ? statusFilter.value : undefined,
-        ...overrides,
-    }, { preserveState: true, preserveScroll: true, replace });
+    router.get(
+        route('jet-track-entries.index'),
+        {
+            search: search.value || undefined,
+            status: statusFilter.value !== 'All' ? statusFilter.value : undefined,
+            ...overrides,
+        },
+        { preserveState: true, preserveScroll: true, replace }
+    );
 };
 
 watch(search, debounce(() => visitIndex({ page: 1 }), 350));
 watch(statusFilter, () => visitIndex({ page: 1 }, false));
 
 const resetCreateForm = () => {
-    createForm.defaults({ name: '', is_active: true });
+    createForm.defaults({ awb: '', kondisi_barang: '', notes: '', is_active: true });
     createForm.reset();
     createForm.clearErrors();
 };
@@ -69,66 +99,86 @@ const openCreateModal = () => {
     isCreateOpen.value = true;
 };
 
-const openEditModal = (dataSource: ManagedOrderTrackingDataSource) => {
-    activeDataSource.value = dataSource;
-    editForm.defaults({ name: dataSource.name, is_active: dataSource.is_active });
+const openEditModal = (entry: ManagedJetTrackEntry) => {
+    activeEntry.value = entry;
+    editForm.defaults({
+        awb: entry.awb,
+        kondisi_barang: entry.kondisi_barang,
+        notes: entry.notes || '',
+        is_active: entry.is_active,
+    });
     editForm.reset();
     editForm.clearErrors();
     isEditOpen.value = true;
 };
 
-const openDeleteModal = (dataSource: ManagedOrderTrackingDataSource) => {
-    activeDataSource.value = dataSource;
+const openDeleteModal = (entry: ManagedJetTrackEntry) => {
+    activeEntry.value = entry;
     deleteForm.clearErrors();
     isDeleteOpen.value = true;
 };
 
 const closeDeleteModal = () => {
     isDeleteOpen.value = false;
-    activeDataSource.value = null;
+    activeEntry.value = null;
     deleteForm.clearErrors();
 };
 
-const submitCreate = () => createForm.post(route('order-tracking-data-sources.store'), { preserveScroll: true, onSuccess: () => { isCreateOpen.value = false; resetCreateForm(); } });
+const submitCreate = () =>
+    createForm.post(route('jet-track-entries.store'), {
+        preserveScroll: true,
+        onSuccess: () => {
+            isCreateOpen.value = false;
+            resetCreateForm();
+        },
+    });
+
 const submitEdit = () => {
-    if (!activeDataSource.value) return;
-    editForm.put(route('order-tracking-data-sources.update', activeDataSource.value.id), { preserveScroll: true, onSuccess: () => { isEditOpen.value = false; activeDataSource.value = null; editForm.clearErrors(); } });
+    if (!activeEntry.value) return;
+
+    editForm.put(route('jet-track-entries.update', activeEntry.value.id), {
+        preserveScroll: true,
+        onSuccess: () => {
+            isEditOpen.value = false;
+            activeEntry.value = null;
+            editForm.clearErrors();
+        },
+    });
 };
+
 const submitDelete = () => {
-    if (!activeDataSource.value) return;
-    deleteForm.delete(route('order-tracking-data-sources.destroy', activeDataSource.value.id), { preserveScroll: true, onSuccess: () => closeDeleteModal() });
+    if (!activeEntry.value) return;
+
+    deleteForm.delete(route('jet-track-entries.destroy', activeEntry.value.id), {
+        preserveScroll: true,
+        onSuccess: () => closeDeleteModal(),
+    });
 };
 
-const formatDate = (value: string | null) => {
-    if (!value) return '-';
-    const parsed = new Date(value);
-    if (Number.isNaN(parsed.getTime())) return value;
-    return new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }).format(parsed);
-};
-
-const statusBadgeClass = (active: boolean) => active ? 'bg-emerald-100 text-emerald-700 ring-1 ring-emerald-200' : 'bg-rose-100 text-rose-700 ring-1 ring-rose-200';
+const statusBadgeClass = (active: boolean) =>
+    active ? 'bg-emerald-100 text-emerald-700 ring-1 ring-emerald-200' : 'bg-rose-100 text-rose-700 ring-1 ring-rose-200';
 </script>
 
 <template>
     <AppLayout :breadcrumbs="breadcrumbs">
-        <Head title="Tracking Data Sources" />
+        <Head title="Jet Track" />
 
         <div class="space-y-4">
             <div class="mx-auto max-w-7xl space-y-4">
                 <section class="app-table-shell overflow-hidden">
                     <div class="grid gap-4 border-b border-[var(--app-border)] bg-[linear-gradient(135deg,_#eef4ff_0%,_#f8fbff_100%)] px-5 py-4 text-[var(--app-ink)] lg:grid-cols-[1.2fr,0.8fr]">
                         <div>
-                            <p class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Master Data</p>
-                            <h1 class="mt-1 text-xl font-black tracking-tight">Order Tracking Source Directory</h1>
+                            <p class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Automation Source</p>
+                            <h1 class="mt-1 text-xl font-black tracking-tight">Jet Track Reference</h1>
                             <p class="mt-1 text-xs font-medium text-slate-500">
-                                Kelola daftar data source order tracking untuk standarisasi asal input operasional.
+                                Kelola daftar AWB dan kondisi barang untuk automation track ADA DI JET TRACK.
                             </p>
                         </div>
 
-                        <div v-if="canCreateDataSources" class="flex items-center justify-end">
+                        <div v-if="canCreateEntries" class="flex items-center justify-end">
                             <Button type="button" size="sm" class="h-9 rounded-xl bg-[var(--app-primary)] px-5 text-xs font-bold text-white shadow-lg hover:bg-[var(--app-primary-dark)]" @click="openCreateModal">
                                 <Plus class="h-3.5 w-3.5" />
-                                Tambah Source
+                                Tambah AWB
                             </Button>
                         </div>
                     </div>
@@ -149,12 +199,12 @@ const statusBadgeClass = (active: boolean) => active ? 'bg-emerald-100 text-emer
                 <section class="app-table-shell p-5">
                     <div class="grid gap-4 xl:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] xl:items-center">
                         <div>
-                            <h2 class="text-base font-black text-slate-900 uppercase tracking-wide">Data Source List</h2>
+                            <h2 class="text-base font-black uppercase tracking-wide text-slate-900">Jet Track List</h2>
                         </div>
                         <div class="grid gap-2 sm:grid-cols-2 lg:flex lg:justify-end">
                             <div class="relative lg:w-64">
                                 <Search class="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
-                                <Input v-model="search" class="h-9 pl-9 text-xs" placeholder="Cari..." />
+                                <Input v-model="search" class="h-9 pl-9 text-xs" placeholder="Cari AWB / kondisi..." />
                             </div>
 
                             <select v-model="statusFilter" class="h-9 min-w-[140px] rounded-xl border border-input bg-background px-3 text-xs font-bold text-slate-600 shadow-sm outline-none transition hover:border-slate-300">
@@ -170,42 +220,46 @@ const statusBadgeClass = (active: boolean) => active ? 'bg-emerald-100 text-emer
                             <table class="min-w-full divide-y divide-slate-100 text-[13px]">
                                 <thead class="bg-slate-50/50">
                                     <tr class="text-left text-[10px] font-black uppercase tracking-widest text-slate-400">
-                                        <th class="px-4 py-3">Data Source</th>
+                                        <th class="px-4 py-3">AWB</th>
+                                        <th class="px-4 py-3">Kondisi Barang</th>
+                                        <th class="px-4 py-3">Notes</th>
                                         <th class="px-4 py-3">Status</th>
                                         <th class="px-4 py-3 text-right">Action</th>
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-slate-50 bg-white">
-                                    <tr v-for="dataSource in rows" :key="dataSource.id" class="transition hover:bg-slate-50/50">
+                                    <tr v-for="entry in rows" :key="entry.id" class="transition hover:bg-slate-50/50">
                                         <td class="px-4 py-3">
                                             <div class="flex items-center gap-2.5">
                                                 <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-50 text-slate-400">
                                                     <Database class="h-3.5 w-3.5" />
                                                 </div>
                                                 <div>
-                                                    <p class="font-bold text-slate-900 leading-tight">{{ dataSource.name }}</p>
-                                                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">ID: #{{ dataSource.id }}</p>
+                                                    <p class="font-bold leading-tight text-slate-900">{{ entry.awb }}</p>
+                                                    <p class="text-[10px] font-bold uppercase tracking-tighter text-slate-400">ID: #{{ entry.id }}</p>
                                                 </div>
                                             </div>
                                         </td>
+                                        <td class="px-4 py-3 font-semibold text-slate-700">{{ entry.kondisi_barang }}</td>
+                                        <td class="px-4 py-3 text-slate-600">{{ entry.notes || '-' }}</td>
                                         <td class="px-4 py-3">
-                                            <span class="inline-flex rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-wider shadow-sm" :class="statusBadgeClass(dataSource.is_active)">
-                                                {{ dataSource.is_active ? 'Active' : 'Inactive' }}
+                                            <span class="inline-flex rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-wider shadow-sm" :class="statusBadgeClass(entry.is_active)">
+                                                {{ entry.is_active ? 'Active' : 'Inactive' }}
                                             </span>
                                         </td>
                                         <td class="px-4 py-3">
                                             <div class="flex justify-end gap-1.5">
-                                                <Button v-if="canUpdateDataSources" type="button" variant="ghost" size="sm" class="h-8 rounded-lg text-slate-400 hover:text-[var(--app-primary)] hover:bg-blue-50" @click="openEditModal(dataSource)">
+                                                <Button v-if="canUpdateEntries" type="button" variant="ghost" size="sm" class="h-8 rounded-lg text-slate-400 hover:bg-blue-50 hover:text-[var(--app-primary)]" @click="openEditModal(entry)">
                                                     <PencilLine class="h-3.5 w-3.5" />
                                                 </Button>
-                                                <Button v-if="canDeleteDataSources" type="button" variant="ghost" size="sm" class="h-8 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50" @click="openDeleteModal(dataSource)">
+                                                <Button v-if="canDeleteEntries" type="button" variant="ghost" size="sm" class="h-8 rounded-lg text-slate-400 hover:bg-rose-50 hover:text-rose-600" @click="openDeleteModal(entry)">
                                                     <Trash2 class="h-3.5 w-3.5" />
                                                 </Button>
                                             </div>
                                         </td>
                                     </tr>
                                     <tr v-if="rows.length === 0">
-                                        <td colspan="3" class="px-4 py-10 text-center text-slate-400 font-bold">Tidak ada data ditemukan</td>
+                                        <td colspan="5" class="px-4 py-10 text-center font-bold text-slate-400">Tidak ada data ditemukan</td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -231,22 +285,34 @@ const statusBadgeClass = (active: boolean) => active ? 'bg-emerald-100 text-emer
             <DialogContent class="max-w-xl overflow-hidden rounded-[28px] border-0 p-0 shadow-[0_30px_80px_rgba(15,23,42,0.25)]">
                 <div class="bg-[#EEF2FF] px-7 py-8">
                     <DialogHeader>
-                        <DialogTitle class="text-3xl font-black text-slate-900">Tambah Source</DialogTitle>
-                        <DialogDescription class="mt-2 text-base font-medium text-slate-500">Masukkan data source baru untuk standarisasi asal input order tracking.</DialogDescription>
+                        <DialogTitle class="text-3xl font-black text-slate-900">Tambah AWB Jet Track</DialogTitle>
+                        <DialogDescription class="mt-2 text-base font-medium text-slate-500">Masukkan AWB dan kondisi barang yang akan dipakai automation Order Tracking.</DialogDescription>
                     </DialogHeader>
                 </div>
 
                 <form class="space-y-6 bg-white px-7 py-7" @submit.prevent="submitCreate">
                     <div class="space-y-4">
                         <div class="grid gap-2">
-                            <Label for="create-name" class="text-[13px] font-bold uppercase tracking-wide text-slate-700">Nama Data Source</Label>
-                            <Input id="create-name" v-model="createForm.name" placeholder="Contoh: WH / Warehouse" class="h-12 rounded-xl border-slate-200 bg-slate-50/50 px-4 text-sm transition focus:bg-white" />
-                            <InputError :message="createForm.errors.name" />
+                            <Label for="create-awb" class="text-[13px] font-bold uppercase tracking-wide text-slate-700">AWB</Label>
+                            <Input id="create-awb" v-model="createForm.awb" placeholder="Contoh: JT000123456" class="h-12 rounded-xl border-slate-200 bg-slate-50/50 px-4 text-sm transition focus:bg-white" />
+                            <InputError :message="createForm.errors.awb" />
+                        </div>
+
+                        <div class="grid gap-2">
+                            <Label for="create-kondisi" class="text-[13px] font-bold uppercase tracking-wide text-slate-700">Kondisi Barang</Label>
+                            <Input id="create-kondisi" v-model="createForm.kondisi_barang" placeholder="Contoh: Box penyok" class="h-12 rounded-xl border-slate-200 bg-slate-50/50 px-4 text-sm transition focus:bg-white" />
+                            <InputError :message="createForm.errors.kondisi_barang" />
+                        </div>
+
+                        <div class="grid gap-2">
+                            <Label for="create-notes" class="text-[13px] font-bold uppercase tracking-wide text-slate-700">Notes</Label>
+                            <Input id="create-notes" v-model="createForm.notes" placeholder="Catatan opsional" class="h-12 rounded-xl border-slate-200 bg-slate-50/50 px-4 text-sm transition focus:bg-white" />
+                            <InputError :message="createForm.errors.notes" />
                         </div>
 
                         <div class="flex items-center gap-3 rounded-2xl border border-slate-100 bg-slate-50/50 px-4 py-4 transition hover:bg-slate-50">
                             <input v-model="createForm.is_active" type="checkbox" class="h-5 w-5 rounded-md border-slate-300 text-[var(--app-primary)] focus:ring-[var(--app-primary)]" />
-                            <span class="text-sm font-semibold text-slate-600">Source aktif dan siap dipakai di modul tracking</span>
+                            <span class="text-sm font-semibold text-slate-600">Entry aktif dan siap dipakai di automation Order Tracking</span>
                         </div>
                     </div>
 
@@ -254,7 +320,7 @@ const statusBadgeClass = (active: boolean) => active ? 'bg-emerald-100 text-emer
                         <Button type="button" variant="ghost" class="h-11 rounded-xl px-6 font-bold text-slate-500 hover:bg-slate-50" @click="isCreateOpen = false">Cancel</Button>
                         <Button :disabled="createForm.processing" class="h-11 rounded-xl bg-[var(--app-primary)] px-6 font-bold text-white shadow-lg shadow-blue-500/20 hover:bg-[var(--app-primary-dark)]">
                             <Plus class="mr-2 h-4 w-4" />
-                            {{ createForm.processing ? 'Creating...' : 'Create Source' }}
+                            {{ createForm.processing ? 'Creating...' : 'Create Entry' }}
                         </Button>
                     </div>
                 </form>
@@ -265,22 +331,34 @@ const statusBadgeClass = (active: boolean) => active ? 'bg-emerald-100 text-emer
             <DialogContent class="max-w-xl overflow-hidden rounded-[28px] border-0 p-0 shadow-[0_30px_80px_rgba(15,23,42,0.25)]">
                 <div class="bg-slate-900 px-7 py-8">
                     <DialogHeader>
-                        <DialogTitle class="text-3xl font-black text-white">Edit Source</DialogTitle>
-                        <DialogDescription class="mt-2 text-base font-medium text-slate-400">Perbarui nama atau status aktif data source agar tetap sinkron.</DialogDescription>
+                        <DialogTitle class="text-3xl font-black text-white">Edit Entry Jet Track</DialogTitle>
+                        <DialogDescription class="mt-2 text-base font-medium text-slate-400">Perbarui AWB, kondisi barang, atau status aktif agar automation tetap akurat.</DialogDescription>
                     </DialogHeader>
                 </div>
 
-                <form v-if="activeDataSource" class="space-y-6 bg-white px-7 py-7" @submit.prevent="submitEdit">
+                <form v-if="activeEntry" class="space-y-6 bg-white px-7 py-7" @submit.prevent="submitEdit">
                     <div class="space-y-4">
                         <div class="grid gap-2">
-                            <Label for="edit-name" class="text-[13px] font-bold uppercase tracking-wide text-slate-700">Nama Data Source</Label>
-                            <Input id="edit-name" v-model="editForm.name" class="h-12 rounded-xl border-slate-200 bg-slate-50/50 px-4 text-sm transition focus:bg-white" />
-                            <InputError :message="editForm.errors.name" />
+                            <Label for="edit-awb" class="text-[13px] font-bold uppercase tracking-wide text-slate-700">AWB</Label>
+                            <Input id="edit-awb" v-model="editForm.awb" class="h-12 rounded-xl border-slate-200 bg-slate-50/50 px-4 text-sm transition focus:bg-white" />
+                            <InputError :message="editForm.errors.awb" />
+                        </div>
+
+                        <div class="grid gap-2">
+                            <Label for="edit-kondisi" class="text-[13px] font-bold uppercase tracking-wide text-slate-700">Kondisi Barang</Label>
+                            <Input id="edit-kondisi" v-model="editForm.kondisi_barang" class="h-12 rounded-xl border-slate-200 bg-slate-50/50 px-4 text-sm transition focus:bg-white" />
+                            <InputError :message="editForm.errors.kondisi_barang" />
+                        </div>
+
+                        <div class="grid gap-2">
+                            <Label for="edit-notes" class="text-[13px] font-bold uppercase tracking-wide text-slate-700">Notes</Label>
+                            <Input id="edit-notes" v-model="editForm.notes" class="h-12 rounded-xl border-slate-200 bg-slate-50/50 px-4 text-sm transition focus:bg-white" />
+                            <InputError :message="editForm.errors.notes" />
                         </div>
 
                         <div class="flex items-center gap-3 rounded-2xl border border-slate-100 bg-slate-50/50 px-4 py-4 transition hover:bg-slate-50">
                             <input v-model="editForm.is_active" type="checkbox" class="h-5 w-5 rounded-md border-slate-300 text-[var(--app-primary)] focus:ring-[var(--app-primary)]" />
-                            <span class="text-sm font-semibold text-slate-600">Source aktif</span>
+                            <span class="text-sm font-semibold text-slate-600">Entry aktif</span>
                         </div>
                     </div>
 
@@ -299,15 +377,15 @@ const statusBadgeClass = (active: boolean) => active ? 'bg-emerald-100 text-emer
             <DialogContent class="max-w-md overflow-hidden rounded-[28px] border-0 p-0 shadow-[0_30px_80px_rgba(244,63,94,0.15)]">
                 <div class="bg-rose-50 px-7 py-8">
                     <DialogHeader>
-                        <DialogTitle class="text-3xl font-black text-rose-950">Hapus Source</DialogTitle>
+                        <DialogTitle class="text-3xl font-black text-rose-950">Hapus Entry Jet Track</DialogTitle>
                         <DialogDescription class="mt-2 text-base font-medium text-rose-600/80">Tindakan ini tidak bisa dibatalkan secara instan.</DialogDescription>
                     </DialogHeader>
                 </div>
 
                 <div class="space-y-6 bg-white px-7 py-7">
-                    <div v-if="activeDataSource" class="rounded-2xl border border-rose-100 bg-rose-50/30 p-5">
-                        <p class="text-sm font-bold text-rose-900 uppercase tracking-tight">Konfirmasi Source</p>
-                        <p class="mt-1 text-lg font-black text-rose-600">{{ activeDataSource.name }}</p>
+                    <div v-if="activeEntry" class="rounded-2xl border border-rose-100 bg-rose-50/30 p-5">
+                        <p class="text-sm font-bold uppercase tracking-tight text-rose-900">Konfirmasi AWB</p>
+                        <p class="mt-1 text-lg font-black text-rose-600">{{ activeEntry.awb }}</p>
                     </div>
 
                     <InputError :message="deleteForm.errors.delete" />
@@ -316,7 +394,7 @@ const statusBadgeClass = (active: boolean) => active ? 'bg-emerald-100 text-emer
                         <Button type="button" variant="ghost" class="h-11 rounded-xl px-6 font-bold text-slate-500 hover:bg-slate-50" @click="closeDeleteModal">Cancel</Button>
                         <Button type="button" class="h-11 rounded-xl bg-rose-600 px-6 font-bold text-white shadow-lg shadow-rose-500/20 hover:bg-rose-700" :disabled="deleteForm.processing" @click="submitDelete">
                             <Trash2 class="mr-2 h-4 w-4" />
-                            {{ deleteForm.processing ? 'Deleting...' : 'Delete Source' }}
+                            {{ deleteForm.processing ? 'Deleting...' : 'Delete Entry' }}
                         </Button>
                     </div>
                 </div>

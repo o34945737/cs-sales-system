@@ -1,98 +1,1558 @@
 <script setup lang="ts">
-import { computed } from 'vue';
-import { Head } from '@inertiajs/vue3';
 import AppLayout from '@/layouts/AppLayout.vue';
-import { PackageCheck, TimerReset, Truck } from 'lucide-vue-next';
+import { Head, router, useForm } from '@inertiajs/vue3';
+import debounce from 'lodash/debounce';
+import {
+    AlertCircle,
+    CheckCircle2,
+    ChevronDown,
+    ClipboardList,
+    Eye,
+    Pencil,
+    Plus,
+    RotateCcw,
+    Search,
+    Trash2,
+    Upload,
+    Users,
+    X,
+    Activity,
+} from 'lucide-vue-next';
+import { computed, nextTick, ref, watch } from 'vue';
+
+const DEFAULT_SOURCE_OPTIONS = ['WH', 'Finance', 'Reject Return'];
+const DEFAULT_PAYMENT_METHOD_OPTIONS = ['COD', 'NON COD'];
+const DEFAULT_INSURANCE_OPTIONS = ['Y', 'N'];
+
+const today = () => {
+    const currentDate = new Date();
+    const timezoneOffset = currentDate.getTimezoneOffset() * 60000;
+    return new Date(currentDate.getTime() - timezoneOffset).toISOString().split('T')[0];
+};
+
+const createEmptyPaginator = () => ({
+    current_page: 1,
+    data: [],
+    from: 0,
+    last_page: 1,
+    links: [],
+    per_page: 10,
+    to: 0,
+    total: 0,
+});
+
+const inputClass =
+    'w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-[14px] text-slate-900 outline-none transition duration-200 focus:border-[var(--app-primary)] focus:ring-4 focus:ring-[var(--app-primary)]/10';
+const readonlyInputClass =
+    'w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-[14px] text-slate-400 outline-none';
+const selectClass =
+    'w-full appearance-none rounded-xl border border-slate-300 bg-white px-3.5 py-2 pr-12 text-[14px] text-slate-900 outline-none transition duration-200 focus:border-[var(--app-primary)] focus:ring-4 focus:ring-[var(--app-primary)]/10';
+const textAreaClass =
+    'w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-[14px] text-slate-900 outline-none transition duration-200 focus:border-[var(--app-primary)] focus:ring-4 focus:ring-[var(--app-primary)]/10';
 
 const props = defineProps({
     orderTrackings: Object,
+    filters: Object,
+    csSummary: Array,
+    statusSummary: Object,
+    overview: Object,
+    brandOptions: Array,
+    csNameOptions: Array,
+    platformOptions: Array,
+    sourceOptions: Array,
+    logisticsOptions: Array,
+    erpStatusOptions: Array,
+    paymentMethodOptions: Array,
+    categoryOptions: Array,
+    lastStepOptions: Array,
+    reasonWhitelistOptions: Array,
+    reasonLateResponseOptions: Array,
+    complaintSyncMap: Object, // { [orderId]: { category, last_step, status, reason_whitelist, reason_late_respons } }
+    rgoOrderIds: Array,
+    jetTrackMap: Object,      // { [awb]: "KONDISI ..." }
 });
 
-const pageData = computed(() => props.orderTrackings || {});
-const rows = computed(() => pageData.value.data || []);
+const orderTrackingPage = computed(() => ({
+    ...createEmptyPaginator(),
+    ...(props.orderTrackings || {}),
+}));
 
-const metrics = computed(() => [
-    { label: 'Total Tracking', value: pageData.value.total || 0, icon: Truck, tone: 'bg-blue-50 text-blue-500' },
-    { label: 'Pending', value: rows.value.filter((item) => item.status === 'Pending').length, icon: TimerReset, tone: 'bg-amber-50 text-amber-500' },
-    { label: 'Solved', value: rows.value.filter((item) => item.status === 'Solved').length, icon: PackageCheck, tone: 'bg-emerald-50 text-emerald-500' },
+const orderTrackingRows = computed(() =>
+    Array.isArray(orderTrackingPage.value.data) ? orderTrackingPage.value.data : []
+);
+
+const paginationLinks = computed(() =>
+    Array.isArray(orderTrackingPage.value.links) ? orderTrackingPage.value.links : []
+);
+
+const filterState = computed(() => (props.filters && !Array.isArray(props.filters) ? props.filters : {}));
+const csSummary = computed(() => (Array.isArray(props.csSummary) ? props.csSummary : []));
+const statusSummary = computed(() => props.statusSummary || { all: 0, pending: 0, solved: 0, whitelist: 0 });
+const overview = computed(() => props.overview || { total: 0, pending: 0, solved: 0, whitelist: 0 });
+
+const sourceOptions = computed(() =>
+    Array.isArray(props.sourceOptions) && props.sourceOptions.length ? props.sourceOptions : DEFAULT_SOURCE_OPTIONS
+);
+const logisticsOptions = computed(() => (Array.isArray(props.logisticsOptions) ? props.logisticsOptions : []));
+const erpStatusOptions = computed(() => (Array.isArray(props.erpStatusOptions) ? props.erpStatusOptions : []));
+const paymentMethodOptions = computed(() =>
+    Array.isArray(props.paymentMethodOptions) && props.paymentMethodOptions.length
+        ? props.paymentMethodOptions
+        : DEFAULT_PAYMENT_METHOD_OPTIONS
+);
+const insuranceOptions = computed(() => DEFAULT_INSURANCE_OPTIONS);
+
+const brandFilterOptions = computed(() => ['All', ...(props.brandOptions || [])]);
+const platformFilterOptions = computed(() => ['All', ...(props.platformOptions || [])]);
+const categoryFilterOptions = computed(() => ['All', ...(props.categoryOptions || [])]);
+
+const categoryOptions = computed(() => (Array.isArray(props.categoryOptions) ? props.categoryOptions : []));
+const lastStepOptions = computed(() => (Array.isArray(props.lastStepOptions) ? props.lastStepOptions : []));
+const reasonWhitelistOptions = computed(() => (Array.isArray(props.reasonWhitelistOptions) ? props.reasonWhitelistOptions : []));
+const reasonLateResponseOptions = computed(() => (Array.isArray(props.reasonLateResponseOptions) ? props.reasonLateResponseOptions : []));
+const complaintSyncMap = computed(() => (props.complaintSyncMap && !Array.isArray(props.complaintSyncMap) ? props.complaintSyncMap : {}));
+const rgoOrderIds = computed(() => (Array.isArray(props.rgoOrderIds) ? props.rgoOrderIds : []));
+const jetTrackMap = computed(() => (props.jetTrackMap && !Array.isArray(props.jetTrackMap) ? props.jetTrackMap : {}));
+
+const search = ref(filterState.value.search || '');
+const agentSearchQuery = ref('');
+
+const currentStatus = computed(() => filterState.value.status || 'All');
+const currentCs = computed(() => filterState.value.cs_name || '');
+const currentBrand = computed(() => filterState.value.brand || 'All');
+const currentSource = computed(() => filterState.value.source || 'All');
+const currentPlatform = computed(() => filterState.value.platform || 'All');
+const currentCategory = computed(() => filterState.value.category || 'All');
+
+const filteredCsSummary = computed(() => {
+    let list = [...csSummary.value];
+
+    if (agentSearchQuery.value) {
+        const query = agentSearchQuery.value.toLowerCase();
+        list = list.filter((cs: any) => cs.cs_name?.toLowerCase().includes(query));
+    }
+
+    return list.sort((a: any, b: any) => (b.total || 0) - (a.total || 0));
+});
+
+const overviewCards = computed(() => [
+    { label: 'Total', value: overview.value.total || statusSummary.value.all || 0, icon: ClipboardList },
+    { label: 'Pending', value: overview.value.pending || statusSummary.value.pending || 0, icon: AlertCircle },
+    { label: 'Solved', value: overview.value.solved || statusSummary.value.solved || 0, icon: CheckCircle2 },
+    { label: 'Active Agents', value: csSummary.value.length || 0, icon: Users },
 ]);
+
+const statusCards = computed(() => [
+    { key: 'All', label: 'All', value: statusSummary.value.all || 0 },
+    { key: 'Pending', label: 'Pending', value: statusSummary.value.pending || 0 },
+    { key: 'Solved', label: 'Solved', value: statusSummary.value.solved || 0 },
+    { key: 'Whitelist', label: 'Whitelist', value: statusSummary.value.whitelist || 0 },
+]);
+
+const hasActiveFilters = computed(() =>
+    Boolean(
+        search.value ||
+            currentStatus.value !== 'All' ||
+            currentCs.value ||
+            currentBrand.value !== 'All' ||
+            currentSource.value !== 'All' ||
+            currentPlatform.value !== 'All' ||
+            currentCategory.value !== 'All'
+    )
+);
+
+const activeFilterCount = computed(() =>
+    [
+        Boolean(search.value),
+        currentStatus.value !== 'All',
+        Boolean(currentCs.value),
+        currentBrand.value !== 'All',
+        currentSource.value !== 'All',
+        currentPlatform.value !== 'All',
+        currentCategory.value !== 'All',
+    ].filter(Boolean).length
+);
+
+const visitIndex = (overrides = {}, options = {}) => {
+    router.get(
+        route('order-trackings.index'),
+        {
+            search: search.value || undefined,
+            status: filterState.value.status && filterState.value.status !== 'All' ? filterState.value.status : undefined,
+            cs_name: filterState.value.cs_name || undefined,
+            brand: filterState.value.brand && filterState.value.brand !== 'All' ? filterState.value.brand : undefined,
+            source: filterState.value.source && filterState.value.source !== 'All' ? filterState.value.source : undefined,
+            platform: filterState.value.platform && filterState.value.platform !== 'All' ? filterState.value.platform : undefined,
+            category: filterState.value.category && filterState.value.category !== 'All' ? filterState.value.category : undefined,
+            ...overrides,
+        },
+        { preserveState: true, preserveScroll: true, replace: true, ...options }
+    );
+};
+
+watch(search, debounce((value) => visitIndex({ search: value || undefined, page: 1 }), 350));
+
+const setStatus = (status: string) => visitIndex({ status: status === 'All' ? undefined : status, page: 1 }, { replace: false });
+const setCsFilter = (name: string) => visitIndex({ cs_name: name || undefined, page: 1 }, { replace: false });
+const setBrandFilter = (brand: string) => visitIndex({ brand: brand === 'All' ? undefined : brand, page: 1 }, { replace: false });
+const setSourceFilter = (source: string) => visitIndex({ source: source === 'All' ? undefined : source, page: 1 }, { replace: false });
+const setPlatformFilter = (platform: string) => visitIndex({ platform: platform === 'All' ? undefined : platform, page: 1 }, { replace: false });
+const setCategoryFilter = (category: string) => visitIndex({ category: category === 'All' ? undefined : category, page: 1 }, { replace: false });
+
+const resetFilters = () => {
+    search.value = '';
+    visitIndex(
+        {
+            search: undefined,
+            status: undefined,
+            cs_name: undefined,
+            brand: undefined,
+            source: undefined,
+            platform: undefined,
+            category: undefined,
+            page: 1,
+        },
+        { replace: false }
+    );
+};
+
+const createInitialFormState = () => ({
+    data_source: '',
+    tanggal_input: today(),
+    tanggal_order: '',
+    brand: '',
+    platform: '',
+    order_id: '',
+    value: null as number | null,
+    logistics: '',
+    awb: '',
+    erp_status: '',
+    payment_method: '',
+    wh_note: '',
+    cs_name: '',
+    category: '',
+    last_step: '',
+    update: '',
+    tanggal_update: '',
+    value_receive: null as number | null,
+    insurance_info: 'N',
+    video_unboxing_wh: null as File | null,
+    bap_wh: null as File | null,
+    update_wh: '',
+    update_finance: '',
+    status: '',
+    month: '',
+    automation_track: '',
+    tanggal_tts: '',
+    reason_whitelist: '',
+    reason_late_respons: '',
+});
+
+const form = useForm(createInitialFormState());
+
+const isModalOpen = ref(false);
+const modalMode = ref<'create' | 'edit'>('create');
+const editId = ref<number | null>(null);
+const detailItem = ref<any | null>(null);
+const isDeleteModalOpen = ref(false);
+const itemToDelete = ref<any | null>(null);
+const submitError = ref('');
+const isHydratingEditForm = ref(false);
+
+const fieldError = (field: string) => (form.errors as Record<string, string>)[field];
+
+const controlClass = (field: string, variant = 'input') => {
+    const baseClass = variant === 'select' ? selectClass : variant === 'textarea' ? textAreaClass : inputClass;
+    return fieldError(field) ? `${baseClass} border-rose-300 bg-rose-50/60 focus:border-rose-400` : baseClass;
+};
+
+const complaintLinkedRecord = computed(() => {
+    const key = String(form.order_id || '').trim();
+    return key ? complaintSyncMap.value[key] || null : null;
+});
+
+const isComplaintLinked = computed(() => Boolean(complaintLinkedRecord.value));
+
+const resolveStatusFromLastStep = (lastStep: string) => {
+    const matched = lastStepOptions.value.find((item: any) => item?.value === lastStep);
+    return matched?.status_result || 'Pending';
+};
+
+const monthPreview = computed(() => {
+    if (!form.tanggal_input) return '';
+
+    const d = new Date(form.tanggal_input);
+    if (isNaN(d.getTime())) return '';
+
+    const monthNames = [
+        'January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December',
+    ];
+
+    return `${monthNames[d.getMonth()]} ${d.getFullYear()}`;
+});
+
+const tanggalTtsPreview = computed(() => {
+    if (!form.tanggal_order || !form.platform) return '';
+
+    const normalizedPlatform = String(form.platform).toLowerCase();
+    if (normalizedPlatform !== 'lazada') return '';
+
+    const baseDate = new Date(form.tanggal_order);
+    if (isNaN(baseDate.getTime())) return '';
+
+    baseDate.setDate(baseDate.getDate() + 24);
+    return baseDate.toISOString().split('T')[0];
+});
+
+const automationTrackPreview = computed(() => {
+    const orderId = String(form.order_id || '').trim();
+    const awb = String(form.awb || '').trim();
+
+    if (orderId && complaintLinkedRecord.value) {
+        return 'MERGER';
+    }
+
+    if (orderId && rgoOrderIds.value.includes(orderId)) {
+        return 'Sudah diRGO';
+    }
+
+    if (awb && jetTrackMap.value[awb]) {
+        const jetInfo = jetTrackMap.value[awb];
+        return typeof jetInfo === 'string'
+            ? `ADA DI JET TRACK - ${jetInfo}`
+            : `ADA DI JET TRACK - ${(jetInfo?.kondisi_barang || '').trim()}`;
+    }
+
+    return '';
+});
+
+const categoryPreview = computed(() => {
+    if (complaintLinkedRecord.value?.category) return complaintLinkedRecord.value.category;
+    return form.category || '';
+});
+
+const lastStepPreview = computed(() => {
+    if (complaintLinkedRecord.value?.last_step) return complaintLinkedRecord.value.last_step;
+    return form.last_step || '';
+});
+
+const statusPreview = computed(() => {
+    if (complaintLinkedRecord.value?.status) return complaintLinkedRecord.value.status;
+    return resolveStatusFromLastStep(lastStepPreview.value);
+});
+
+const reasonWhitelistPreview = computed(() => {
+    if (complaintLinkedRecord.value?.reason_whitelist) return complaintLinkedRecord.value.reason_whitelist;
+    return '';
+});
+
+const reasonLateResponsPreview = computed(() => {
+    if (complaintLinkedRecord.value?.reason_late_respons) return complaintLinkedRecord.value.reason_late_respons;
+    return '';
+});
+
+watch(
+    [monthPreview, tanggalTtsPreview, automationTrackPreview, statusPreview, categoryPreview, lastStepPreview, reasonWhitelistPreview, reasonLateResponsPreview],
+    () => {
+        if (isHydratingEditForm.value) return;
+
+        form.month = monthPreview.value;
+        form.tanggal_tts = tanggalTtsPreview.value;
+        form.automation_track = automationTrackPreview.value;
+        form.status = statusPreview.value;
+        form.reason_whitelist = reasonWhitelistPreview.value;
+        form.reason_late_respons = reasonLateResponsPreview.value;
+
+        if (isComplaintLinked.value) {
+            form.category = categoryPreview.value;
+            form.last_step = lastStepPreview.value;
+        }
+    },
+    { immediate: true }
+);
+
+const videoLabel = computed(() => form.video_unboxing_wh?.name || 'Upload video unboxing');
+const bapLabel = computed(() => form.bap_wh?.name || 'Upload BAP image');
+
+const setVideoFile = (event: Event) => {
+    const [file] = (event.target as HTMLInputElement).files || [];
+    form.video_unboxing_wh = file || null;
+};
+
+const setBapFile = (event: Event) => {
+    const [file] = (event.target as HTMLInputElement).files || [];
+    form.bap_wh = file || null;
+};
+
+const discardForm = () => {
+    submitError.value = '';
+    isHydratingEditForm.value = false;
+    form.defaults(createInitialFormState());
+    form.reset();
+    form.clearErrors();
+    editId.value = null;
+    isModalOpen.value = false;
+    modalMode.value = 'create';
+};
+
+const openCreateModal = () => {
+    modalMode.value = 'create';
+    editId.value = null;
+    submitError.value = '';
+    isHydratingEditForm.value = false;
+    form.defaults(createInitialFormState());
+    form.reset();
+    form.clearErrors();
+    isModalOpen.value = true;
+};
+
+const openEditModal = (item: any) => {
+    modalMode.value = 'edit';
+    editId.value = item.id;
+    submitError.value = '';
+    detailItem.value = null;
+    isHydratingEditForm.value = true;
+    isModalOpen.value = true;
+
+    nextTick(() => {
+        const initialState = createInitialFormState();
+        const hydratedState: Record<string, any> = { ...initialState };
+
+        Object.keys(initialState).forEach((key) => {
+            if (item[key] !== undefined && key !== 'video_unboxing_wh' && key !== 'bap_wh') {
+                hydratedState[key] = item[key] ?? initialState[key];
+            }
+        });
+
+        form.defaults(hydratedState as any);
+        form.reset();
+        form.clearErrors();
+        form.video_unboxing_wh = null;
+        form.bap_wh = null;
+
+        nextTick(() => {
+            isHydratingEditForm.value = false;
+        });
+    });
+};
+
+const submitForm = () => {
+    submitError.value = '';
+
+    form.transform((data) => ({
+        ...data,
+        month: monthPreview.value || null,
+        category: categoryPreview.value || null,
+        last_step: lastStepPreview.value || null,
+        status: statusPreview.value || null,
+        automation_track: automationTrackPreview.value || null,
+        tanggal_tts: tanggalTtsPreview.value || null,
+        reason_whitelist: reasonWhitelistPreview.value || null,
+        reason_late_respons: reasonLateResponsPreview.value || null,
+        _method: modalMode.value === 'edit' ? 'PUT' : 'POST',
+    })).post(
+        modalMode.value === 'edit'
+            ? route('order-trackings.update', editId.value)
+            : route('order-trackings.store'),
+        {
+            forceFormData: true,
+            preserveScroll: true,
+            onSuccess: () => discardForm(),
+            onError: () => {
+                submitError.value = 'Data gagal disimpan. Periksa field wajib dan validasi backend.';
+            },
+        }
+    );
+};
+
+const openDetail = (item: any) => {
+    detailItem.value = item;
+};
+
+const closeDetail = () => {
+    detailItem.value = null;
+};
+
+const confirmDelete = (item: any) => {
+    itemToDelete.value = item;
+    isDeleteModalOpen.value = true;
+};
+
+const submitDelete = () => {
+    if (!itemToDelete.value) return;
+
+    router.delete(route('order-trackings.destroy', itemToDelete.value.id), {
+        preserveScroll: true,
+        onSuccess: () => {
+            isDeleteModalOpen.value = false;
+            itemToDelete.value = null;
+        },
+    });
+};
+
+const formatDate = (value: string) => {
+    if (!value) return '-';
+
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime())
+        ? value
+        : new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }).format(parsed);
+};
+
+const formatDateTime = (value: string) => {
+    if (!value) return '-';
+
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime())
+        ? value
+        : new Intl.DateTimeFormat('id-ID', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+        }).format(parsed);
+};
+
+const formatCurrency = (value: any) => {
+    if (value === null || value === undefined || value === '') return '-';
+
+    return new Intl.NumberFormat('id-ID', {
+        style: 'currency',
+        currency: 'IDR',
+        maximumFractionDigits: 0,
+    }).format(Number(value) || 0);
+};
+
+const statusClass = (status: string) =>
+    status === 'Solved'
+        ? 'bg-emerald-50 text-emerald-700'
+        : status === 'Whitelist'
+          ? 'bg-rose-50 text-rose-700'
+          : 'bg-amber-50 text-amber-700';
+
+const statusDotClass = (status: string) =>
+    status === 'Solved' ? 'bg-emerald-500' : status === 'Whitelist' ? 'bg-rose-500' : 'bg-amber-500';
+
+const insuranceButtonClass = (value: string) =>
+    form.insurance_info === value
+        ? 'border-[var(--app-primary)] bg-[var(--app-primary)] text-white shadow-md'
+        : 'border-slate-200 bg-white text-slate-600 hover:border-[var(--app-primary)]/40 hover:bg-slate-50';
 </script>
 
 <template>
-    <Head title="Order Tracking" />
+    <Head title="Order Trackings" />
 
-    <AppLayout :breadcrumbs="[{ title: 'Dashboard', href: '/dashboard' }, { title: 'Order Tracking', href: '/order-trackings' }]">
-        <div class="space-y-4">
-            <section class="app-table-shell overflow-hidden">
-                <div class="flex flex-col gap-4 border-b border-[var(--app-border)] px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
-                    <div>
-                        <p class="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Shipment Visibility</p>
-                        <h2 class="mt-1 text-xl font-black tracking-tight text-[var(--app-ink)]">Order Tracking Workspace</h2>
-                        <p class="mt-1 text-xs font-medium text-slate-500">Monitor AWB, status, dan jalur penyelesaian secara real-time.</p>
-                    </div>
- 
-                    <div class="inline-flex rounded-xl bg-[var(--app-primary-soft)] px-3 py-2 text-[11px] font-bold text-[var(--app-primary)]">
-                        Logistics Flow Active
-                    </div>
-                </div>
- 
-                <div class="grid gap-3.5 px-4 py-4 md:grid-cols-3">
-                    <article v-for="card in metrics" :key="card.label" class="rounded-xl border border-slate-50 bg-white px-4 py-4 shadow-sm">
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400">{{ card.label }}</p>
-                                <p class="mt-1 text-2xl font-black text-[var(--app-ink)]">{{ card.value }}</p>
+    <AppLayout
+        :breadcrumbs="[
+            { title: 'Dashboard', href: '/dashboard' },
+            { title: 'Order Trackings', href: '/order-trackings' },
+        ]"
+    >
+        <div class="pb-20">
+            <div class="mx-auto flex max-w-[90rem] flex-col gap-10 px-4 font-sans sm:px-6 lg:px-8">
+                <div class="space-y-10">
+                    <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                        <article
+                            v-for="card in overviewCards"
+                            :key="card.label"
+                            class="group relative overflow-hidden rounded-xl border border-slate-100 bg-white p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
+                        >
+                            <div class="absolute -right-4 -top-4 h-24 w-24 rounded-full bg-[var(--app-primary)]/5 blur-2xl"></div>
+                            <div class="relative z-10">
+                                <p class="text-[9px] font-black uppercase tracking-[0.15rem] text-slate-400">{{ card.label }}</p>
+                                <div class="mt-1.5 flex items-end justify-between">
+                                    <p class="text-2xl font-black tracking-tight text-slate-900">{{ card.value }}</p>
+                                    <div class="flex h-6 w-6 items-center justify-center rounded-lg bg-slate-50 text-slate-400">
+                                        <component :is="card.icon" class="h-3 w-3" />
+                                    </div>
+                                </div>
                             </div>
-                            <div class="flex h-9 w-9 items-center justify-center rounded-lg" :class="card.tone">
-                                <component :is="card.icon" class="h-4 w-4" />
+                        </article>
+                    </div>
+
+                    <div class="rounded-3xl border border-slate-100 bg-slate-50/50 p-2 shadow-sm ring-1 ring-slate-100/10">
+                        <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                            <div class="flex items-center gap-3 px-3">
+                                <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-blue-500 shadow-sm ring-1 ring-slate-200/50">
+                                    <AlertCircle class="h-4 w-4" />
+                                </div>
+                                <div>
+                                    <p class="text-[10px] font-black uppercase leading-none tracking-widest text-slate-400">Global Filters</p>
+                                    <p class="mt-1 text-[13px] font-black leading-none text-slate-900">Refine Workspace</p>
+                                </div>
+                            </div>
+
+                            <div class="flex flex-wrap items-center gap-2 pr-1">
+                                <div class="relative min-w-[140px]">
+                                    <select
+                                        :value="currentBrand"
+                                        class="h-10 w-full appearance-none rounded-xl border border-slate-200/60 bg-white pl-4 pr-10 text-[11px] font-black uppercase tracking-wider text-slate-600 shadow-sm outline-none transition-all hover:border-slate-300 focus:ring-4 focus:ring-blue-50/50"
+                                        @change="setBrandFilter(($event.target as HTMLSelectElement).value)"
+                                    >
+                                        <option v-for="option in brandFilterOptions" :key="option" :value="option">
+                                            {{ option === 'All' ? 'ANY BRAND' : option }}
+                                        </option>
+                                    </select>
+                                    <ChevronDown class="pointer-events-none absolute right-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+                                </div>
+
+                                <div class="relative min-w-[130px]">
+                                    <select
+                                        :value="currentSource"
+                                        class="h-10 w-full appearance-none rounded-xl border border-slate-200/60 bg-white pl-4 pr-10 text-[11px] font-black uppercase tracking-wider text-slate-600 shadow-sm outline-none transition-all hover:border-slate-300 focus:ring-4 focus:ring-blue-50/50"
+                                        @change="setSourceFilter(($event.target as HTMLSelectElement).value)"
+                                    >
+                                        <option value="All">ANY SOURCE</option>
+                                        <option v-for="source in sourceOptions" :key="source" :value="source">
+                                            {{ source }}
+                                        </option>
+                                    </select>
+                                    <ChevronDown class="pointer-events-none absolute right-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+                                </div>
+
+                                <div class="relative min-w-[130px]">
+                                    <select
+                                        :value="currentPlatform"
+                                        class="h-10 w-full appearance-none rounded-xl border border-slate-200/60 bg-white pl-4 pr-10 text-[11px] font-black uppercase tracking-wider text-slate-600 shadow-sm outline-none transition-all hover:border-slate-300 focus:ring-4 focus:ring-blue-50/50"
+                                        @change="setPlatformFilter(($event.target as HTMLSelectElement).value)"
+                                    >
+                                        <option value="All">ANY PLATFORM</option>
+                                        <option v-for="platform in platformFilterOptions.filter((item) => item !== 'All')" :key="platform" :value="platform">
+                                            {{ platform }}
+                                        </option>
+                                    </select>
+                                    <ChevronDown class="pointer-events-none absolute right-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+                                </div>
+
+                                <div class="relative min-w-[150px]">
+                                    <select
+                                        :value="currentCategory"
+                                        class="h-10 w-full appearance-none rounded-xl border border-slate-200/60 bg-white pl-4 pr-10 text-[11px] font-black uppercase tracking-wider text-slate-600 shadow-sm outline-none transition-all hover:border-slate-300 focus:ring-4 focus:ring-blue-50/50"
+                                        @change="setCategoryFilter(($event.target as HTMLSelectElement).value)"
+                                    >
+                                        <option v-for="option in categoryFilterOptions" :key="option" :value="option">
+                                            {{ option === 'All' ? 'ANY CATEGORY' : option }}
+                                        </option>
+                                    </select>
+                                    <ChevronDown class="pointer-events-none absolute right-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+                                </div>
+
+                                <div class="relative min-w-[130px]">
+                                    <select
+                                        :value="currentStatus"
+                                        class="h-10 w-full appearance-none rounded-xl border border-slate-200/60 bg-white pl-4 pr-10 text-[11px] font-black uppercase tracking-wider text-slate-600 shadow-sm outline-none transition-all hover:border-slate-300"
+                                        @change="setStatus(($event.target as HTMLSelectElement).value)"
+                                    >
+                                        <option value="All">ANY STATUS</option>
+                                        <option value="Pending">PENDING</option>
+                                        <option value="Solved">SOLVED</option>
+                                        <option value="Whitelist">WHITELIST</option>
+                                    </select>
+                                    <ChevronDown class="pointer-events-none absolute right-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+                                </div>
+
+                                <transition name="fade">
+                                    <button
+                                        v-if="hasActiveFilters"
+                                        type="button"
+                                        @click="resetFilters"
+                                        class="flex h-10 items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-3.5 text-[11px] font-black uppercase tracking-wider text-rose-600 shadow-sm transition-all hover:border-rose-300 hover:bg-rose-100"
+                                    >
+                                        <RotateCcw class="h-3.5 w-3.5" />
+                                        <span>Reset</span>
+                                        <span class="flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[9px] font-black text-white">
+                                            {{ activeFilterCount }}
+                                        </span>
+                                    </button>
+                                </transition>
                             </div>
                         </div>
-                    </article>
-                </div>
-            </section>
- 
-            <section class="app-table-shell overflow-hidden">
-                <div class="border-b border-[var(--app-border)] px-5 py-4">
-                    <h3 class="text-base font-black text-[var(--app-ink)] uppercase tracking-wide">Tracking List</h3>
-                </div>
- 
-                <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-[var(--app-border)]">
-                        <thead class="bg-slate-50/50">
-                            <tr class="text-left text-[10px] font-black uppercase tracking-widest text-slate-400">
-                                <th class="px-5 py-3">Order ID</th>
-                                <th class="px-5 py-3">Platform</th>
-                                <th class="px-5 py-3">AWB</th>
-                                <th class="px-5 py-3">Logistics</th>
-                                <th class="px-5 py-3">Last Step</th>
-                                <th class="px-5 py-3">Status</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-[var(--app-border)] bg-white text-[13px]">
-                            <tr v-for="item in rows" :key="item.id" class="hover:bg-slate-50/50 transition-colors">
-                                <td class="px-5 py-3 font-bold text-[var(--app-ink)]">{{ item.order_id || '-' }}</td>
-                                <td class="px-5 py-3 font-medium text-slate-600">{{ item.platform || '-' }}</td>
-                                <td class="px-5 py-3 font-medium text-slate-600 font-mono tracking-tighter">{{ item.awb || '-' }}</td>
-                                <td class="px-5 py-3 font-medium text-slate-600">{{ item.logistics || '-' }}</td>
-                                <td class="px-5 py-3 font-medium text-slate-600 leading-tight">{{ item.last_step || '-' }}</td>
-                                <td class="px-5 py-3">
-                                    <span
-                                        class="inline-flex rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-wider shadow-sm"
-                                        :class="item.status === 'Solved' ? 'bg-emerald-50 text-emerald-600' : item.status === 'Whitelist' ? 'bg-rose-50 text-rose-600' : 'bg-amber-50 text-amber-600'"
+                    </div>
+
+                    <div class="grid grid-cols-1 gap-8 lg:grid-cols-[320px,1fr]">
+                        <aside class="space-y-4">
+                            <div class="rounded-[24px] border border-slate-100 bg-white p-5 shadow-sm ring-1 ring-slate-100/50">
+                                <header class="flex items-center justify-between">
+                                    <div>
+                                        <p class="text-[9px] font-black uppercase tracking-[0.2em] text-[var(--app-primary)]">CS Groupings</p>
+                                        <h2 class="mt-0.5 text-lg font-black text-slate-900">Order Tracking Desk</h2>
+                                    </div>
+                                    <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-[var(--app-primary)]">
+                                        <Users class="h-4 w-4" />
+                                    </div>
+                                </header>
+
+                                <div class="mt-6 space-y-2.5">
+                                    <button
+                                        @click="setCsFilter('')"
+                                        class="flex h-10 w-full items-center justify-between rounded-xl px-4 text-[13px] font-black transition-all"
+                                        :class="!currentCs ? 'bg-[var(--app-primary)] text-white shadow-lg shadow-blue-500/20' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'"
                                     >
-                                        {{ item.status || 'Pending' }}
-                                    </span>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
+                                        <div class="flex items-center gap-2">
+                                            <Activity class="h-3.5 w-3.5" />
+                                            <span>All Active Agents</span>
+                                        </div>
+                                        <span class="text-[10px] font-black opacity-60">
+                                            {{ csSummary.reduce((acc: number, curr: any) => acc + (curr.total || 0), 0) }}
+                                        </span>
+                                    </button>
+
+                                    <div class="group relative">
+                                        <Search class="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400 transition-colors group-focus-within:text-[var(--app-primary)]" />
+                                        <input
+                                            v-model="agentSearchQuery"
+                                            type="text"
+                                            placeholder="Search agent name..."
+                                            class="h-9 w-full rounded-xl border border-slate-100 bg-slate-50/50 pl-9 pr-4 text-[11px] font-bold text-slate-700 outline-none transition-all placeholder:font-medium placeholder:text-slate-400 focus:border-[var(--app-primary)] focus:bg-white focus:ring-4 focus:ring-blue-50/50"
+                                        />
+                                    </div>
+
+                                    <div class="custom-scrollbar mt-4 max-h-[480px] space-y-3 overflow-y-auto border-b border-dashed border-slate-100 pb-5 pr-1.5">
+                                        <button
+                                            v-for="cs in filteredCsSummary"
+                                            :key="cs.cs_name"
+                                            @click="setCsFilter(cs.cs_name)"
+                                            class="group relative flex w-full flex-col gap-3 overflow-hidden rounded-[20px] border p-3.5 text-left transition-all"
+                                            :class="currentCs === cs.cs_name ? 'border-[var(--app-primary)] bg-blue-50/40 ring-2 ring-[var(--app-primary)]/10' : 'border-slate-50 bg-white hover:border-slate-200 hover:shadow-sm'"
+                                        >
+                                            <div class="flex items-start justify-between">
+                                                <div class="min-w-0">
+                                                    <p class="text-[13px] font-black leading-tight text-slate-900 transition-colors group-hover:text-[var(--app-primary)]">
+                                                        {{ cs.cs_name }}
+                                                    </p>
+                                                    <p class="mt-0.5 text-[10px] font-bold text-slate-400">{{ cs.total }} Active Tickets</p>
+                                                </div>
+                                                <div class="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-50 text-[10px] font-black text-slate-500">
+                                                    {{ cs.total }}
+                                                </div>
+                                            </div>
+                                        </button>
+
+                                        <div v-if="filteredCsSummary.length === 0" class="py-10 text-center">
+                                            <Users class="mx-auto h-8 w-8 text-slate-200 opacity-50" />
+                                            <p class="mt-2 text-[11px] font-bold uppercase tracking-widest text-slate-400">No agent found</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </aside>
+
+                        <div class="min-w-0 space-y-8">
+                            <section class="overflow-hidden rounded-[24px] border border-slate-100 bg-white shadow-sm">
+                                <div class="flex flex-col gap-6 border-b border-slate-100 px-6 py-7 lg:flex-row lg:items-center lg:justify-between">
+                                    <div class="min-w-0">
+                                        <div class="inline-flex items-center gap-2 rounded-full bg-blue-50 px-2 py-0.5 text-[9px] font-black uppercase tracking-widest text-[var(--app-primary)]">
+                                            Operational Database
+                                        </div>
+                                        <h2 class="mt-1 text-2xl font-black tracking-tight text-slate-900">Order Trackings</h2>
+                                        <div class="mt-2.5 flex items-center gap-2">
+                                            <div class="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-[10px] font-black text-slate-500 ring-1 ring-slate-200/50">
+                                                <span>SHOWING {{ orderTrackingPage.from || 0 }}-{{ orderTrackingPage.to || 0 }} OF {{ orderTrackingPage.total || 0 }}</span>
+                                            </div>
+                                            <div
+                                                class="rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-widest"
+                                                :class="activeFilterCount ? 'border-amber-200 bg-amber-50 text-amber-600 shadow-sm shadow-amber-500/5' : 'border-slate-100 bg-white text-slate-400'"
+                                            >
+                                                {{ activeFilterCount ? `${activeFilterCount} Active Filters` : 'No Filter' }}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="flex flex-1 flex-col gap-4 lg:max-w-xl lg:flex-row lg:items-center lg:justify-end">
+                                        <div class="group relative flex-1">
+                                            <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
+                                                <Search class="h-4.5 w-4.5 text-slate-400 transition-colors group-focus-within:text-[var(--app-primary)]" />
+                                            </div>
+                                            <input
+                                                v-model="search"
+                                                type="text"
+                                                class="h-11 w-full rounded-2xl border border-slate-200 bg-slate-50/50 pl-11 pr-4 text-[13px] font-medium text-slate-900 outline-none transition-all focus:border-[var(--app-primary)] focus:bg-white focus:ring-4 focus:ring-[var(--app-primary)]/10"
+                                                placeholder="Search order ID, AWB, logistics, brand..."
+                                            />
+                                        </div>
+
+                                        <button
+                                            type="button"
+                                            class="group flex h-12 items-center justify-center gap-2 rounded-2xl bg-[var(--app-primary)] px-6 text-[14px] font-black text-white shadow-[0_15px_30px_rgba(53,103,232,0.25)] transition-all hover:-translate-y-1 hover:bg-[var(--app-primary-dark)] hover:shadow-[0_20px_40px_rgba(53,103,232,0.35)] active:scale-[0.98]"
+                                            @click="openCreateModal"
+                                        >
+                                            <Plus class="h-5 w-5 stroke-[3px]" />
+                                            <span>Create Tracking</span>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="overflow-x-auto custom-scrollbar">
+                                    <table class="w-full min-w-[1180px] border-collapse text-left">
+                                        <thead>
+                                            <tr class="border-b border-slate-100 bg-slate-50/30 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+                                                <th class="py-4 pl-6 pr-4">No</th>
+                                                <th class="px-4 py-4">Source</th>
+                                                <th class="px-4 py-4">Input Date</th>
+                                                <th class="px-4 py-4">Order Date</th>
+                                                <th class="px-4 py-4">Order</th>
+                                                <th class="px-4 py-4">Brand / Platform</th>
+                                                <th class="px-4 py-4">Logistics / AWB</th>
+                                                <th class="px-4 py-4">Agent</th>
+                                                <th class="px-4 py-4 text-center">Status</th>
+                                                <th class="px-4 py-4">Track</th>
+                                                <th class="py-4 pl-4 pr-6 text-right">Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="divide-y divide-slate-100 bg-white">
+                                            <tr
+                                                v-for="(item, index) in orderTrackingRows"
+                                                :key="item.id"
+                                                class="group align-top transition-colors hover:bg-slate-50/70"
+                                            >
+                                                <td class="py-4 pl-6 pr-4">
+                                                    <span class="text-[10px] font-black text-slate-400">
+                                                        {{ ((orderTrackingPage.current_page || 1) - 1) * (orderTrackingPage.per_page || 10) + index + 1 }}
+                                                    </span>
+                                                </td>
+
+                                                <td class="px-4 py-4">
+                                                    <div class="space-y-0.5">
+                                                        <p class="text-[12px] font-black text-slate-900">{{ item.data_source || '-' }}</p>
+                                                        <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400">{{ item.erp_status || '-' }}</p>
+                                                    </div>
+                                                </td>
+
+                                                <td class="px-4 py-4">
+                                                    <p class="text-[12px] font-bold text-slate-700">{{ formatDate(item.tanggal_input) }}</p>
+                                                    <p class="mt-0.5 text-[10px] font-medium text-slate-400">{{ item.month || '-' }}</p>
+                                                </td>
+
+                                                <td class="px-4 py-4">
+                                                    <p class="text-[12px] font-bold text-slate-700">{{ formatDate(item.tanggal_order) }}</p>
+                                                    <p class="mt-0.5 text-[10px] font-medium text-slate-400">{{ item.tanggal_tts ? `TTS ${formatDate(item.tanggal_tts)}` : '-' }}</p>
+                                                </td>
+
+                                                <td class="px-4 py-4">
+                                                    <div class="space-y-1">
+                                                        <p class="text-[12px] font-black text-slate-900">#{{ item.order_id || '-' }}</p>
+                                                        <p class="text-[10px] font-bold text-slate-400">{{ formatCurrency(item.value) }}</p>
+                                                    </div>
+                                                </td>
+
+                                                <td class="px-4 py-4">
+                                                    <div class="space-y-0.5">
+                                                        <p class="text-[12px] font-black text-slate-900">{{ item.brand || '-' }}</p>
+                                                        <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400">{{ item.platform || '-' }}</p>
+                                                    </div>
+                                                </td>
+
+                                                <td class="px-4 py-4">
+                                                    <div class="space-y-0.5">
+                                                        <p class="text-[12px] font-black text-slate-900">{{ item.logistics || '-' }}</p>
+                                                        <p class="text-[10px] font-bold text-slate-400">{{ item.awb || '-' }}</p>
+                                                    </div>
+                                                </td>
+
+                                                <td class="px-4 py-4">
+                                                    <div class="flex items-center gap-2">
+                                                        <div class="flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 text-[10px] font-black text-slate-500">
+                                                            {{ (item.cs_name || '?').substring(0, 2).toUpperCase() }}
+                                                        </div>
+                                                        <div class="space-y-0.5">
+                                                            <p class="text-[12px] font-bold text-slate-700">{{ item.cs_name || 'Unassigned' }}</p>
+                                                            <p class="text-[10px] font-medium text-slate-400">{{ item.category || '-' }}</p>
+                                                        </div>
+                                                    </div>
+                                                </td>
+
+                                                <td class="px-4 py-4 text-center">
+                                                    <span class="inline-flex rounded-full px-2.5 py-1 text-[9px] font-black uppercase tracking-wider" :class="statusClass(item.status)">
+                                                        {{ item.status || 'Pending' }}
+                                                    </span>
+                                                </td>
+
+                                                <td class="px-4 py-4">
+                                                    <p class="line-clamp-2 text-[11px] font-bold text-slate-600">
+                                                        {{ item.automation_track || '-' }}
+                                                    </p>
+                                                </td>
+
+                                                <td class="py-4 pl-4 pr-6">
+                                                    <div class="flex items-center justify-end gap-1.5">
+                                                        <button
+                                                            @click="openDetail(item)"
+                                                            class="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-100 bg-white text-slate-400 shadow-sm transition-all hover:border-blue-100 hover:bg-blue-50 hover:text-blue-600"
+                                                        >
+                                                            <Eye class="h-3.5 w-3.5" />
+                                                        </button>
+                                                        <button
+                                                            @click="openEditModal(item)"
+                                                            class="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-100 bg-white text-slate-400 shadow-sm transition-all hover:border-amber-100 hover:bg-amber-50 hover:text-amber-600"
+                                                        >
+                                                            <Pencil class="h-3.5 w-3.5" />
+                                                        </button>
+                                                        <button
+                                                            @click="confirmDelete(item)"
+                                                            class="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-100 bg-white text-slate-400 shadow-sm transition-all hover:border-rose-100 hover:bg-rose-50 hover:text-rose-600"
+                                                        >
+                                                            <Trash2 class="h-3.5 w-3.5" />
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                <div v-if="!orderTrackingRows.length" class="border-t border-slate-50 px-6 py-24 text-center">
+                                    <div class="mx-auto max-w-sm space-y-5">
+                                        <div class="mx-auto flex h-20 w-20 items-center justify-center rounded-[2.5rem] bg-slate-50 text-slate-300 shadow-inner">
+                                            <ClipboardList class="h-10 w-10" />
+                                        </div>
+                                        <div class="space-y-2">
+                                            <h3 class="text-2xl font-black tracking-tight text-slate-900">
+                                                {{ hasActiveFilters ? 'No Results Found' : 'Clean Slate' }}
+                                            </h3>
+                                            <p class="text-[13px] font-medium text-slate-500">
+                                                {{ hasActiveFilters ? 'Try adjusting your filters to find what you are looking for.' : 'No order tracking records yet.' }}
+                                            </p>
+                                        </div>
+                                        <div class="flex flex-col items-center gap-3 pt-4">
+                                            <button
+                                                type="button"
+                                                class="group inline-flex items-center justify-center gap-3 rounded-2xl bg-[var(--app-primary)] px-8 py-4 text-sm font-black text-white shadow-[0_12px_30_rgba(53,103,232,0.25)] transition-all hover:-translate-y-1 hover:bg-[var(--app-primary-dark)] active:scale-95"
+                                                @click="openCreateModal"
+                                            >
+                                                <Plus class="h-5 w-5 stroke-[3px]" />
+                                                <span>Tambah Data Baru</span>
+                                            </button>
+                                            <button
+                                                v-if="hasActiveFilters"
+                                                type="button"
+                                                class="text-sm font-bold text-slate-500 underline underline-offset-4 transition hover:text-[var(--app-primary)]"
+                                                @click="resetFilters"
+                                            >
+                                                Reset all filters
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="flex flex-col gap-5 border-t border-slate-100 bg-slate-50/30 px-6 py-6 sm:flex-row sm:items-center sm:justify-between">
+                                    <p class="text-[13px] font-bold text-slate-400">
+                                        <span class="text-slate-900">Listing {{ orderTrackingPage.from || 0 }} - {{ orderTrackingPage.to || 0 }}</span>
+                                        <span class="mx-2 text-slate-300">/</span>
+                                        Total {{ orderTrackingPage.total || 0 }} Records
+                                    </p>
+
+                                    <div class="flex flex-wrap items-center gap-1.5">
+                                        <template v-for="(link, index) in paginationLinks" :key="index">
+                                            <button
+                                                v-if="link.url || link.active"
+                                                type="button"
+                                                class="flex h-10 min-w-[40px] items-center justify-center rounded-xl px-3 text-[13px] font-black transition-all"
+                                                :class="link.active ? 'bg-[var(--app-primary)] text-white shadow-lg shadow-blue-500/20' : link.url ? 'bg-white text-slate-600 ring-1 ring-slate-200/60 hover:bg-slate-50' : 'cursor-not-allowed bg-slate-50 text-slate-300'"
+                                                :disabled="!link.url"
+                                                @click="link.url && router.visit(link.url, { preserveScroll: true, preserveState: true, replace: true })"
+                                            >
+                                                <span v-html="link.label"></span>
+                                            </button>
+                                        </template>
+                                    </div>
+                                </div>
+                            </section>
+                        </div>
+                    </div>
                 </div>
- 
-                <div v-if="!rows.length" class="px-6 py-10 text-center">
-                    <p class="text-base font-bold text-[var(--app-ink)]">Belum ada data tracking</p>
-                    <p class="mt-1 text-xs text-slate-500">Queue akan muncul di sini.</p>
-                </div>
-            </section>
+            </div>
         </div>
+
+        <transition name="fade">
+            <div v-if="detailItem" class="fixed inset-0 z-40 bg-slate-950/20 backdrop-blur-[1px]" @click.self="closeDetail">
+                <aside class="absolute right-0 top-0 h-full w-full max-w-xl overflow-y-auto bg-white p-8 shadow-2xl">
+                    <header class="mb-8 flex items-center justify-between border-b border-slate-100 pb-6">
+                        <div>
+                            <p class="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--app-primary)]">Details Viewer</p>
+                            <h3 class="mt-1 text-2xl font-black text-slate-900">Order #{{ detailItem.order_id }}</h3>
+                        </div>
+                        <button @click="closeDetail" class="flex h-10 w-10 items-center justify-center rounded-full bg-slate-50 text-slate-400 transition-all hover:bg-rose-50 hover:text-rose-500">
+                            <X class="h-5 w-5" />
+                        </button>
+                    </header>
+
+                    <div class="space-y-8">
+                        <section class="grid grid-cols-2 gap-4">
+                            <div class="rounded-2xl border border-slate-100 bg-slate-50/50 p-5">
+                                <p class="text-[10px] font-bold uppercase text-slate-400">Tanggal Input</p>
+                                <p class="mt-2 text-[15px] font-black text-slate-900">{{ formatDate(detailItem.tanggal_input) }}</p>
+                            </div>
+                            <div class="rounded-2xl border border-slate-100 bg-slate-50/50 p-5">
+                                <p class="text-[10px] font-bold uppercase text-slate-400">Tanggal Order</p>
+                                <p class="mt-2 text-[15px] font-black text-slate-900">{{ formatDate(detailItem.tanggal_order) }}</p>
+                            </div>
+                        </section>
+
+                        <section class="rounded-2xl border border-slate-100 p-6">
+                            <div class="flex items-center gap-4">
+                                <div class="flex h-12 w-12 items-center justify-center rounded-full bg-blue-50 text-[var(--app-primary)]">
+                                    <Users class="h-5 w-5" />
+                                </div>
+                                <div>
+                                    <p class="text-[10px] font-bold uppercase text-slate-400">Order Summary</p>
+                                    <p class="mt-1 text-lg font-black text-slate-900">{{ detailItem.brand || '-' }} / {{ detailItem.platform || '-' }}</p>
+                                    <p class="text-[13px] font-medium text-slate-500">
+                                        {{ detailItem.logistics || '-' }} / {{ detailItem.awb || '-' }}
+                                    </p>
+                                </div>
+                            </div>
+                        </section>
+
+                        <section class="space-y-4">
+                            <p class="px-1 text-[10px] font-bold uppercase text-slate-400">Updates & Notes</p>
+                            <div class="rounded-3xl border border-slate-100 bg-[#f8fbff]/50 p-6 italic leading-relaxed text-slate-600 ring-1 ring-slate-100/50">
+                                "{{ detailItem.update || detailItem.wh_note || 'No update provided.' }}"
+                            </div>
+                        </section>
+
+                        <section class="grid grid-cols-1 gap-4">
+                            <div class="rounded-2xl border border-slate-100 p-5">
+                                <p class="text-[10px] font-bold uppercase text-slate-400">Status Tracking</p>
+                                <div class="mt-4 flex items-center justify-between">
+                                    <span class="rounded-full px-3 py-1 text-[11px] font-black uppercase tracking-wider" :class="statusClass(detailItem.status)">
+                                        {{ detailItem.status }}
+                                    </span>
+                                    <span class="text-[13px] font-black text-slate-500">{{ detailItem.last_step || 'Untracked' }}</span>
+                                </div>
+                                <p class="mt-3 text-[12px] font-medium text-slate-500">
+                                    Automation: {{ detailItem.automation_track || '-' }}
+                                </p>
+                                <p class="mt-2 text-[12px] font-medium text-slate-500">
+                                    TTS: {{ detailItem.tanggal_tts ? formatDate(detailItem.tanggal_tts) : '-' }}
+                                </p>
+                            </div>
+                        </section>
+                    </div>
+                </aside>
+            </div>
+        </transition>
+
+        <transition name="fade">
+            <div v-if="isModalOpen" class="fixed inset-0 z-50 bg-slate-950/35 backdrop-blur-[2px]">
+                <div class="absolute inset-y-0 right-0 h-full w-full overflow-y-auto bg-[#f8fbff] shadow-2xl 2xl:max-w-[1320px]">
+                    <div
+                        class="sticky top-0 z-20 flex items-center justify-between border-b px-5 py-6 transition-all duration-500 sm:px-8"
+                        :class="modalMode === 'edit' ? 'border-slate-800 bg-slate-900' : 'border-[#E0E7FF] bg-[#EEF2FF]'"
+                    >
+                        <div class="flex items-center gap-5">
+                            <button
+                                type="button"
+                                class="flex h-11 w-11 items-center justify-center rounded-2xl transition-all active:scale-90"
+                                :class="modalMode === 'edit' ? 'bg-white/10 text-slate-300 hover:bg-white/20 hover:text-white' : 'bg-slate-900/5 text-slate-500 hover:bg-slate-900/10 hover:text-slate-900'"
+                                @click="discardForm"
+                            >
+                                <X class="h-5 w-5" />
+                            </button>
+                            <div>
+                                <h2 class="text-2xl font-black tracking-tight transition-colors" :class="modalMode === 'edit' ? 'text-white' : 'text-slate-900'">
+                                    {{ modalMode === 'edit' ? 'Edit Order Tracking' : 'Create Order Tracking' }}
+                                </h2>
+                                <p class="mt-0.5 text-[13px] font-medium transition-colors" :class="modalMode === 'edit' ? 'text-slate-400' : 'text-slate-500'">
+                                    Flow sesuai WH, Finance, Reject Return, dan automation complaint.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center gap-3">
+                            <button
+                                type="button"
+                                class="h-11 rounded-xl px-5 text-sm font-black transition-all active:scale-95"
+                                :class="modalMode === 'edit' ? 'text-slate-400 hover:bg-white/5' : 'text-slate-500 hover:bg-slate-100'"
+                                @click="discardForm"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                class="h-11 rounded-xl px-6 text-sm font-black text-white shadow-xl transition-all hover:-translate-y-0.5 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+                                :class="modalMode === 'edit' ? 'bg-blue-600 shadow-blue-500/20 hover:bg-blue-500' : 'bg-[var(--app-primary)] shadow-indigo-500/20 hover:bg-[var(--app-primary-dark)]'"
+                                :disabled="form.processing"
+                                @click="submitForm"
+                            >
+                                <div class="flex items-center gap-2">
+                                    <Plus v-if="!form.processing && modalMode === 'create'" class="h-4 w-4 stroke-[3px]" />
+                                    <CheckCircle2 v-else-if="!form.processing && modalMode === 'edit'" class="h-4 w-4 stroke-[3px]" />
+                                    <span>{{ form.processing ? 'Syncing...' : (modalMode === 'edit' ? 'Update Data' : 'Submit Tracking') }}</span>
+                                </div>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="px-5 py-8 sm:px-8">
+                        <div class="mx-auto grid max-w-[1240px] gap-8 xl:grid-cols-[minmax(0,1fr)_320px]">
+                            <div class="space-y-7">
+                                <div v-if="submitError || Object.keys(form.errors).length" class="rounded-[18px] border border-rose-200 bg-rose-50 px-4 py-4 text-sm text-rose-700">
+                                    <p class="font-semibold">{{ submitError || 'Mohon lengkapi field mandatory:' }}</p>
+                                    <ul v-if="Object.keys(form.errors).length" class="mt-2 list-disc pl-5">
+                                        <li v-for="(message, field) in form.errors" :key="field">{{ message }}</li>
+                                    </ul>
+                                </div>
+
+                                <div class="grid grid-cols-1 gap-4 sm:grid-cols-4">
+                                    <div class="rounded-2xl border border-slate-100 bg-slate-50/50 p-4">
+                                        <div class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Status</div>
+                                        <div class="mt-1 text-[13px] font-semibold text-slate-700">{{ statusPreview }}</div>
+                                    </div>
+                                    <div class="rounded-2xl border border-blue-100 bg-blue-50/50 p-4">
+                                        <div class="text-[11px] font-bold uppercase tracking-wider text-blue-400">Month</div>
+                                        <div class="mt-1 text-[13px] font-semibold text-blue-700">{{ monthPreview || '-' }}</div>
+                                    </div>
+                                    <div class="rounded-2xl border border-indigo-100 bg-indigo-50/50 p-4">
+                                        <div class="text-[11px] font-bold uppercase tracking-wider text-indigo-400">Tanggal TTS</div>
+                                        <div class="mt-1 text-[13px] font-semibold text-indigo-700">{{ tanggalTtsPreview || '-' }}</div>
+                                    </div>
+                                    <div class="rounded-2xl border border-emerald-100 bg-emerald-50/50 p-4">
+                                        <div class="text-[11px] font-bold uppercase tracking-wider text-emerald-400">Automation Track</div>
+                                        <div class="mt-1 text-[13px] font-semibold text-emerald-700">{{ automationTrackPreview || '-' }}</div>
+                                    </div>
+                                </div>
+
+                                <section class="rounded-[24px] border border-slate-100 bg-white p-6 shadow-[0_15px_40px_rgba(15,23,42,0.03)]">
+                                    <div class="mb-6 border-b border-slate-50 pb-5">
+                                        <div class="inline-flex items-center gap-2 rounded-full bg-[var(--app-primary-soft)] px-2.5 py-0.5 text-[9px] font-black uppercase tracking-widest text-[var(--app-primary)]">
+                                            <span>Section 01</span>
+                                        </div>
+                                        <h3 class="mt-2 text-lg font-black text-slate-900">Basic Information</h3>
+                                    </div>
+
+                                    <div class="space-y-4">
+                                        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                                            <div class="space-y-2">
+                                                <label class="block text-[13px] font-black uppercase tracking-wide text-slate-700">Data Source*</label>
+                                                <div class="relative">
+                                                    <select v-model="form.data_source" :class="controlClass('data_source', 'select')">
+                                                        <option value="" disabled>Pilih Data Source</option>
+                                                        <option v-for="item in sourceOptions" :key="item" :value="item">{{ item }}</option>
+                                                    </select>
+                                                    <ChevronDown class="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                                                </div>
+                                            </div>
+
+                                            <div class="space-y-2">
+                                                <label class="block text-[13px] font-black uppercase tracking-wide text-slate-700">Tanggal Input*</label>
+                                                <input v-model="form.tanggal_input" type="date" :class="controlClass('tanggal_input')" />
+                                            </div>
+
+                                            <div class="space-y-2">
+                                                <label class="block text-[13px] font-black uppercase tracking-wide text-slate-700">Tanggal Order*</label>
+                                                <input v-model="form.tanggal_order" type="date" :class="controlClass('tanggal_order')" />
+                                            </div>
+
+                                            <div class="space-y-2">
+                                                <label class="block text-[13px] font-black uppercase tracking-wide text-slate-700">Month</label>
+                                                <input :value="monthPreview || 'Auto from tanggal input'" type="text" readonly :class="readonlyInputClass" />
+                                            </div>
+                                        </div>
+
+                                        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                                            <div class="space-y-2">
+                                                <label class="block text-[13px] font-black uppercase tracking-wide text-slate-700">Brand*</label>
+                                                <div class="relative">
+                                                    <select v-model="form.brand" :class="controlClass('brand', 'select')">
+                                                        <option value="" disabled>Pilih Brand</option>
+                                                        <option v-for="brand in props.brandOptions" :key="brand" :value="brand">{{ brand }}</option>
+                                                    </select>
+                                                    <ChevronDown class="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                                                </div>
+                                            </div>
+
+                                            <div class="space-y-2">
+                                                <label class="block text-[13px] font-black uppercase tracking-wide text-slate-700">Platform*</label>
+                                                <div class="relative">
+                                                    <select v-model="form.platform" :class="controlClass('platform', 'select')">
+                                                        <option value="" disabled>Pilih Platform</option>
+                                                        <option v-for="platform in props.platformOptions" :key="platform" :value="platform">{{ platform }}</option>
+                                                    </select>
+                                                    <ChevronDown class="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                                                </div>
+                                            </div>
+
+                                            <div class="space-y-2">
+                                                <label class="block text-[13px] font-black uppercase tracking-wide text-slate-700">Order ID*</label>
+                                                <input v-model="form.order_id" type="text" placeholder="Masukkan Order ID" :class="controlClass('order_id')" />
+                                            </div>
+                                        </div>
+
+                                        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                                            <div class="space-y-2">
+                                                <label class="block text-[13px] font-black uppercase tracking-wide text-slate-700">Value</label>
+                                                <input v-model="form.value" type="number" placeholder="Nominal order" :class="controlClass('value')" />
+                                            </div>
+
+                                            <div class="space-y-2">
+                                                <label class="block text-[13px] font-black uppercase tracking-wide text-slate-700">Logistics*</label>
+                                                <div class="relative">
+                                                    <select v-model="form.logistics" :class="controlClass('logistics', 'select')">
+                                                        <option value="" disabled>Pilih Logistics</option>
+                                                        <option v-for="item in logisticsOptions" :key="item" :value="item">{{ item }}</option>
+                                                    </select>
+                                                    <ChevronDown class="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                                                </div>
+                                            </div>
+
+                                            <div class="space-y-2">
+                                                <label class="block text-[13px] font-black uppercase tracking-wide text-slate-700">AWB</label>
+                                                <input v-model="form.awb" type="text" placeholder="Masukkan AWB" :class="controlClass('awb')" />
+                                            </div>
+
+                                            <div class="space-y-2">
+                                                <label class="block text-[13px] font-black uppercase tracking-wide text-slate-700">ERP Status</label>
+                                                <div class="relative">
+                                                    <select v-model="form.erp_status" :class="controlClass('erp_status', 'select')">
+                                                        <option value="" disabled>Pilih ERP Status</option>
+                                                        <option v-for="item in erpStatusOptions" :key="item" :value="item">{{ item }}</option>
+                                                    </select>
+                                                    <ChevronDown class="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="grid gap-4 sm:grid-cols-2">
+                                            <div class="space-y-2">
+                                                <label class="block text-[13px] font-black uppercase tracking-wide text-slate-700">Payment Method</label>
+                                                <div class="relative">
+                                                    <select v-model="form.payment_method" :class="controlClass('payment_method', 'select')">
+                                                        <option value="" disabled>Pilih Payment Method</option>
+                                                        <option v-for="item in paymentMethodOptions" :key="item" :value="item">{{ item }}</option>
+                                                    </select>
+                                                    <ChevronDown class="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </section>
+
+                                <section class="rounded-[24px] border border-slate-100 bg-white p-6 shadow-[0_15px_40px_rgba(15,23,42,0.03)]">
+                                    <div class="mb-6 border-b border-slate-50 pb-5">
+                                        <div class="inline-flex items-center gap-2 rounded-full bg-[var(--app-primary-soft)] px-2.5 py-0.5 text-[9px] font-black uppercase tracking-widest text-[var(--app-primary)]">
+                                            <span>Section 02</span>
+                                        </div>
+                                        <h3 class="mt-2 text-lg font-black text-slate-900">Handling</h3>
+                                    </div>
+
+                                    <div class="space-y-4">
+                                        <div class="space-y-2">
+                                            <label class="block text-[13px] font-black uppercase tracking-wide text-slate-700">WH Note</label>
+                                            <textarea v-model="form.wh_note" rows="4" :class="controlClass('wh_note', 'textarea')" placeholder="Catatan panjang dari WH..."></textarea>
+                                        </div>
+
+                                        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                                            <div class="space-y-2">
+                                                <label class="block text-[13px] font-black uppercase tracking-wide text-slate-700">CS Name*</label>
+                                                <div class="relative">
+                                                    <select v-model="form.cs_name" :class="controlClass('cs_name', 'select')">
+                                                        <option value="" disabled>Pilih CS</option>
+                                                        <option v-for="cs in props.csNameOptions" :key="cs" :value="cs">{{ cs }}</option>
+                                                    </select>
+                                                    <ChevronDown class="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                                                </div>
+                                            </div>
+
+                                            <div class="space-y-2">
+                                                <label class="block text-[13px] font-black uppercase tracking-wide text-slate-700">Category*</label>
+                                                <template v-if="isComplaintLinked">
+                                                    <input :value="categoryPreview || '-'" type="text" readonly :class="readonlyInputClass" />
+                                                </template>
+                                                <template v-else>
+                                                    <div class="relative">
+                                                        <select v-model="form.category" :class="controlClass('category', 'select')">
+                                                            <option value="" disabled>Pilih Category</option>
+                                                            <option v-for="item in categoryOptions" :key="item" :value="item">{{ item }}</option>
+                                                        </select>
+                                                        <ChevronDown class="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                                                    </div>
+                                                </template>
+                                            </div>
+
+                                            <div class="space-y-2">
+                                                <label class="block text-[13px] font-black uppercase tracking-wide text-slate-700">Last Step*</label>
+                                                <template v-if="isComplaintLinked">
+                                                    <input :value="lastStepPreview || '-'" type="text" readonly :class="readonlyInputClass" />
+                                                </template>
+                                                <template v-else>
+                                                    <div class="relative">
+                                                        <select v-model="form.last_step" :class="controlClass('last_step', 'select')">
+                                                            <option value="" disabled>Pilih Last Step</option>
+                                                            <option v-for="option in lastStepOptions" :key="option.value" :value="option.value">
+                                                                {{ option.label || option.value }}
+                                                            </option>
+                                                        </select>
+                                                        <ChevronDown class="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                                                    </div>
+                                                </template>
+                                            </div>
+                                        </div>
+
+                                        <div class="space-y-2">
+                                            <label class="block text-[13px] font-black uppercase tracking-wide text-slate-700">Update</label>
+                                            <textarea v-model="form.update" rows="4" :class="controlClass('update', 'textarea')" placeholder="Update utama order tracking..."></textarea>
+                                        </div>
+
+                                        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                                            <div class="space-y-2">
+                                                <label class="block text-[13px] font-black uppercase tracking-wide text-slate-700">Tanggal Update*</label>
+                                                <input v-model="form.tanggal_update" type="datetime-local" :class="controlClass('tanggal_update')" />
+                                            </div>
+
+                                            <div class="space-y-2">
+                                                <label class="block text-[13px] font-black uppercase tracking-wide text-slate-700">Value Receive</label>
+                                                <input v-model="form.value_receive" type="number" placeholder="Nominal diterima" :class="controlClass('value_receive')" />
+                                            </div>
+
+                                            <div class="space-y-2">
+                                                <label class="block text-[13px] font-black uppercase tracking-wide text-slate-700">Insurance Info</label>
+                                                <div class="flex flex-wrap gap-2 pt-1">
+                                                    <button
+                                                        v-for="option in insuranceOptions"
+                                                        :key="option"
+                                                        type="button"
+                                                        class="rounded-lg border px-4 py-3 text-[15px] font-bold transition"
+                                                        :class="insuranceButtonClass(option)"
+                                                        @click="form.insurance_info = option"
+                                                    >
+                                                        {{ option }}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </section>
+
+                                <section class="rounded-[24px] border border-slate-100 bg-white p-6 shadow-[0_15px_40px_rgba(15,23,42,0.03)]">
+                                    <div class="mb-6 border-b border-slate-50 pb-5">
+                                        <div class="inline-flex items-center gap-2 rounded-full bg-[var(--app-primary-soft)] px-2.5 py-0.5 text-[9px] font-black uppercase tracking-widest text-[var(--app-primary)]">
+                                            <span>Section 03</span>
+                                        </div>
+                                        <h3 class="mt-2 text-lg font-black text-slate-900">Attachment & Internal Update</h3>
+                                    </div>
+
+                                    <div class="space-y-5">
+                                        <div class="grid gap-5 sm:grid-cols-2">
+                                            <div class="space-y-2">
+                                                <label class="block text-[13px] font-black uppercase tracking-wide text-slate-700">Video Unboxing</label>
+                                                <label class="flex cursor-pointer items-center justify-between rounded-2xl border border-dashed border-slate-300 bg-slate-50/60 px-4 py-3 transition hover:border-[var(--app-primary)] hover:bg-blue-50/40">
+                                                    <div class="flex items-center gap-3">
+                                                        <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-slate-400 shadow-sm">
+                                                            <Upload class="h-4 w-4" />
+                                                        </div>
+                                                        <div>
+                                                            <p class="text-[13px] font-black text-slate-700">{{ videoLabel }}</p>
+                                                            <p class="text-[11px] font-medium text-slate-400">Video from WH</p>
+                                                        </div>
+                                                    </div>
+                                                    <input type="file" class="hidden" accept="video/*" @change="setVideoFile" />
+                                                </label>
+                                            </div>
+
+                                            <div class="space-y-2">
+                                                <label class="block text-[13px] font-black uppercase tracking-wide text-slate-700">BAP</label>
+                                                <label class="flex cursor-pointer items-center justify-between rounded-2xl border border-dashed border-slate-300 bg-slate-50/60 px-4 py-3 transition hover:border-[var(--app-primary)] hover:bg-blue-50/40">
+                                                    <div class="flex items-center gap-3">
+                                                        <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-slate-400 shadow-sm">
+                                                            <Upload class="h-4 w-4" />
+                                                        </div>
+                                                        <div>
+                                                            <p class="text-[13px] font-black text-slate-700">{{ bapLabel }}</p>
+                                                            <p class="text-[11px] font-medium text-slate-400">Image from WH</p>
+                                                        </div>
+                                                    </div>
+                                                    <input type="file" class="hidden" accept="image/*" @change="setBapFile" />
+                                                </label>
+                                            </div>
+                                        </div>
+
+                                        <div class="space-y-2">
+                                            <label class="block text-[13px] font-black uppercase tracking-wide text-slate-700">Update dari WH</label>
+                                            <textarea v-model="form.update_wh" rows="3" :class="controlClass('update_wh', 'textarea')" placeholder="Update internal dari WH..."></textarea>
+                                        </div>
+
+                                        <div class="space-y-2">
+                                            <label class="block text-[13px] font-black uppercase tracking-wide text-slate-700">Update dari Finance</label>
+                                            <textarea v-model="form.update_finance" rows="3" :class="controlClass('update_finance', 'textarea')" placeholder="Update internal dari Finance..."></textarea>
+                                        </div>
+                                    </div>
+                                </section>
+
+                                <section class="rounded-[24px] border border-slate-100 bg-white p-6 shadow-[0_15px_40px_rgba(15,23,42,0.03)]">
+                                    <div class="mb-6 border-b border-slate-50 pb-5">
+                                        <div class="inline-flex items-center gap-2 rounded-full bg-[var(--app-primary-soft)] px-2.5 py-0.5 text-[9px] font-black uppercase tracking-widest text-[var(--app-primary)]">
+                                            <span>Section 04</span>
+                                        </div>
+                                        <h3 class="mt-2 text-lg font-black text-slate-900">Automation Result</h3>
+                                    </div>
+
+                                    <div class="space-y-4">
+                                        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                                            <div class="space-y-2">
+                                                <label class="block text-[13px] font-black uppercase tracking-wide text-slate-700">Status</label>
+                                                <input :value="statusPreview || '-'" type="text" readonly :class="readonlyInputClass" />
+                                            </div>
+
+                                            <div class="space-y-2">
+                                                <label class="block text-[13px] font-black uppercase tracking-wide text-slate-700">Month</label>
+                                                <input :value="monthPreview || '-'" type="text" readonly :class="readonlyInputClass" />
+                                            </div>
+
+                                            <div class="space-y-2">
+                                                <label class="block text-[13px] font-black uppercase tracking-wide text-slate-700">Automation Track</label>
+                                                <input :value="automationTrackPreview || '-'" type="text" readonly :class="readonlyInputClass" />
+                                            </div>
+
+                                            <div class="space-y-2">
+                                                <label class="block text-[13px] font-black uppercase tracking-wide text-slate-700">Tanggal TTS</label>
+                                                <input :value="tanggalTtsPreview || '-'" type="text" readonly :class="readonlyInputClass" />
+                                            </div>
+                                        </div>
+
+                                        <div class="grid gap-4 sm:grid-cols-2">
+                                            <div class="space-y-2">
+                                                <label class="block text-[13px] font-black uppercase tracking-wide text-slate-700">Reason Whitelist</label>
+                                                <input :value="reasonWhitelistPreview || '-'" type="text" readonly :class="readonlyInputClass" />
+                                            </div>
+
+                                            <div class="space-y-2">
+                                                <label class="block text-[13px] font-black uppercase tracking-wide text-slate-700">Reason Late Respons</label>
+                                                <input :value="reasonLateResponsPreview || '-'" type="text" readonly :class="readonlyInputClass" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </section>
+                            </div>
+
+                            <aside class="space-y-6">
+                                <div class="sticky top-12 space-y-6">
+                                    <div class="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm ring-1 ring-slate-100/50">
+                                        <p class="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">Live Outcome</p>
+                                        <div class="mt-4 space-y-4">
+                                            <div class="rounded-xl border border-slate-50 bg-slate-50/50 p-3.5">
+                                                <p class="text-[10px] font-bold text-slate-400">Projected Status</p>
+                                                <div class="mt-1.5 inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[9px] font-black uppercase tracking-wider shadow-sm" :class="statusClass(statusPreview)">
+                                                    <span class="h-1.5 w-1.5 animate-pulse rounded-full" :class="statusDotClass(statusPreview)"></span>
+                                                    {{ statusPreview }}
+                                                </div>
+                                            </div>
+
+                                            <div class="grid gap-2.5 sm:grid-cols-2">
+                                                <div class="rounded-xl border border-slate-50 bg-slate-50/50 p-3.5">
+                                                    <p class="text-[10px] font-bold text-slate-400">Automation Track</p>
+                                                    <p class="mt-0.5 text-[11px] font-bold text-slate-700">{{ automationTrackPreview || '-' }}</p>
+                                                </div>
+                                                <div class="rounded-xl border border-slate-50 bg-slate-50/50 p-3.5">
+                                                    <p class="text-[10px] font-bold text-slate-400">Tanggal TTS</p>
+                                                    <p class="mt-0.5 text-[11px] font-bold text-slate-700">{{ tanggalTtsPreview || '-' }}</p>
+                                                </div>
+                                            </div>
+
+                                            <div class="rounded-xl border border-blue-100 bg-blue-50/50 p-3.5">
+                                                <p class="text-[10px] font-bold text-blue-400">Order Value</p>
+                                                <p class="mt-0.5 text-[12px] font-bold text-blue-700">{{ formatCurrency(form.value) }}</p>
+                                            </div>
+
+                                            <div class="rounded-xl border border-emerald-100 bg-emerald-50/50 p-3.5">
+                                                <p class="text-[10px] font-bold text-emerald-400">Value Receive</p>
+                                                <p class="mt-0.5 text-[12px] font-bold text-emerald-700">{{ formatCurrency(form.value_receive) }}</p>
+                                            </div>
+
+                                            <div class="rounded-xl border border-indigo-100 bg-indigo-50/50 p-3.5">
+                                                <p class="text-[10px] font-bold text-indigo-400">Complaint Sync</p>
+                                                <p class="mt-0.5 text-[12px] font-bold text-indigo-700">
+                                                    {{ isComplaintLinked ? 'Linked with Complaint' : 'No complaint match' }}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="rounded-2xl border border-slate-100 bg-[var(--app-ink)] p-6 text-white shadow-xl">
+                                        <p class="text-[9px] font-black uppercase tracking-[0.2em] text-white/40">Quick Guidelines</p>
+                                        <ul class="mt-4 space-y-3">
+                                            <li class="flex items-start gap-2.5">
+                                                <div class="flex h-4.5 w-4.5 shrink-0 items-center justify-center rounded-full bg-white/10 text-white">
+                                                    <CheckCircle2 class="h-2.5 w-2.5" />
+                                                </div>
+                                                <p class="text-[12px] font-medium leading-tight text-white/80">
+                                                    Input manual hanya untuk field operasional. <span class="font-bold text-white">Status, Month, Automation Track, TTS</span> otomatis.
+                                                </p>
+                                            </li>
+                                            <li class="flex items-start gap-2.5">
+                                                <div class="flex h-4.5 w-4.5 shrink-0 items-center justify-center rounded-full bg-white/10 text-white">
+                                                    <CheckCircle2 class="h-2.5 w-2.5" />
+                                                </div>
+                                                <p class="text-[12px] font-medium leading-tight text-white/80">
+                                                    Jika order terhubung complaint, maka <span class="font-bold text-white">Category, Last Step, Reason Whitelist, Reason Late Respons</span> ikut sinkron.
+                                                </p>
+                                            </li>
+                                            <li class="flex items-start gap-2.5">
+                                                <div class="flex h-4.5 w-4.5 shrink-0 items-center justify-center rounded-full bg-white/10 text-white">
+                                                    <CheckCircle2 class="h-2.5 w-2.5" />
+                                                </div>
+                                                <p class="text-[12px] font-medium leading-tight text-white/80">
+                                                    Untuk <span class="font-bold text-white">Lazada</span>, TTS selalu otomatis dari tanggal order + 24 hari.
+                                                </p>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </aside>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </transition>
+
+        <transition name="fade">
+            <div v-if="isDeleteModalOpen" class="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/40 px-4 backdrop-blur-sm" @click.self="isDeleteModalOpen = false">
+                <div class="w-full max-w-md overflow-hidden rounded-[32px] bg-white shadow-2xl">
+                    <div class="bg-rose-50 px-8 py-10">
+                        <div class="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-rose-600 shadow-sm ring-1 ring-rose-100">
+                            <Trash2 class="h-7 w-7" />
+                        </div>
+                        <h3 class="text-3xl font-black tracking-tight text-slate-900">Delete Tracking</h3>
+                        <p class="mt-2 text-[15px] font-medium leading-relaxed text-slate-500">
+                            System will remove order tracking record for <b>#{{ itemToDelete?.order_id }}</b> permanently.
+                        </p>
+                    </div>
+                    <div class="flex gap-3 bg-white p-8">
+                        <button @click="isDeleteModalOpen = false" class="h-12 flex-1 rounded-2xl bg-slate-50 text-[14px] font-black text-slate-500">
+                            Keep It
+                        </button>
+                        <button @click="submitDelete" class="h-12 flex-[2] rounded-2xl bg-rose-600 text-[14px] font-black text-white shadow-lg shadow-rose-500/20">
+                            Delete Forever
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </transition>
     </AppLayout>
 </template>
+
+<style scoped>
+.custom-scrollbar::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #e2e8f0;
+    border-radius: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #cbd5e1;
+}
+.fade-enter-active,
+.fade-leave-active {
+    transition: opacity 0.3s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+    opacity: 0;
+}
+</style>

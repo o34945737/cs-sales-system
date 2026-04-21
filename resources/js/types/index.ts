@@ -51,6 +51,18 @@ export interface Auth {
         create_order_tracking_data_sources: boolean;
         update_order_tracking_data_sources: boolean;
         delete_order_tracking_data_sources: boolean;
+        view_order_tracking_erp_statuses: boolean;
+        create_order_tracking_erp_statuses: boolean;
+        update_order_tracking_erp_statuses: boolean;
+        delete_order_tracking_erp_statuses: boolean;
+        view_order_tracking_rgo_entries: boolean;
+        create_order_tracking_rgo_entries: boolean;
+        update_order_tracking_rgo_entries: boolean;
+        delete_order_tracking_rgo_entries: boolean;
+        view_jet_track_entries: boolean;
+        create_jet_track_entries: boolean;
+        update_jet_track_entries: boolean;
+        delete_jet_track_entries: boolean;
         view_oos_reasons: boolean;
         create_oos_reasons: boolean;
         update_oos_reasons: boolean;

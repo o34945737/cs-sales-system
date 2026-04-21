@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\BadReview;
 use App\Models\Brand;
+use App\Models\CauseBy;
 use App\Models\Platform;
 use App\Models\SkuCode;
 use App\Models\SubCase;
@@ -17,32 +18,10 @@ class BadReviewController extends Controller
 {
     public function index(Request $request)
     {
-        // Master Data Options
-        $brandOptions = Brand::query()
-            ->where('is_active', true)
-            ->orderBy('name')
-            ->pluck('name')
-            ->all();
-
-        $platformOptions = Platform::query()
-            ->where('is_active', true)
-            ->orderBy('name')
-            ->pluck('name')
-            ->all();
-
-        $categoryReviewOptions = SubCase::query()
-            ->where('is_active', true)
-            ->orderBy('name')
-            ->pluck('name')
-            ->all();
-
-        $causeByOptions = [
-            '?', 'J&T', 'SAP EXPRESS', 'ANTERAJA', 'LEX', 'POS', 
-            'NINJA', 'SICEPAT', 'KURIR REKOMENDASI', 'SPX', 
-            'INDOPAKET', 'GTL', 'CUSTOM LOGISTICS', 'GRAB', 
-            'JNE', 'GOJEK', 'CS', 'Chat++', 'STREAMER', 'KAE', 
-            'WH', 'PART', 'BRAND', 'CUSTOMER', 'PROMO'
-        ];
+        $brandOptions = $this->brandOptions();
+        $platformOptions = $this->platformOptions();
+        $categoryReviewOptions = $this->categoryReviewOptions();
+        $causeByOptions = $this->causeByOptions();
 
         $skuCodeOptions = SkuCode::query()
             ->where('is_active', true)
@@ -64,10 +43,7 @@ class BadReviewController extends Controller
             ->pluck('name')
             ->all();
 
-        // Filtering & Searching
         $baseQuery = BadReview::query();
-
-        // Search
         if ($request->filled('search')) {
             $search = trim((string) $request->search);
             $baseQuery->where(function ($q) use ($search) {
@@ -80,49 +56,51 @@ class BadReviewController extends Controller
             });
         }
 
-        // Filter by Brand
         if ($request->filled('brand') && $request->brand !== 'All') {
             $baseQuery->where('brand', $request->brand);
         }
 
-        // Filter by Platform
         if ($request->filled('platform') && $request->platform !== 'All') {
             $baseQuery->where('platform', $request->platform);
         }
 
-        // Filter by Star (Angka)
         if ($request->filled('star') && $request->star !== 'All') {
             $baseQuery->where('star', (int)$request->star);
         }
 
-        // Filter by Priority
-        if ($request->filled('priority') && $request->priority !== 'All') {
-            $baseQuery->where('priority', $request->priority);
-        }
-        // Filter by Status
         if ($request->filled('status') && $request->status !== 'All') {
             $baseQuery->where('status', $request->status);
         }
 
-        // Filter by CS Name
         if ($request->filled('cs_name')) {
             $baseQuery->where('cs_name', $request->cs_name);
         }
 
-        // Sorting
+        $allowedSortFields = [
+            'tanggal_review',
+            'tanggal_update',
+            'order_id',
+            'username',
+            'brand',
+            'platform',
+            'star',
+            'status',
+            'cs_name',
+            'created_at',
+        ];
+
         $sortField = $request->get('sort', 'tanggal_review');
+        $sortField = in_array($sortField, $allowedSortFields, true) ? $sortField : 'tanggal_review';
         $sortOrder = $request->get('order', 'desc') === 'asc' ? 'asc' : 'desc';
         $baseQuery->orderBy($sortField, $sortOrder);
 
-        // Get filtered data for summaries
         $filteredQuery = clone $baseQuery;
         $allBadReviews = $filteredQuery->get();
 
-        // Calculate summaries
         $statusSummary = [
-            'all' => BadReview::count(),
-            'pending' => BadReview::where('status', 'Pending')->count(),
-            'solved' => BadReview::where('status', 'Solved')->count(),
+            'all' => $allBadReviews->count(),
+            'pending' => $allBadReviews->where('status', 'Pending')->count(),
+            'solved' => $allBadReviews->where('status', 'Solved')->count(),
         ];
 
         $starSummary = [
@@ -138,14 +116,7 @@ class BadReviewController extends Controller
             ->values()
             ->all();
 
-        // Pagination
         $badReviews = $baseQuery->paginate(15)->appends($request->query());
-
-        // Priority Summary (Static list P1-P7 for example, or dynamic based on master)
-        $priorityLevels = ['P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7'];
-        $prioritySummary = collect($priorityLevels)->mapWithKeys(function($p) use ($allBadReviews) {
-            return [$p => $allBadReviews->where('priority', $p)->count()];
-        })->all();
 
         return Inertia::render('BadReviews/Index', [
             'badReviews' => $badReviews,
@@ -158,32 +129,20 @@ class BadReviewController extends Controller
             'statusSummary' => $statusSummary,
             'starSummary' => $starSummary,
             'csSummary' => $csSummary,
-            'prioritySummary' => $prioritySummary,
-            'autoCauseByMap' => SubCase::where('is_active', true)->get(['name', 'default_cause_by']),
-            'filters' => $request->only(['search', 'brand', 'platform', 'priority', 'status', 'cs_name', 'star']),
+            'autoCauseByMap' => SubCase::query()
+                ->where('is_active', true)
+                ->whereNotNull('default_cause_by')
+                ->orderBy('name')
+                ->get(['name', 'default_cause_by'])
+                ->mapWithKeys(fn(SubCase $subCase) => [$subCase->name => $subCase->default_cause_by])
+                ->all(),
+            'filters' => $request->only(['search', 'brand', 'platform', 'status', 'cs_name', 'star']),
         ]);
     }
 
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'tanggal_review' => 'required|date',
-            'month' => 'nullable|string',
-            'brand' => 'required|string',
-            'platform' => 'required|string',
-            'order_id' => 'required|string',
-            'username' => 'required|string',
-            'star' => 'required|integer|in:1,2,3',
-            'product_name' => 'nullable|string',
-            'sku' => 'nullable|string',
-            'category_review' => 'required|string',
-            'cause_by' => 'required|string',
-            'review_notes' => 'required|string',
-            'progress' => 'required|string|in:Follow Up Customer,Auto Reply',
-            'tanggal_update' => 'required',
-            'cs_name' => 'required|string',
-            'priority' => 'required|string',
-        ]);
+        $validated = $request->validate($this->badReviewRules($request));
 
         try {
             BadReview::create($validated);
@@ -195,24 +154,7 @@ class BadReviewController extends Controller
 
     public function update(Request $request, BadReview $badReview)
     {
-        $validated = $request->validate([
-            'tanggal_review' => 'required|date',
-            'month' => 'nullable|string',
-            'brand' => 'required|string',
-            'platform' => 'required|string',
-            'order_id' => 'required|string',
-            'username' => 'required|string',
-            'star' => 'required|integer|in:1,2,3',
-            'product_name' => 'nullable|string',
-            'sku' => 'nullable|string',
-            'category_review' => 'required|string',
-            'cause_by' => 'required|string',
-            'review_notes' => 'required|string',
-            'progress' => 'required|string|in:Follow Up Customer,Auto Reply',
-            'tanggal_update' => 'required',
-            'cs_name' => 'required|string',
-            'priority' => 'required|string',
-        ]);
+        $validated = $request->validate($this->badReviewRules($request));
 
         try {
             $badReview->update($validated);
@@ -230,5 +172,127 @@ class BadReviewController extends Controller
         } catch (Throwable $e) {
             return redirect()->back()->with('error', 'Gagal menghapus Bad Review.');
         }
+    }
+
+    private function badReviewRules(Request $request): array
+    {
+        $brandOptions = $this->brandOptions();
+        $platformOptions = $this->platformOptions();
+        $categoryReviewOptions = $this->categoryReviewOptions();
+        $causeByOptions = $this->causeByOptions();
+        $csNameOptions = User::query()
+            ->whereHas('roles', fn($q) => $q->where('name', 'CS'))
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->pluck('name')
+            ->all();
+
+        $skuCatalog = SkuCode::query()
+            ->where('is_active', true)
+            ->get(['sku', 'brand', 'product_name'])
+            ->keyBy('sku');
+
+        $activeSkuOptions = $skuCatalog->keys()->values()->all();
+
+        return [
+            'tanggal_review' => ['required', 'date'],
+            'month' => ['nullable', 'string'],
+            'brand' => [
+                'required',
+                'string',
+                Rule::in($brandOptions),
+                function ($attribute, $value, $fail) use ($request, $skuCatalog) {
+                    $sku = $request->input('sku');
+                    if (!$sku || !$skuCatalog->has($sku)) {
+                        return;
+                    }
+
+                    $skuBrand = $skuCatalog->get($sku)?->brand;
+                    if ($skuBrand && $value !== $skuBrand) {
+                        $fail("Brand untuk SKU '{$sku}' harus '{$skuBrand}'.");
+                    }
+                },
+            ],
+            'platform' => ['required', 'string', Rule::in($platformOptions)],
+            'order_id' => ['required', 'string'],
+            'username' => ['required', 'string'],
+            'star' => ['required', 'integer', Rule::in([1, 2, 3])],
+            'product_name' => [
+                'nullable',
+                'string',
+                function ($attribute, $value, $fail) use ($request, $skuCatalog) {
+                    $sku = $request->input('sku');
+                    if (!$sku || !$skuCatalog->has($sku) || blank($value)) {
+                        return;
+                    }
+
+                    $skuProductName = $skuCatalog->get($sku)?->product_name;
+                    if ($skuProductName && $value !== $skuProductName) {
+                        $fail("Product Name untuk SKU '{$sku}' harus '{$skuProductName}'.");
+                    }
+                },
+            ],
+            'sku' => empty($activeSkuOptions) ? ['nullable', 'string'] : ['nullable', 'string', Rule::in($activeSkuOptions)],
+            'category_review' => ['required', 'string', Rule::in($categoryReviewOptions)],
+            'cause_by' => [
+                'required',
+                'string',
+                Rule::in($causeByOptions),
+                function ($attribute, $value, $fail) use ($request) {
+                    $categoryReview = $request->input('category_review');
+                    if (!$categoryReview) {
+                        return;
+                    }
+
+                    $defaultCauseBy = SubCase::query()
+                        ->where('name', $categoryReview)
+                        ->value('default_cause_by');
+
+                    if ($defaultCauseBy && $value !== $defaultCauseBy) {
+                        $fail("Cause/By untuk Sub Case '{$categoryReview}' harus '{$defaultCauseBy}'.");
+                    }
+                },
+            ],
+            'review_notes' => ['required', 'string'],
+            'progress' => ['required', 'string', Rule::in(['Follow Up Customer', 'Auto Reply'])],
+            'tanggal_update' => ['required', 'date'],
+            'cs_name' => ['required', 'string', Rule::in($csNameOptions)],
+        ];
+    }
+
+    private function brandOptions(): array
+    {
+        return Brand::query()
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->pluck('name')
+            ->all();
+    }
+
+    private function platformOptions(): array
+    {
+        return Platform::query()
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->pluck('name')
+            ->all();
+    }
+
+    private function categoryReviewOptions(): array
+    {
+        return SubCase::query()
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->pluck('name')
+            ->all();
+    }
+
+    private function causeByOptions(): array
+    {
+        return CauseBy::query()
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->pluck('name')
+            ->all();
     }
 }

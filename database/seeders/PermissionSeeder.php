@@ -69,6 +69,18 @@ class PermissionSeeder extends Seeder
             'create order tracking data sources',
             'update order tracking data sources',
             'delete order tracking data sources',
+            'view order tracking erp statuses',
+            'create order tracking erp statuses',
+            'update order tracking erp statuses',
+            'delete order tracking erp statuses',
+            'view order tracking rgo entries',
+            'create order tracking rgo entries',
+            'update order tracking rgo entries',
+            'delete order tracking rgo entries',
+            'view jet track entries',
+            'create jet track entries',
+            'update jet track entries',
+            'delete jet track entries',
             'view oos reasons',
             'create oos reasons',
             'update oos reasons',
@@ -97,29 +109,35 @@ class PermissionSeeder extends Seeder
 
         $rolePermissions = [
             'Super Admin' => $permissions,
+
             'CS' => [
                 'view dashboard',
                 'access complaints',
                 'access bad reviews',
             ],
+
             'Finance' => [
                 'view dashboard',
                 'access order trackings',
             ],
+
             'WH' => [
                 'view dashboard',
                 'access order trackings',
             ],
+
             'KAE' => [
                 'view dashboard',
                 'access complaints',
                 'access oos',
             ],
+
             'After Sales' => [
                 'view dashboard',
                 'access complaints',
                 'access bad reviews',
             ],
+
             'Brand' => [
                 'view dashboard',
                 'access complaints',

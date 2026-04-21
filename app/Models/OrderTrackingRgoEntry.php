@@ -5,25 +5,19 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class SkuCode extends Model
+class OrderTrackingRgoEntry extends Model
 {
     use HasFactory;
 
     protected $fillable = [
-        'sku',
-        'product_name',
-        'brand',
-        'available_qty',
-        'status_qty',
-        'default_value_of_product',
+        'order_id',
+        'notes',
         'is_active',
     ];
 
     protected function casts(): array
     {
         return [
-            'available_qty' => 'integer',
-            'default_value_of_product' => 'decimal:2',
             'is_active' => 'boolean',
         ];
     }

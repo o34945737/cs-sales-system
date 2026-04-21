@@ -8,6 +8,7 @@ import {
     ChevronDown,
     ClipboardList,
     Database,
+    FireExtinguisherIcon,
     LayoutGrid,
     ListChecks,
     LogOut,
@@ -108,6 +109,10 @@ const otherConfigItems = computed<NavItem[]>(() => {
         items.push({ title: 'Logistics', href: '/logistics', icon: Truck });
     }
 
+    if (page.props.auth.can.view_order_tracking_erp_statuses) {
+        items.push({ title: 'ERP Statuses', href: '/order-tracking-erp-statuses', icon: FireExtinguisherIcon });
+    }
+
     if (page.props.auth.can.view_reason_whitelists) {
         items.push({ title: 'Whitelist Reasons', href: '/reason-whitelists', icon: ShieldAlert });
     }
@@ -122,6 +127,14 @@ const otherConfigItems = computed<NavItem[]>(() => {
 
     if (page.props.auth.can.view_order_tracking_data_sources) {
         items.push({ title: 'Tracking Data Sources', href: '/order-tracking-data-sources', icon: Database });
+    }
+
+    if (page.props.auth.can.view_order_tracking_rgo_entries) {
+        items.push({ title: 'Tracking RGO List', href: '/order-tracking-rgo-entries', icon: Database });
+    }
+
+    if (page.props.auth.can.view_jet_track_entries) {
+        items.push({ title: 'Jet Track', href: '/jet-track-entries', icon: Database });
     }
 
     if (page.props.auth.can.view_oos_reasons) {

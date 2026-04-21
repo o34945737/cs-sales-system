@@ -91,6 +91,8 @@ class SkuCodeController extends Controller
             'sku' => ['required', 'string', 'max:255', Rule::unique('sku_codes', 'sku')->ignore($skuCode?->id)],
             'product_name' => ['required', 'string', 'max:255'],
             'brand' => empty($brandOptions) ? ['nullable', 'string', 'max:255'] : ['nullable', 'string', Rule::in($brandOptions)],
+            'available_qty' => ['nullable', 'integer', 'min:0'],
+            'status_qty' => ['nullable', 'string', 'max:100'],
             'default_value_of_product' => ['nullable', 'numeric', 'min:0'],
             'is_active' => ['required', 'boolean'],
         ];
@@ -103,6 +105,8 @@ class SkuCodeController extends Controller
             'sku' => $skuCode->sku,
             'product_name' => $skuCode->product_name,
             'brand' => $skuCode->brand,
+            'available_qty' => (int) ($skuCode->available_qty ?? 0),
+            'status_qty' => $skuCode->status_qty,
             'default_value_of_product' => $skuCode->default_value_of_product !== null
                 ? (float) $skuCode->default_value_of_product
                 : null,
