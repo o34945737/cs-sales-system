@@ -5,10 +5,11 @@ namespace App\Models;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Complaint extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     protected $guarded = ['id'];
 
@@ -154,6 +155,9 @@ class Complaint extends Model
 
             if ($defaultCauseBy) {
                 $model->cause_by = $defaultCauseBy;
+                $model->report_category = $defaultCauseBy;
+            } else {
+                $model->report_category = null;
             }
 
             // 4-5. Status dan priority mengacu ke master Last Step aktif.
@@ -185,8 +189,13 @@ class Complaint extends Model
             if (empty($model->history) && $model->username) {
                 if (!$model->exists) {
                     $count = self::where('username', $model->username)->count();
-                    $newCount = $count + 1;
-                    $model->history = "Complaint ke {$newCount}";
+                    if ($count === 0) {
+                        $model->history = null;
+                    } elseif ($count === 1) {
+                        $model->history = 'Customer ini complaint ke 2';
+                    } else {
+                        $model->history = "Customer ini complaint ke " . ($count + 1) . "x";
+                    }
                 }
             }
 

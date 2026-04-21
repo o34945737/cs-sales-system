@@ -143,7 +143,6 @@ test('complaint create redirects back with a toast success message', function ()
         'status' => 'Pending',
         'priority' => 'P1',
         'oos' => null,
-        'riwayat_oos' => null,
     ]);
 });
 
@@ -261,7 +260,6 @@ test('complaint marks oos history only when order exists in oos data', function 
     $this->assertDatabaseHas('complaints', [
         'order_id' => 'ORD-OOS-1',
         'oos' => 'Ada Riwayat OOS',
-        'riwayat_oos' => 'Ada Riwayat OOS',
     ]);
 });
 
@@ -281,9 +279,9 @@ test('complaint delete redirects back with a toast success message', function ()
 
     $response
         ->assertRedirect('/complaints')
-        ->assertSessionHas('success', 'Complaint berhasil dihapus.');
+        ->assertSessionHas('success', 'Complaint berhasil diarsipkan.');
 
-    $this->assertDatabaseMissing('complaints', [
+    $this->assertSoftDeleted('complaints', [
         'id' => $complaint->id,
     ]);
 });

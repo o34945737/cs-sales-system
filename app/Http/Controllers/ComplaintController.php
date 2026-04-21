@@ -200,7 +200,7 @@ class ComplaintController extends Controller
 
         $applyHistoryFilter = function ($query) use ($request) {
             if ($request->filled('history') && $request->history === 'Repeat') {
-                $query->where('history', '!=', 'Complaint ke 1')->whereNotNull('history');
+                $query->whereNotNull('history')->where('history', '!=', '');
             }
 
             return $query;
@@ -359,7 +359,7 @@ class ComplaintController extends Controller
             'jam_customer_complaint.date_format' => 'Format jam harus HH:mm atau HH:mm:ss.',
         ]);
 
-        $data = collect($request->all())->except(['_token', 'video_unboxing', 'proof_attachment'])->toArray();
+        $data = collect($request->all())->except(['_token', 'video_unboxing', 'proof_attachment', 'riwayat_oos'])->toArray();
 
         // Sync Foreign Keys based on provided names
         $this->syncForeignKeys($data);
@@ -415,7 +415,7 @@ class ComplaintController extends Controller
             'jam_customer_complaint.date_format' => 'Format jam harus HH:mm atau HH:mm:ss.',
         ]);
 
-        $data = collect($request->all())->except(['_token', '_method', 'video_unboxing', 'proof_attachment'])->toArray();
+        $data = collect($request->all())->except(['_token', '_method', 'video_unboxing', 'proof_attachment', 'riwayat_oos'])->toArray();
         
         // Sync Foreign Keys based on provided names
         $this->syncForeignKeys($data);
@@ -471,7 +471,7 @@ class ComplaintController extends Controller
             return redirect()->back()->with('error', 'Complaint gagal dihapus. Silakan coba lagi.');
         }
 
-        return redirect()->back()->with('success', 'Complaint berhasil dihapus.');
+        return redirect()->back()->with('success', 'Complaint berhasil diarsipkan.');
     }
 
     public function bulkDestroy(Request $request)
@@ -486,10 +486,10 @@ class ComplaintController extends Controller
         } catch (Throwable $exception) {
             report($exception);
 
-            return redirect()->back()->with('error', 'Gagal menghapus beberapa data. Silakan coba lagi.');
+            return redirect()->back()->with('error', 'Gagal mengarsipkan beberapa data. Silakan coba lagi.');
         }
 
-        return redirect()->back()->with('success', 'Semua data yang dipilih berhasil dihapus.');
+        return redirect()->back()->with('success', 'Semua data yang dipilih berhasil diarsipkan.');
     }
 
     private function complaintRules(Request $request, bool $forUpdate = false): array
@@ -583,8 +583,22 @@ class ComplaintController extends Controller
             'resi' => [$required, 'string'],
             'sku' => empty($skuOptions) ? [$required, 'string'] : [$required, 'string', Rule::in($skuOptions)],
             'product_name' => ['nullable', 'string'],
+            'qty' => ['nullable', 'integer'],
             'sub_case' => [$required, 'string', Rule::in($subCaseOptions)],
-            'cause_by' => [$required, 'string', Rule::in($causeByOptions)],
+            'cause_by' => [
+                $required,
+                'string',
+                Rule::in($causeByOptions),
+                function ($attribute, $value, $fail) use ($request) {
+                    $subCase = $request->input('sub_case');
+                    if ($subCase) {
+                        $defaultCauseBy = \App\Models\SubCase::where('name', $subCase)->value('default_cause_by');
+                        if ($defaultCauseBy && $value !== $defaultCauseBy) {
+                            $fail("Cause/By untuk Sub Case '{$subCase}' harus '{$defaultCauseBy}'.");
+                        }
+                    }
+                },
+            ],
             'summary_case' => [$required, 'string'],
             'update_long_text' => [$required, 'string'],
             'part_of_bad' => empty($partOfBadOptions) ? ['nullable', 'string'] : ['nullable', 'string', Rule::in($partOfBadOptions)],

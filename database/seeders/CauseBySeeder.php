@@ -10,6 +10,7 @@ class CauseBySeeder extends Seeder
     public function run(): void
     {
         $items = [
+            '?',
             'J&T',
             'SAP EXPRESS',
             'ANTERAJA',

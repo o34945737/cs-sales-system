@@ -9,7 +9,13 @@ class BrandSeeder extends Seeder
 {
     public function run(): void
     {
-        foreach (['ANTA', 'ERKE', 'KAPPA'] as $name) {
+        $activeBrands = ['ANTA', 'WHISKAS', 'CLEAR'];
+
+        Brand::query()
+            ->whereIn('name', ['ERKE', 'KAPPA'])
+            ->update(['is_active' => false]);
+
+        foreach ($activeBrands as $name) {
             Brand::query()->updateOrCreate(
                 ['name' => $name],
                 ['is_active' => true],

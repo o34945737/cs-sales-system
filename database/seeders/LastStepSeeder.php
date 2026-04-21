@@ -32,7 +32,7 @@ class LastStepSeeder extends Seeder
             ['name' => 'Return Refund (Full)', 'status_result' => 'Solved', 'priority_level' => 'Cool'],
             ['name' => 'Return Refund (Partial)', 'status_result' => 'Solved', 'priority_level' => 'Cool'],
             ['name' => 'Seller Win', 'status_result' => 'Solved', 'priority_level' => 'Cool'],
-            ['name' => 'The replacement product has been received by the buyer', 'status_result' => 'Solved', 'priority_level' => null],
+            ['name' => 'The replacement product has been received by the buyer', 'status_result' => 'Solved', 'priority_level' => 'Cool'],
             ['name' => 'Follow Up to After Sales Team', 'status_result' => 'Pending', 'priority_level' => 'P1'],
             ['name' => 'Waiting Claim', 'status_result' => 'Pending', 'priority_level' => 'P7'],
             ['name' => 'Waiting Money Receive', 'status_result' => 'Pending', 'priority_level' => 'P7'],
@@ -41,7 +41,7 @@ class LastStepSeeder extends Seeder
             ['name' => 'Follow Up WH', 'status_result' => 'Pending', 'priority_level' => 'P1'],
             ['name' => 'Follow Up KAE to KAM', 'status_result' => 'Pending', 'priority_level' => 'P2'],
             ['name' => 'Return not authorized', 'status_result' => 'Pending', 'priority_level' => 'P5'],
-            ['name' => 'Return follow-up (No further action)', 'status_result' => 'Solved', 'priority_level' => null],
+            ['name' => 'Return follow-up (No further action)', 'status_result' => 'Solved', 'priority_level' => 'Cool'],
         ];
 
         foreach ($items as $item) {
