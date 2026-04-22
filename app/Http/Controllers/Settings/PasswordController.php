@@ -42,6 +42,10 @@ class PasswordController extends Controller
             'force_password_reset' => false,
         ]);
 
+        if ($requiresPasswordReset) {
+            return redirect()->route('dashboard')->with('success', 'Password berhasil diperbarui. Selamat datang!');
+        }
+
         return back()->with('success', 'Password berhasil diperbarui.');
     }
 }

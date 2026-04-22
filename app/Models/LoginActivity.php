@@ -10,6 +10,7 @@ class LoginActivity extends Model
     protected $fillable = [
         'user_id',
         'email',
+        'role',
         'status',
         'ip_address',
         'user_agent',

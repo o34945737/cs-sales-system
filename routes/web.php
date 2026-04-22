@@ -25,10 +25,11 @@ use App\Http\Controllers\SkuCodeController;
 use App\Http\Controllers\SubCaseController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\UserManagementController;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
-    return auth()->check()
+    return Auth::check()
         ? redirect()->route('dashboard')
         : redirect()->route('login');
 })->name('home');
@@ -37,7 +38,8 @@ Route::get('/', function () {
 Route::middleware(['auth', 'active', 'password.reset.required'])->group(function () {
     Route::middleware('permission:view dashboard')->group(function () {
         Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
-        Route::post('dashboard/productivity', [DashboardController::class, 'storeProductivity'])->name('dashboard.productivity.store');
+        Route::get('dashboard/complaints', [DashboardController::class, 'complaintAnalytics'])->name('dashboard.complaints');
+        Route::get('dashboard/performance', [DashboardController::class, 'performanceMonitoring'])->name('dashboard.performance');
     });
 
     Route::middleware('permission:access complaints')->group(function () {

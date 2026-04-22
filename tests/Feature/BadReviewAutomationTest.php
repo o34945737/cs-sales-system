@@ -6,9 +6,12 @@ use App\Models\Platform;
 use App\Models\SkuCode;
 use App\Models\SubCase;
 use App\Models\User;
+use Illuminate\Foundation\Testing\WithoutMiddleware;
 use Inertia\Testing\AssertableInertia as Assert;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
+
+uses(WithoutMiddleware::class);
 
 beforeEach(function () {
     Permission::findOrCreate('access bad reviews');

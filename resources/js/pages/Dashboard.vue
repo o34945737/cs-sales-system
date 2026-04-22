@@ -71,11 +71,12 @@ const props = defineProps<{
     pendingComplaintCount: number;
     pendingOtCount: number;
     oosTodayCount: number;
-    totalComplaintCount: number;
+    totalTaskCount: number;
     weeklyComplaint: WeeklyPoint[];
     weeklyBadReview: WeeklyPoint[];
     weeklyOos: WeeklyPoint[];
     pendingByCauseBy: LabelTotal[];
+    pendingByPlatform: LabelTotal[];
     pendingByLevel: LabelTotal[];
     pendingBySubCase: SubCaseRow[];
     pendingByLastStepExt: LabelTotal[];
@@ -247,9 +248,9 @@ const quickLinks = computed(() => {
                         <ClipboardList class="h-5 w-5 text-violet-500" />
                     </div>
                     <div>
-                        <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Total Complaint</p>
-                        <p class="text-2xl font-black text-[var(--app-ink)]">{{ totalComplaintCount }}</p>
-                        <p class="text-[10px] text-slate-400">All time</p>
+                        <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Total Task Pending</p>
+                        <p class="text-2xl font-black text-[var(--app-ink)]">{{ totalTaskCount }}</p>
+                        <p class="text-[10px] text-slate-400">Sum of 1+2+3</p>
                     </div>
                 </article>
             </section>
@@ -262,7 +263,7 @@ const quickLinks = computed(() => {
                 <div class="app-grid-card p-4">
                     <div class="flex items-center gap-2 mb-3">
                         <BarChart2 class="h-4 w-4 text-rose-400" />
-                        <p class="text-xs font-black uppercase tracking-wider text-slate-500">Complaint 7 Hari</p>
+                        <p class="text-xs font-black uppercase tracking-wider text-slate-500">Trend 7 Hari (Incoming vs Solved)</p>
                     </div>
                     <div class="flex items-end gap-1 h-16">
                         <template v-for="(pt, i) in weeklyComplaint" :key="i">
@@ -271,7 +272,7 @@ const quickLinks = computed(() => {
                                     <div
                                         class="w-full rounded-sm bg-rose-200 transition-all"
                                         :style="{ height: Math.max(2, Math.round(((pt.new ?? 0) / maxWeekly(weeklyComplaint, 'new')) * 48)) + 'px' }"
-                                        :title="'New: ' + pt.new"
+                                        :title="'Incoming: ' + pt.new"
                                     ></div>
                                     <div
                                         class="w-full rounded-sm bg-emerald-300 transition-all"
@@ -284,7 +285,7 @@ const quickLinks = computed(() => {
                         </template>
                     </div>
                     <div class="flex items-center gap-3 mt-2 text-[10px] text-slate-400">
-                        <span class="flex items-center gap-1"><span class="h-2 w-2 rounded-sm bg-rose-200 inline-block"></span>New</span>
+                        <span class="flex items-center gap-1"><span class="h-2 w-2 rounded-sm bg-rose-200 inline-block"></span>Incoming</span>
                         <span class="flex items-center gap-1"><span class="h-2 w-2 rounded-sm bg-emerald-300 inline-block"></span>Solved</span>
                     </div>
                 </div>
@@ -447,6 +448,25 @@ const quickLinks = computed(() => {
                                 </div>
                             </div>
                             <div v-if="!pendingByCauseBy.length" class="text-xs text-slate-400 text-center py-3">Tidak ada data</div>
+                        </div>
+                    </div>
+
+                    <!-- #8.1 By Platform -->
+                    <div class="app-grid-card p-4">
+                        <p class="text-[10px] font-black uppercase tracking-wider text-slate-400 mb-2">By Platform</p>
+                        <div class="space-y-1.5">
+                            <div v-for="row in pendingByPlatform" :key="row.label ?? 'null'" class="flex items-center gap-2">
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center justify-between mb-0.5">
+                                        <span class="text-xs font-semibold text-[var(--app-ink)] truncate">{{ row.label || '-' }}</span>
+                                        <span class="text-xs font-black text-slate-500 ml-2">{{ row.total }}</span>
+                                    </div>
+                                    <div class="h-1.5 w-full rounded-full bg-slate-100">
+                                        <div class="h-1.5 rounded-full bg-blue-400" :style="{ width: barWidth(row.total, maxOf(pendingByPlatform)) }"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div v-if="!pendingByPlatform.length" class="text-xs text-slate-400 text-center py-3">Tidak ada data</div>
                         </div>
                     </div>
 

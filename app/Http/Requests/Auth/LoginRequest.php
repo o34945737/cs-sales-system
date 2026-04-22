@@ -47,7 +47,8 @@ class LoginRequest extends FormRequest
         $user = User::where('email', $this->string('email'))->first();
 
         if ($user && ! $user->is_active && Hash::check($this->string('password'), $user->password)) {
-            $this->logFailedAttempt($user->email, 'inactive_account', $user->id);
+            $this->logFailedAttempt($user->email, 'inactive_account', $user->id, $user->getRoleNames()->first());
+            RateLimiter::hit($this->throttleKey());
 
             throw ValidationException::withMessages([
                 'email' => 'Akun Anda sedang nonaktif. Hubungi administrator untuk mengaktifkannya kembali.',
@@ -59,7 +60,7 @@ class LoginRequest extends FormRequest
             'password' => $this->string('password')->toString(),
             'is_active' => true,
         ], $this->boolean('remember'))) {
-            $this->logFailedAttempt($this->string('email')->toString(), 'invalid_credentials', $user?->id);
+            $this->logFailedAttempt($this->string('email')->toString(), 'invalid_credentials', $user?->id, $user?->getRoleNames()->first());
             RateLimiter::hit($this->throttleKey());
 
             throw ValidationException::withMessages([
@@ -70,11 +71,12 @@ class LoginRequest extends FormRequest
         RateLimiter::clear($this->throttleKey());
     }
 
-    private function logFailedAttempt(string $email, string $reason, ?int $userId = null): void
+    private function logFailedAttempt(string $email, string $reason, ?int $userId = null, ?string $role = null): void
     {
         LoginActivity::create([
             'user_id' => $userId,
             'email' => $email,
+            'role' => $role,
             'status' => 'failed',
             'ip_address' => $this->ip(),
             'user_agent' => $this->userAgent(),

@@ -3,6 +3,7 @@ import { useInitials } from '@/composables/useInitials';
 import { type NavItem, type SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/vue3';
 import {
+    Activity,
     Archive,
     Boxes,
     ChevronDown,
@@ -14,6 +15,7 @@ import {
     LogOut,
     MessageSquare,
     MonitorSmartphone,
+    PieChart,
     Settings,
     ShieldAlert,
     ShieldCheck,
@@ -46,24 +48,27 @@ const { getInitials } = useInitials();
 const user = computed(() => page.props.auth.user);
 const primaryRole = computed(() => user.value?.roles?.[0] ?? 'Workspace');
 const workspaceName = computed(() => page.props.name || 'CS Sales System');
+const dashboardOpen = ref(false);
 const masterDataComplainOpen = ref(false);
 const otherConfigOpen = ref(false);
 
 const mainNavItems = computed<NavItem[]>(() => {
     const items: NavItem[] = [];
 
-    if (page.props.auth.can.view_dashboard) {
-        items.push({ title: 'Dashboard', href: '/dashboard', icon: LayoutGrid });
-    }
-
     if (page.props.auth.can.view_users) {
         items.push({ title: 'Management Users', href: '/users', icon: Users });
     }
 
-    if (page.props.auth.can.view_reports) {
-        items.push({ title: 'Operational Reports', href: '/reports', icon: ClipboardList });
-    }
+    return items;
+});
 
+const dashboardItems = computed<NavItem[]>(() => {
+    const items: NavItem[] = [];
+    if (page.props.auth.can.view_dashboard) {
+        items.push({ title: 'Overview', href: '/dashboard', icon: LayoutGrid });
+        items.push({ title: 'Complaint Analytics', href: '/dashboard/complaints', icon: Activity });
+        items.push({ title: 'Performance Monitor', href: '/dashboard/performance', icon: PieChart });
+    }
     return items;
 });
 
@@ -148,6 +153,9 @@ const otherConfigItems = computed<NavItem[]>(() => {
     return items;
 });
 
+const hasDashboardAccess = computed(() => dashboardItems.value.length > 0);
+const isDashboardActive = computed(() => dashboardItems.value.some((item) => isActive(item.href)));
+
 const hasMasterDataComplainAccess = computed(() => masterDataComplainItems.value.length > 0);
 const isMasterDataComplainActive = computed(() => masterDataComplainItems.value.some((item) => isActive(item.href)));
 
@@ -155,16 +163,17 @@ const hasOtherConfigAccess = computed(() => otherConfigItems.value.length > 0);
 const isOtherConfigActive = computed(() => otherConfigItems.value.some((item) => isActive(item.href)));
 
 const isActive = (href: string) => {
-    if (href === '/dashboard') {
-        return page.url === href;
-    }
-
     return page.url === href || page.url.startsWith(`${href}/`);
 };
+
+const isExactActive = (href: string) => page.url === href;
 
 watch(
     () => page.url,
     () => {
+        if (isDashboardActive.value) {
+            dashboardOpen.value = true;
+        }
         if (isMasterDataComplainActive.value) {
             masterDataComplainOpen.value = true;
         }
@@ -174,6 +183,10 @@ watch(
     },
     { immediate: true },
 );
+
+const toggleDashboard = () => {
+    dashboardOpen.value = !dashboardOpen.value;
+};
 
 const toggleMasterDataComplain = () => {
     masterDataComplainOpen.value = !masterDataComplainOpen.value;
@@ -237,6 +250,42 @@ const closeSidebar = () => emit('close');
             <p class="px-3 text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">Workspace</p>
 
             <nav class="mt-3 space-y-1.5">
+                <!-- Dashboard Submenu -->
+                <div v-if="hasDashboardAccess" class="space-y-1.5">
+                    <button
+                        type="button"
+                        class="flex w-full items-center gap-3 rounded-[18px] px-4 py-3 text-left text-sm font-semibold transition"
+                        :class="
+                            isDashboardActive
+                                ? 'bg-[var(--app-primary-soft)] text-[var(--app-primary)]'
+                                : 'text-slate-600 hover:bg-[var(--app-primary-soft)] hover:text-[var(--app-primary)]'
+                        "
+                        @click="toggleDashboard"
+                    >
+                        <LayoutGrid class="h-5 w-5 shrink-0" />
+                        <span class="flex-1 truncate">Dashboard</span>
+                        <ChevronDown class="h-4 w-4 shrink-0 transition" :class="dashboardOpen ? 'rotate-180' : ''" />
+                    </button>
+
+                    <div v-if="dashboardOpen" class="space-y-1 pl-4">
+                        <Link
+                            v-for="item in dashboardItems"
+                            :key="item.title"
+                            :href="item.href"
+                            class="group flex items-center gap-3 rounded-[16px] px-4 py-2.5 text-sm font-medium transition"
+                            :class="
+                                isExactActive(item.href)
+                                    ? 'bg-[var(--app-primary)] text-white shadow-[0_12px_22px_rgba(53,103,232,0.22)]'
+                                    : 'text-slate-500 hover:bg-[var(--app-primary-soft)] hover:text-[var(--app-primary)]'
+                            "
+                            @click="closeSidebar"
+                        >
+                            <component :is="item.icon" class="h-4 w-4 shrink-0" />
+                            <span class="truncate">{{ item.title }}</span>
+                        </Link>
+                    </div>
+                </div>
+
                 <Link
                     v-for="item in mainNavItems"
                     :key="item.title"

@@ -103,7 +103,7 @@ export interface NavItem {
     isActive?: boolean;
 }
 
-export interface SharedData {
+export interface SharedData extends Record<string, unknown> {
     name: string;
     quote: { message: string; author: string };
     auth: Auth;
