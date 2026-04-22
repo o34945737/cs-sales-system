@@ -13,6 +13,7 @@ class LastStepController extends Controller
 {
     private const STATUS_OPTIONS = ['Pending', 'Solved', 'Whitelist'];
     private const PRIORITY_OPTIONS = ['Mines', 'Cool', 'P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7'];
+    private const TYPE_OPTIONS = ['External', 'Internal'];
 
     public function index(Request $request): Response
     {
@@ -26,11 +27,20 @@ class LastStepController extends Controller
                     $lastStepQuery
                         ->where('name', 'like', "%{$search}%")
                         ->orWhere('status_result', 'like', "%{$search}%")
-                        ->orWhere('priority_level', 'like', "%{$search}%");
+                        ->orWhere('priority_level', 'like', "%{$search}%")
+                        ->orWhere('type', 'like', "%{$search}%");
                 });
             })
             ->when($request->filled('status_filter') && $request->input('status_filter') !== 'All', function ($query) use ($request) {
                 $query->where('status_result', $request->input('status_filter'));
+            })
+            ->when($request->filled('type_filter') && $request->input('type_filter') !== 'All', function ($query) use ($request) {
+                if ($request->input('type_filter') === 'None') {
+                    $query->whereNull('type');
+                    return;
+                }
+
+                $query->where('type', $request->input('type_filter'));
             })
             ->when($request->filled('active_state') && $request->input('active_state') !== 'All', function ($query) use ($request) {
                 $query->where('is_active', $request->input('active_state') === 'Active');
@@ -46,9 +56,11 @@ class LastStepController extends Controller
             'lastSteps' => $lastSteps,
             'statusOptions' => self::STATUS_OPTIONS,
             'priorityOptions' => self::PRIORITY_OPTIONS,
+            'typeOptions' => self::TYPE_OPTIONS,
             'filters' => [
                 'search' => $request->input('search'),
                 'status_filter' => $request->input('status_filter', 'All'),
+                'type_filter' => $request->input('type_filter', 'All'),
                 'active_state' => $request->input('active_state', 'All'),
             ],
             'metrics' => [
@@ -62,12 +74,7 @@ class LastStepController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        $data = $request->validate([
-            'name' => ['required', 'string', 'max:255', 'unique:last_steps,name'],
-            'status_result' => ['required', 'string', Rule::in(self::STATUS_OPTIONS)],
-            'priority_level' => ['nullable', 'string', Rule::in(self::PRIORITY_OPTIONS)],
-            'is_active' => ['required', 'boolean'],
-        ]);
+        $data = $this->validatePayload($request);
 
         LastStep::create($data);
 
@@ -76,12 +83,7 @@ class LastStepController extends Controller
 
     public function update(Request $request, LastStep $lastStep): RedirectResponse
     {
-        $data = $request->validate([
-            'name' => ['required', 'string', 'max:255', Rule::unique('last_steps', 'name')->ignore($lastStep->id)],
-            'status_result' => ['required', 'string', Rule::in(self::STATUS_OPTIONS)],
-            'priority_level' => ['nullable', 'string', Rule::in(self::PRIORITY_OPTIONS)],
-            'is_active' => ['required', 'boolean'],
-        ]);
+        $data = $this->validatePayload($request, $lastStep);
 
         $lastStep->update($data);
 
@@ -95,6 +97,23 @@ class LastStepController extends Controller
         return redirect()->route('last-steps.index')->with('success', 'Last step berhasil dihapus.');
     }
 
+    private function validatePayload(Request $request, ?LastStep $lastStep = null): array
+    {
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:255', Rule::unique('last_steps', 'name')->ignore($lastStep?->id)],
+            'status_result' => ['required', 'string', Rule::in(self::STATUS_OPTIONS)],
+            'priority_level' => ['nullable', 'string', Rule::in(self::PRIORITY_OPTIONS)],
+            'type' => ['nullable', 'string', Rule::in(self::TYPE_OPTIONS)],
+            'is_active' => ['required', 'boolean'],
+        ]);
+
+        if (($data['status_result'] ?? null) !== 'Pending') {
+            $data['type'] = null;
+        }
+
+        return $data;
+    }
+
     private function transformLastStep(LastStep $lastStep): array
     {
         return [
@@ -102,6 +121,7 @@ class LastStepController extends Controller
             'name' => $lastStep->name,
             'status_result' => $lastStep->status_result,
             'priority_level' => $lastStep->priority_level,
+            'type' => $lastStep->type,
             'is_active' => (bool) $lastStep->is_active,
             'created_at' => optional($lastStep->created_at)?->toDateTimeString(),
         ];

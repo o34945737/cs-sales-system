@@ -13,6 +13,7 @@ class LastStep extends Model
         'name',
         'status_result',
         'priority_level',
+        'type',
         'is_active',
     ];
 

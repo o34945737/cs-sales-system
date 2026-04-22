@@ -11,15 +11,17 @@ import debounce from 'lodash/debounce';
 import { AlertCircle, CheckCircle2, ChevronLeft, ChevronRight, ListChecks, PencilLine, Plus, Search, ShieldAlert, Trash2 } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 
-interface ManagedLastStep { id: number; name: string; status_result: string; priority_level: string | null; is_active: boolean; created_at: string | null; }
+interface ManagedLastStep { id: number; name: string; status_result: string; priority_level: string | null; type: string | null; is_active: boolean; created_at: string | null; }
 interface PaginatorLink { active: boolean; label: string; url: string | null; }
 interface Paginator<T> { current_page: number; data: T[]; from: number | null; last_page: number; links: PaginatorLink[]; path: string; per_page: number; to: number | null; total: number; }
+interface LastStepFormData { name: string; status_result: string; priority_level: string; type: string; is_active: boolean; }
 
 const props = defineProps<{
     lastSteps: Paginator<ManagedLastStep>;
     statusOptions: string[];
     priorityOptions: string[];
-    filters: { search?: string | null; status_filter?: string | null; active_state?: string | null; };
+    typeOptions: string[];
+    filters: { search?: string | null; status_filter?: string | null; type_filter?: string | null; active_state?: string | null; };
     metrics: { total: number; pending: number; solved: number; whitelist: number; };
 }>();
 
@@ -27,6 +29,7 @@ const breadcrumbs: BreadcrumbItem[] = [{ title: 'Dashboard', href: '/dashboard' 
 const page = usePage<SharedData>();
 const search = ref(props.filters.search || '');
 const statusFilter = ref(props.filters.status_filter || 'All');
+const typeFilter = ref(props.filters.type_filter || 'All');
 const activeState = ref(props.filters.active_state || 'All');
 const isCreateOpen = ref(false);
 const isEditOpen = ref(false);
@@ -37,8 +40,8 @@ const canCreateLastSteps = computed(() => page.props.auth.can.create_last_steps)
 const canUpdateLastSteps = computed(() => page.props.auth.can.update_last_steps);
 const canDeleteLastSteps = computed(() => page.props.auth.can.delete_last_steps);
 
-const createForm = useForm({ name: '', status_result: props.statusOptions[0] ?? 'Pending', priority_level: '', is_active: true });
-const editForm = useForm({ name: '', status_result: props.statusOptions[0] ?? 'Pending', priority_level: '', is_active: true });
+const createForm = useForm<LastStepFormData>({ name: '', status_result: props.statusOptions[0] ?? 'Pending', priority_level: '', type: '', is_active: true });
+const editForm = useForm<LastStepFormData>({ name: '', status_result: props.statusOptions[0] ?? 'Pending', priority_level: '', type: '', is_active: true });
 const deleteForm = useForm({});
 
 const lastStepsPage = computed(() => props.lastSteps);
@@ -55,6 +58,7 @@ const visitIndex = (overrides: Record<string, unknown> = {}, replace = true) => 
     router.get(route('last-steps.index'), {
         search: search.value || undefined,
         status_filter: statusFilter.value !== 'All' ? statusFilter.value : undefined,
+        type_filter: typeFilter.value !== 'All' ? typeFilter.value : undefined,
         active_state: activeState.value !== 'All' ? activeState.value : undefined,
         ...overrides,
     }, { preserveState: true, preserveScroll: true, replace });
@@ -62,10 +66,11 @@ const visitIndex = (overrides: Record<string, unknown> = {}, replace = true) => 
 
 watch(search, debounce(() => visitIndex({ page: 1 }), 350));
 watch(statusFilter, () => visitIndex({ page: 1 }, false));
+watch(typeFilter, () => visitIndex({ page: 1 }, false));
 watch(activeState, () => visitIndex({ page: 1 }, false));
 
 const resetCreateForm = () => {
-    createForm.defaults({ name: '', status_result: props.statusOptions[0] ?? 'Pending', priority_level: '', is_active: true });
+    createForm.defaults({ name: '', status_result: props.statusOptions[0] ?? 'Pending', priority_level: '', type: '', is_active: true });
     createForm.reset();
     createForm.clearErrors();
 };
@@ -81,6 +86,7 @@ const openEditModal = (lastStep: ManagedLastStep) => {
         name: lastStep.name,
         status_result: lastStep.status_result,
         priority_level: lastStep.priority_level || '',
+        type: lastStep.type || '',
         is_active: lastStep.is_active,
     });
     editForm.reset();
@@ -100,10 +106,16 @@ const closeDeleteModal = () => {
     deleteForm.clearErrors();
 };
 
-const submitCreate = () => createForm.transform((data) => ({ ...data, priority_level: data.priority_level || null })).post(route('last-steps.store'), { preserveScroll: true, onSuccess: () => { isCreateOpen.value = false; resetCreateForm(); } });
+const normalizePayload = (data: LastStepFormData) => ({
+    ...data,
+    priority_level: data.priority_level || null,
+    type: data.status_result === 'Pending' ? (data.type || null) : null,
+});
+
+const submitCreate = () => createForm.transform((data) => normalizePayload(data)).post(route('last-steps.store'), { preserveScroll: true, onSuccess: () => { isCreateOpen.value = false; resetCreateForm(); } });
 const submitEdit = () => {
     if (!activeLastStep.value) return;
-    editForm.transform((data) => ({ ...data, priority_level: data.priority_level || null })).put(route('last-steps.update', activeLastStep.value.id), { preserveScroll: true, onSuccess: () => { isEditOpen.value = false; activeLastStep.value = null; editForm.clearErrors(); } });
+    editForm.transform((data) => normalizePayload(data)).put(route('last-steps.update', activeLastStep.value.id), { preserveScroll: true, onSuccess: () => { isEditOpen.value = false; activeLastStep.value = null; editForm.clearErrors(); } });
 };
 const submitDelete = () => {
     if (!activeLastStep.value) return;
@@ -124,6 +136,11 @@ const statusClass = (status: string) => {
 };
 
 const activeBadgeClass = (active: boolean) => active ? 'bg-emerald-100 text-emerald-700 ring-1 ring-emerald-200' : 'bg-slate-100 text-slate-600 ring-1 ring-slate-200';
+const typeBadgeClass = (type: string | null) => type === 'External'
+    ? 'bg-orange-100 text-orange-700 ring-1 ring-orange-200'
+    : type === 'Internal'
+        ? 'bg-violet-100 text-violet-700 ring-1 ring-violet-200'
+        : 'bg-slate-100 text-slate-500 ring-1 ring-slate-200';
 </script>
 
 <template>
@@ -164,11 +181,11 @@ const activeBadgeClass = (active: boolean) => active ? 'bg-emerald-100 text-emer
                 </section>
  
                 <section class="app-table-shell p-5">
-                    <div class="grid gap-4 xl:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] xl:items-center">
+                    <div class="grid gap-4 xl:grid-cols-[minmax(0,0.7fr)_minmax(0,1.3fr)] xl:items-center">
                         <div>
                             <h2 class="text-base font-black text-slate-900 uppercase tracking-wide">Last Step List</h2>
                         </div>
-                        <div class="grid gap-2 sm:grid-cols-3 lg:flex lg:justify-end">
+                        <div class="grid gap-2 sm:grid-cols-4 lg:flex lg:justify-end">
                             <div class="relative lg:w-48">
                                 <Search class="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
                                 <Input v-model="search" class="h-9 pl-9 text-xs" placeholder="Search..." />
@@ -176,6 +193,11 @@ const activeBadgeClass = (active: boolean) => active ? 'bg-emerald-100 text-emer
                             <select v-model="statusFilter" class="h-9 min-w-[120px] rounded-xl border border-input bg-background px-3 text-xs font-bold text-slate-600 shadow-sm outline-none transition hover:border-slate-300">
                                 <option value="All">Semua status</option>
                                 <option v-for="option in statusOptions" :key="option" :value="option">{{ option }}</option>
+                            </select>
+                            <select v-model="typeFilter" class="h-9 min-w-[120px] rounded-xl border border-input bg-background px-3 text-xs font-bold text-slate-600 shadow-sm outline-none transition hover:border-slate-300">
+                                <option value="All">Semua tipe</option>
+                                <option v-for="option in typeOptions" :key="option" :value="option">{{ option }}</option>
+                                <option value="None">Tanpa tipe</option>
                             </select>
                             <select v-model="activeState" class="h-9 min-w-[120px] rounded-xl border border-input bg-background px-3 text-xs font-bold text-slate-600 shadow-sm outline-none transition hover:border-slate-300">
                                 <option value="All">Semua state</option>
@@ -193,6 +215,7 @@ const activeBadgeClass = (active: boolean) => active ? 'bg-emerald-100 text-emer
                                         <th class="px-4 py-3">Last Step</th>
                                         <th class="px-4 py-3">Status Result</th>
                                         <th class="px-4 py-3">Priority</th>
+                                        <th class="px-4 py-3">Type</th>
                                         <th class="px-4 py-3">State</th>
                                         <th class="px-4 py-3 text-right">Action</th>
                                     </tr>
@@ -212,6 +235,7 @@ const activeBadgeClass = (active: boolean) => active ? 'bg-emerald-100 text-emer
                                         </td>
                                         <td class="px-4 py-3"><span class="inline-flex rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-wider" :class="statusClass(lastStep.status_result)">{{ lastStep.status_result }}</span></td>
                                         <td class="px-4 py-3"><span class="inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-slate-700 ring-1 ring-slate-200">{{ lastStep.priority_level || '-' }}</span></td>
+                                        <td class="px-4 py-3"><span class="inline-flex rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-wider" :class="typeBadgeClass(lastStep.type)">{{ lastStep.type || '-' }}</span></td>
                                         <td class="px-4 py-3"><span class="inline-flex rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-wider" :class="activeBadgeClass(lastStep.is_active)">{{ lastStep.is_active ? 'Active' : 'Inactive' }}</span></td>
                                         <td class="px-4 py-3">
                                             <div class="flex justify-end gap-1.5">
@@ -221,7 +245,7 @@ const activeBadgeClass = (active: boolean) => active ? 'bg-emerald-100 text-emer
                                         </td>
                                     </tr>
                                     <tr v-if="lastStepRows.length === 0">
-                                        <td colspan="5" class="px-4 py-10 text-center text-slate-400 font-bold">Tidak ada data ditemukan</td>
+                                        <td colspan="6" class="px-4 py-10 text-center text-slate-400 font-bold">Tidak ada data ditemukan</td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -277,6 +301,15 @@ const activeBadgeClass = (active: boolean) => active ? 'bg-emerald-100 text-emer
                             </div>
                         </div>
 
+                        <div class="grid gap-2">
+                            <Label for="create-type" class="text-[13px] font-bold uppercase tracking-wide text-slate-700">Type</Label>
+                            <select id="create-type" v-model="createForm.type" :disabled="createForm.status_result !== 'Pending'" class="h-12 rounded-xl border border-slate-200 bg-slate-50/50 px-4 text-sm font-bold text-slate-700 outline-none transition focus:bg-white focus:ring-2 focus:ring-blue-500/20 disabled:cursor-not-allowed disabled:bg-slate-100">
+                                <option value="">Tanpa tipe</option>
+                                <option v-for="option in typeOptions" :key="option" :value="option">{{ option }}</option>
+                            </select>
+                            <InputError :message="createForm.errors.type" />
+                        </div>
+
                         <div class="flex items-center gap-3 rounded-2xl border border-slate-100 bg-slate-50/50 px-4 py-4 transition hover:bg-slate-50">
                             <input v-model="createForm.is_active" type="checkbox" class="h-5 w-5 rounded-md border-slate-300 text-[var(--app-primary)] focus:ring-[var(--app-primary)]" />
                             <span class="text-sm font-semibold text-slate-600">Last step aktif dan siap dipakai di modul lain</span>
@@ -327,6 +360,15 @@ const activeBadgeClass = (active: boolean) => active ? 'bg-emerald-100 text-emer
                                 </select>
                                 <InputError :message="editForm.errors.priority_level" />
                             </div>
+                        </div>
+
+                        <div class="grid gap-2">
+                            <Label for="edit-type" class="text-[13px] font-bold uppercase tracking-wide text-slate-700">Type</Label>
+                            <select id="edit-type" v-model="editForm.type" :disabled="editForm.status_result !== 'Pending'" class="h-12 rounded-xl border border-slate-200 bg-slate-50/50 px-4 text-sm font-bold text-slate-700 outline-none transition focus:bg-white focus:ring-2 focus:ring-blue-500/20 disabled:cursor-not-allowed disabled:bg-slate-100">
+                                <option value="">Tanpa tipe</option>
+                                <option v-for="option in typeOptions" :key="option" :value="option">{{ option }}</option>
+                            </select>
+                            <InputError :message="editForm.errors.type" />
                         </div>
 
                         <div class="flex items-center gap-3 rounded-2xl border border-slate-100 bg-slate-50/50 px-4 py-4 transition hover:bg-slate-50">

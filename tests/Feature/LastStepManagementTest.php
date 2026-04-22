@@ -47,6 +47,7 @@ test('super admin can create a last step', function () {
         'name' => 'Follow Up WH',
         'status_result' => 'Pending',
         'priority_level' => 'P1',
+        'type' => 'Internal',
         'is_active' => true,
     ]);
 
@@ -56,6 +57,7 @@ test('super admin can create a last step', function () {
         'name' => 'Follow Up WH',
         'status_result' => 'Pending',
         'priority_level' => 'P1',
+        'type' => 'Internal',
         'is_active' => true,
     ]);
 });
@@ -68,6 +70,7 @@ test('super admin can update a last step', function () {
         'name' => 'Follow Up WH',
         'status_result' => 'Pending',
         'priority_level' => 'P1',
+        'type' => 'Internal',
         'is_active' => true,
     ]);
 
@@ -75,6 +78,7 @@ test('super admin can update a last step', function () {
         'name' => 'Seller Win',
         'status_result' => 'Solved',
         'priority_level' => 'Cool',
+        'type' => 'External',
         'is_active' => false,
     ]);
 
@@ -85,6 +89,7 @@ test('super admin can update a last step', function () {
         'name' => 'Seller Win',
         'status_result' => 'Solved',
         'priority_level' => 'Cool',
+        'type' => null,
         'is_active' => false,
     ]);
 });
@@ -97,6 +102,7 @@ test('super admin can delete a last step', function () {
         'name' => 'Follow Up WH',
         'status_result' => 'Pending',
         'priority_level' => 'P1',
+        'type' => 'Internal',
         'is_active' => true,
     ]);
 

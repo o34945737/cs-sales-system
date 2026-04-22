@@ -68,6 +68,7 @@ const dashboardItems = computed<NavItem[]>(() => {
         items.push({ title: 'Overview', href: '/dashboard', icon: LayoutGrid });
         items.push({ title: 'Complaint Analytics', href: '/dashboard/complaints', icon: Activity });
         items.push({ title: 'Performance Monitor', href: '/dashboard/performance', icon: PieChart });
+        items.push({ title: 'Agent Interface', href: '/dashboard/agents', icon: Users });
     }
     return items;
 });

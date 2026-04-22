@@ -2,16 +2,8 @@
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 import { Head, router } from '@inertiajs/vue3';
-import {
-    Activity,
-    BarChart3,
-    FileText,
-    Footprints,
-    Layers,
-    PieChart,
-    RefreshCw,
-    TrendingUp,
-} from 'lucide-vue-next';
+import { Activity, BarChart3, FileText, Footprints, Layers, PieChart, RefreshCw, TrendingUp } from 'lucide-vue-next';
+import { computed } from 'vue';
 
 interface LabelTotal {
     label: string | null;
@@ -45,13 +37,18 @@ const props = defineProps<{
     brandRealTime: BrandRealTimeRow[];
     complaintByStatus: LabelTotal[];
     pendingByLastStep: LabelTotal[];
+    pendingByLastStepExternal?: LabelTotal[];
+    pendingByLastStepInternal?: LabelTotal[];
     totalComplaintCount: number;
 }>();
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: '/dashboard' },
-    { title: 'Complaint Analytics', href: '/dashboard/complaints' }
+    { title: 'Complaint Analytics', href: '/dashboard/complaints' },
 ];
+
+const externalLastSteps = computed(() => props.pendingByLastStepExternal ?? []);
+const internalLastSteps = computed(() => props.pendingByLastStepInternal ?? []);
 
 function barWidth(value: number, max: number): string {
     if (!max) return '0%';
@@ -59,16 +56,16 @@ function barWidth(value: number, max: number): string {
 }
 
 function maxOf(arr: LabelTotal[]): number {
-    return arr.reduce((m, r) => Math.max(m, r.total), 0) || 1;
+    return arr.reduce((max, row) => Math.max(max, row.total), 0) || 1;
 }
 
 function maxWeekly(arr: WeeklyPoint[], key: 'new' | 'solved'): number {
-    return arr.reduce((m, r) => Math.max(m, (r as any)[key] ?? 0), 0) || 1;
+    return arr.reduce((max, row) => Math.max(max, row[key] ?? 0), 0) || 1;
 }
 
 function shortDate(iso: string): string {
-    const d = new Date(iso);
-    return d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short' });
+    const date = new Date(iso);
+    return date.toLocaleDateString('id-ID', { day: '2-digit', month: 'short' });
 }
 
 function refreshPage() {
@@ -77,19 +74,27 @@ function refreshPage() {
 
 function statusColor(label: string | null): string {
     switch (label) {
-        case 'Pending': return 'bg-rose-500';
-        case 'Solved': return 'bg-emerald-500';
-        case 'Whitelist': return 'bg-sky-500';
-        default: return 'bg-slate-400';
+        case 'Pending':
+            return 'bg-rose-500';
+        case 'Solved':
+            return 'bg-emerald-500';
+        case 'Whitelist':
+            return 'bg-sky-500';
+        default:
+            return 'bg-slate-400';
     }
 }
 
 function statusBadgeClass(label: string | null): string {
     switch (label) {
-        case 'Pending': return 'bg-rose-50 text-rose-600 border-rose-100';
-        case 'Solved': return 'bg-emerald-50 text-emerald-600 border-emerald-100';
-        case 'Whitelist': return 'bg-sky-50 text-sky-600 border-sky-100';
-        default: return 'bg-slate-50 text-slate-600 border-slate-100';
+        case 'Pending':
+            return 'bg-rose-50 text-rose-600 border-rose-100';
+        case 'Solved':
+            return 'bg-emerald-50 text-emerald-600 border-emerald-100';
+        case 'Whitelist':
+            return 'bg-sky-50 text-sky-600 border-sky-100';
+        default:
+            return 'bg-slate-50 text-slate-600 border-slate-100';
     }
 }
 </script>
@@ -98,7 +103,6 @@ function statusBadgeClass(label: string | null): string {
     <Head title="Complaint Analytics" />
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="space-y-8 pb-10">
-            <!-- Header -->
             <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div class="flex items-center gap-3">
                     <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-500 text-white shadow-lg shadow-rose-500/20">
@@ -106,7 +110,7 @@ function statusBadgeClass(label: string | null): string {
                     </div>
                     <div>
                         <h1 class="text-2xl font-black tracking-tight text-slate-900">Complaint Analytics</h1>
-                        <p class="text-[13px] font-medium text-slate-500">Performance trends & bottleneck analysis</p>
+                        <p class="text-[13px] font-medium text-slate-500">Performance trends and bottleneck analysis</p>
                     </div>
                 </div>
                 <button
@@ -118,7 +122,6 @@ function statusBadgeClass(label: string | null): string {
                 </button>
             </div>
 
-            <!-- All Complaint & Status Breakdown -->
             <section class="rounded-[32px] border border-slate-100 bg-white p-8 shadow-sm">
                 <div class="mb-8 flex items-center gap-3">
                     <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50 text-indigo-500">
@@ -126,27 +129,22 @@ function statusBadgeClass(label: string | null): string {
                     </div>
                     <div>
                         <h2 class="text-lg font-black text-slate-900">All Complaint</h2>
-                        <p class="text-[12px] font-medium text-slate-400">Total seluruh komplain & breakdown per status</p>
+                        <p class="text-[12px] font-medium text-slate-400">Total seluruh komplain dan breakdown per status</p>
                     </div>
                 </div>
 
                 <div class="flex flex-col gap-8 lg:flex-row lg:items-start">
-                    <!-- Total count card -->
                     <div class="flex min-w-[200px] flex-col items-center justify-center rounded-2xl bg-indigo-50 p-8 text-center">
                         <span class="text-[56px] font-black leading-none text-indigo-600">{{ totalComplaintCount }}</span>
                         <span class="mt-2 text-[11px] font-black uppercase tracking-widest text-indigo-400">Total Komplain</span>
                     </div>
 
-                    <!-- Status breakdown bars -->
                     <div class="flex-1 space-y-5">
                         <div v-for="row in complaintByStatus" :key="row.label ?? 'null'" class="group">
                             <div class="mb-2 flex items-center justify-between">
-                                <div class="flex items-center gap-2">
-                                    <span
-                                        class="inline-flex rounded-lg border px-2.5 py-0.5 text-[11px] font-black"
-                                        :class="statusBadgeClass(row.label)"
-                                    >{{ row.label || '-' }}</span>
-                                </div>
+                                <span class="inline-flex rounded-lg border px-2.5 py-0.5 text-[11px] font-black" :class="statusBadgeClass(row.label)">
+                                    {{ row.label || '-' }}
+                                </span>
                                 <div class="flex items-center gap-2">
                                     <span class="text-sm font-black text-slate-700">{{ row.total }}</span>
                                     <span class="text-[11px] font-medium text-slate-400">
@@ -155,11 +153,7 @@ function statusBadgeClass(label: string | null): string {
                                 </div>
                             </div>
                             <div class="h-2.5 w-full overflow-hidden rounded-full bg-slate-100 shadow-inner">
-                                <div
-                                    class="h-full transition-all duration-700"
-                                    :class="statusColor(row.label)"
-                                    :style="{ width: barWidth(row.total, totalComplaintCount) }"
-                                ></div>
+                                <div class="h-full transition-all duration-700" :class="statusColor(row.label)" :style="{ width: barWidth(row.total, totalComplaintCount) }"></div>
                             </div>
                         </div>
                         <p v-if="!complaintByStatus.length" class="text-sm text-slate-400">Belum ada data komplain.</p>
@@ -167,7 +161,6 @@ function statusBadgeClass(label: string | null): string {
                 </div>
             </section>
 
-            <!-- Weekly Trend -->
             <section class="rounded-[32px] border border-slate-100 bg-white p-8 shadow-sm">
                 <div class="mb-8 flex items-center justify-between">
                     <div class="flex items-center gap-3">
@@ -176,44 +169,27 @@ function statusBadgeClass(label: string | null): string {
                         </div>
                         <div>
                             <h2 class="text-lg font-black text-slate-900">Volume Trend</h2>
-                            <p class="text-[12px] font-medium text-slate-400">7 Days performance comparison</p>
-                        </div>
-                    </div>
-                    <div class="flex items-center gap-4">
-                        <div class="flex items-center gap-2">
-                            <span class="h-3 w-3 rounded-full bg-rose-200"></span>
-                            <span class="text-[11px] font-black uppercase tracking-wider text-slate-400">Incoming</span>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <span class="h-3 w-3 rounded-full bg-emerald-400"></span>
-                            <span class="text-[11px] font-black uppercase tracking-wider text-slate-400">Solved</span>
+                            <p class="text-[12px] font-medium text-slate-400">7 hari incoming versus solved</p>
                         </div>
                     </div>
                 </div>
 
-                <div class="flex items-end gap-3 h-48">
-                    <template v-for="(pt, i) in weeklyComplaint" :key="i">
-                        <div class="group relative flex-1 flex flex-col items-center gap-2">
+                <div class="flex h-48 items-end gap-3">
+                    <template v-for="(point, index) in weeklyComplaint" :key="index">
+                        <div class="group relative flex flex-1 flex-col items-center gap-2">
                             <div class="absolute -top-12 left-1/2 -translate-x-1/2 rounded-lg bg-slate-900 px-2 py-1 text-[10px] font-bold text-white opacity-0 transition group-hover:opacity-100">
-                                In: {{ pt.new }} | Sol: {{ pt.solved }}
+                                In: {{ point.new }} | Sol: {{ point.solved }}
                             </div>
-                            <div class="w-full flex flex-col gap-1 justify-end h-full">
-                                <div
-                                    class="w-full rounded-lg bg-rose-100 transition-all duration-500 group-hover:bg-rose-200"
-                                    :style="{ height: Math.max(6, Math.round(((pt.new ?? 0) / maxWeekly(weeklyComplaint, 'new')) * 100)) + 'px' }"
-                                ></div>
-                                <div
-                                    class="w-full rounded-lg bg-emerald-400 transition-all duration-500 group-hover:bg-emerald-500"
-                                    :style="{ height: Math.max(6, Math.round(((pt.solved ?? 0) / maxWeekly(weeklyComplaint, 'solved')) * 100)) + 'px' }"
-                                ></div>
+                            <div class="flex h-full w-full flex-col justify-end gap-1">
+                                <div class="w-full rounded-lg bg-rose-100" :style="{ height: Math.max(6, Math.round(((point.new ?? 0) / maxWeekly(weeklyComplaint, 'new')) * 100)) + 'px' }"></div>
+                                <div class="w-full rounded-lg bg-emerald-400" :style="{ height: Math.max(6, Math.round(((point.solved ?? 0) / maxWeekly(weeklyComplaint, 'solved')) * 100)) + 'px' }"></div>
                             </div>
-                            <span class="text-[10px] font-black text-slate-400 uppercase tracking-tighter">{{ shortDate(pt.date) }}</span>
+                            <span class="text-[10px] font-black uppercase tracking-tighter text-slate-400">{{ shortDate(point.date) }}</span>
                         </div>
                     </template>
                 </div>
             </section>
 
-            <!-- Controller Brand Real Time -->
             <section class="overflow-hidden rounded-[32px] border border-slate-100 bg-white shadow-sm">
                 <div class="flex items-center gap-3 border-b border-slate-50 px-8 py-6">
                     <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-500">
@@ -228,43 +204,41 @@ function statusBadgeClass(label: string | null): string {
                     <table class="w-full text-sm">
                         <thead>
                             <tr class="bg-slate-50/50 text-[10px] font-black uppercase tracking-widest text-slate-400">
-                                <th class="px-8 py-4 text-left">Brand Name</th>
-                                <th class="px-4 py-4 text-center">Total Pending</th>
-                                <th class="px-4 py-4 text-center">Hard Case</th>
-                                <th class="px-4 py-4 text-center">Normal Case</th>
+                                <th class="px-8 py-4 text-left">Brand</th>
+                                <th class="px-4 py-4 text-center">Pending</th>
+                                <th class="px-4 py-4 text-center">Hard</th>
+                                <th class="px-4 py-4 text-center">Normal</th>
                                 <th class="px-8 py-4 text-left">Severity Ratio</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-50">
-                            <tr v-for="row in brandRealTime" :key="row.label ?? 'null'" class="group transition hover:bg-slate-50/50">
+                            <tr v-for="row in brandRealTime" :key="row.label ?? 'null'" class="transition hover:bg-slate-50/50">
                                 <td class="px-8 py-4 font-black text-slate-700">{{ row.label || '-' }}</td>
+                                <td class="px-4 py-4 text-center text-lg font-black text-slate-900">{{ row.total }}</td>
                                 <td class="px-4 py-4 text-center">
-                                    <span class="text-lg font-black text-slate-900">{{ row.total }}</span>
+                                    <span class="inline-flex rounded-xl border border-rose-100 bg-rose-50 px-3 py-1 text-xs font-black text-rose-600">{{ row.hard }}</span>
                                 </td>
                                 <td class="px-4 py-4 text-center">
-                                    <span v-if="row.hard" class="inline-flex rounded-xl bg-rose-50 px-3 py-1 text-xs font-black text-rose-600 border border-rose-100">{{ row.hard }}</span>
-                                    <span v-else class="text-slate-300">-</span>
-                                </td>
-                                <td class="px-4 py-4 text-center">
-                                    <span v-if="row.normal" class="inline-flex rounded-xl bg-blue-50 px-3 py-1 text-xs font-black text-blue-600 border border-blue-100">{{ row.normal }}</span>
-                                    <span v-else class="text-slate-300">-</span>
+                                    <span class="inline-flex rounded-xl border border-blue-100 bg-blue-50 px-3 py-1 text-xs font-black text-blue-600">{{ row.normal }}</span>
                                 </td>
                                 <td class="px-8 py-4">
                                     <div class="flex items-center gap-3">
                                         <div class="flex h-2.5 flex-1 overflow-hidden rounded-full bg-slate-100 shadow-inner">
-                                            <div class="bg-rose-500 transition-all duration-700" :style="{ width: barWidth(row.hard, row.total) }"></div>
-                                            <div class="bg-blue-500 transition-all duration-700" :style="{ width: barWidth(row.normal, row.total) }"></div>
+                                            <div class="bg-rose-500" :style="{ width: barWidth(row.hard, row.total) }"></div>
+                                            <div class="bg-blue-500" :style="{ width: barWidth(row.normal, row.total) }"></div>
                                         </div>
-                                        <span class="text-[10px] font-black text-slate-400">{{ Math.round((row.hard / row.total) * 100) }}% Hard</span>
+                                        <span class="text-[10px] font-black text-slate-400">{{ row.total ? Math.round((row.hard / row.total) * 100) : 0 }}% Hard</span>
                                     </div>
                                 </td>
+                            </tr>
+                            <tr v-if="!brandRealTime.length">
+                                <td colspan="5" class="px-8 py-8 text-center text-xs font-bold text-slate-400">Tidak ada pending complaint</td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
             </section>
 
-            <!-- Analisa Bottleneck Pending (3-col grid) -->
             <div>
                 <div class="mb-6 flex items-center gap-2 px-1">
                     <PieChart class="h-5 w-5 text-indigo-500" />
@@ -272,7 +246,6 @@ function statusBadgeClass(label: string | null): string {
                 </div>
 
                 <div class="grid gap-6 md:grid-cols-3">
-                    <!-- By Platform -->
                     <div class="rounded-[32px] border border-slate-100 bg-white p-6 shadow-sm">
                         <p class="mb-4 text-[10px] font-black uppercase tracking-widest text-slate-400">By Platform</p>
                         <div class="space-y-4">
@@ -281,30 +254,28 @@ function statusBadgeClass(label: string | null): string {
                                     <span class="text-xs font-black text-slate-600">{{ row.label || '-' }}</span>
                                     <span class="text-xs font-black text-slate-400">{{ row.total }}</span>
                                 </div>
-                                <div class="h-1.5 w-full rounded-full bg-slate-50 overflow-hidden shadow-inner">
-                                    <div class="h-full bg-blue-500 transition-all duration-1000 group-hover:bg-blue-600" :style="{ width: barWidth(row.total, maxOf(pendingByPlatform)) }"></div>
+                                <div class="h-1.5 overflow-hidden rounded-full bg-slate-50 shadow-inner">
+                                    <div class="h-full bg-blue-500" :style="{ width: barWidth(row.total, maxOf(pendingByPlatform)) }"></div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- By Root Cause -->
                     <div class="rounded-[32px] border border-slate-100 bg-white p-6 shadow-sm">
                         <p class="mb-4 text-[10px] font-black uppercase tracking-widest text-slate-400">By Root Cause</p>
                         <div class="space-y-4">
                             <div v-for="row in pendingByCauseBy" :key="row.label ?? 'null'" class="group">
                                 <div class="mb-1.5 flex items-center justify-between">
-                                    <span class="text-xs font-black text-slate-600 truncate max-w-[120px]">{{ row.label || '-' }}</span>
+                                    <span class="max-w-[120px] truncate text-xs font-black text-slate-600">{{ row.label || '-' }}</span>
                                     <span class="text-xs font-black text-slate-400">{{ row.total }}</span>
                                 </div>
-                                <div class="h-1.5 w-full rounded-full bg-slate-50 overflow-hidden shadow-inner">
-                                    <div class="h-full bg-rose-500 transition-all duration-1000 group-hover:bg-rose-600" :style="{ width: barWidth(row.total, maxOf(pendingByCauseBy)) }"></div>
+                                <div class="h-1.5 overflow-hidden rounded-full bg-slate-50 shadow-inner">
+                                    <div class="h-full bg-rose-500" :style="{ width: barWidth(row.total, maxOf(pendingByCauseBy)) }"></div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- By Priority Level -->
                     <div class="rounded-[32px] border border-slate-100 bg-white p-6 shadow-sm">
                         <p class="mb-4 text-[10px] font-black uppercase tracking-widest text-slate-400">By Priority Level</p>
                         <div class="space-y-4">
@@ -313,8 +284,8 @@ function statusBadgeClass(label: string | null): string {
                                     <span class="text-xs font-black text-slate-600">{{ row.label || '-' }}</span>
                                     <span class="text-xs font-black text-slate-400">{{ row.total }}</span>
                                 </div>
-                                <div class="h-1.5 w-full rounded-full bg-slate-50 overflow-hidden shadow-inner">
-                                    <div class="h-full bg-amber-500 transition-all duration-1000 group-hover:bg-amber-600" :style="{ width: barWidth(row.total, maxOf(pendingByLevel)) }"></div>
+                                <div class="h-1.5 overflow-hidden rounded-full bg-slate-50 shadow-inner">
+                                    <div class="h-full bg-amber-500" :style="{ width: barWidth(row.total, maxOf(pendingByLevel)) }"></div>
                                 </div>
                             </div>
                         </div>
@@ -322,7 +293,6 @@ function statusBadgeClass(label: string | null): string {
                 </div>
             </div>
 
-            <!-- Sub Case – full list -->
             <section class="rounded-[32px] border border-slate-100 bg-white p-8 shadow-sm">
                 <div class="mb-6 flex items-center gap-3">
                     <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-50 text-violet-500">
@@ -336,44 +306,80 @@ function statusBadgeClass(label: string | null): string {
                 <div class="grid gap-x-10 gap-y-4 sm:grid-cols-2 lg:grid-cols-3">
                     <div v-for="row in pendingBySubCase" :key="row.label ?? 'null'" class="group">
                         <div class="mb-1.5 flex items-center justify-between">
-                            <span class="text-xs font-black text-slate-600 truncate max-w-[200px]">{{ row.label || '-' }}</span>
+                            <span class="max-w-[200px] truncate text-xs font-black text-slate-600">{{ row.label || '-' }}</span>
                             <span class="text-xs font-black text-slate-400">{{ row.total }}</span>
                         </div>
-                        <div class="h-1.5 w-full rounded-full bg-slate-50 overflow-hidden shadow-inner">
-                            <div class="h-full bg-violet-500 transition-all duration-1000 group-hover:bg-violet-600" :style="{ width: barWidth(row.total, maxOf(pendingBySubCase)) }"></div>
+                        <div class="h-1.5 overflow-hidden rounded-full bg-slate-50 shadow-inner">
+                            <div class="h-full bg-violet-500" :style="{ width: barWidth(row.total, maxOf(pendingBySubCase)) }"></div>
                         </div>
                     </div>
                     <p v-if="!pendingBySubCase.length" class="col-span-full text-sm text-slate-400">Tidak ada data sub case pending.</p>
                 </div>
             </section>
 
-            <!-- Last Step -->
-            <section class="rounded-[32px] border border-slate-100 bg-white p-8 shadow-sm">
-                <div class="mb-6 flex items-center gap-3">
-                    <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-50 text-orange-500">
-                        <Footprints class="h-5 w-5" />
-                    </div>
-                    <div>
-                        <h2 class="text-lg font-black text-slate-900">Last Step</h2>
-                        <p class="text-[12px] font-medium text-slate-400">Pending complaint tersangkut di step mana</p>
-                    </div>
-                </div>
-                <div class="space-y-4">
-                    <div v-for="row in pendingByLastStep" :key="row.label ?? 'null'" class="group">
-                        <div class="mb-1.5 flex items-center justify-between">
-                            <span class="text-sm font-black text-slate-700">{{ row.label || '(belum diisi)' }}</span>
-                            <span class="text-sm font-black text-slate-500">{{ row.total }}</span>
+            <div class="grid gap-6 lg:grid-cols-3">
+                <section class="rounded-[32px] border border-slate-100 bg-white p-8 shadow-sm lg:col-span-1">
+                    <div class="mb-6 flex items-center gap-3">
+                        <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-50 text-orange-500">
+                            <Footprints class="h-5 w-5" />
                         </div>
-                        <div class="h-2 w-full overflow-hidden rounded-full bg-slate-100 shadow-inner">
-                            <div
-                                class="h-full bg-orange-500 transition-all duration-700 group-hover:bg-orange-600"
-                                :style="{ width: barWidth(row.total, maxOf(pendingByLastStep)) }"
-                            ></div>
+                        <div>
+                            <h2 class="text-lg font-black text-slate-900">Last Step All</h2>
+                            <p class="text-[12px] font-medium text-slate-400">Semua pending last step tercatat</p>
                         </div>
                     </div>
-                    <p v-if="!pendingByLastStep.length" class="text-sm text-slate-400">Tidak ada komplain pending dengan last step tercatat.</p>
-                </div>
-            </section>
+                    <div class="space-y-4">
+                        <div v-for="row in pendingByLastStep" :key="row.label ?? 'null'" class="group">
+                            <div class="mb-1.5 flex items-center justify-between">
+                                <span class="text-sm font-black text-slate-700">{{ row.label || '(belum diisi)' }}</span>
+                                <span class="text-sm font-black text-slate-500">{{ row.total }}</span>
+                            </div>
+                            <div class="h-2 overflow-hidden rounded-full bg-slate-100 shadow-inner">
+                                <div class="h-full bg-orange-500" :style="{ width: barWidth(row.total, maxOf(pendingByLastStep)) }"></div>
+                            </div>
+                        </div>
+                        <p v-if="!pendingByLastStep.length" class="text-sm text-slate-400">Tidak ada komplain pending dengan last step tercatat.</p>
+                    </div>
+                </section>
+
+                <section class="rounded-[32px] border border-slate-100 bg-white p-8 shadow-sm">
+                    <div class="mb-6">
+                        <h2 class="text-lg font-black text-slate-900">Last Step External</h2>
+                        <p class="text-[12px] font-medium text-slate-400">Step yang bergantung pada pihak luar</p>
+                    </div>
+                    <div class="space-y-4">
+                        <div v-for="row in externalLastSteps" :key="row.label ?? 'null'">
+                            <div class="mb-1.5 flex items-center justify-between">
+                                <span class="text-sm font-black text-slate-700">{{ row.label || '-' }}</span>
+                                <span class="text-sm font-black text-slate-500">{{ row.total }}</span>
+                            </div>
+                            <div class="h-2 overflow-hidden rounded-full bg-slate-100 shadow-inner">
+                                <div class="h-full bg-orange-400" :style="{ width: barWidth(row.total, maxOf(externalLastSteps)) }"></div>
+                            </div>
+                        </div>
+                        <p v-if="!externalLastSteps.length" class="text-sm text-slate-400">Belum ada data last step external.</p>
+                    </div>
+                </section>
+
+                <section class="rounded-[32px] border border-slate-100 bg-white p-8 shadow-sm">
+                    <div class="mb-6">
+                        <h2 class="text-lg font-black text-slate-900">Last Step Internal</h2>
+                        <p class="text-[12px] font-medium text-slate-400">Step yang bergantung pada tim internal</p>
+                    </div>
+                    <div class="space-y-4">
+                        <div v-for="row in internalLastSteps" :key="row.label ?? 'null'">
+                            <div class="mb-1.5 flex items-center justify-between">
+                                <span class="text-sm font-black text-slate-700">{{ row.label || '-' }}</span>
+                                <span class="text-sm font-black text-slate-500">{{ row.total }}</span>
+                            </div>
+                            <div class="h-2 overflow-hidden rounded-full bg-slate-100 shadow-inner">
+                                <div class="h-full bg-violet-500" :style="{ width: barWidth(row.total, maxOf(internalLastSteps)) }"></div>
+                            </div>
+                        </div>
+                        <p v-if="!internalLastSteps.length" class="text-sm text-slate-400">Belum ada data last step internal.</p>
+                    </div>
+                </section>
+            </div>
         </div>
     </AppLayout>
 </template>

@@ -40,6 +40,8 @@ Route::middleware(['auth', 'active', 'password.reset.required'])->group(function
         Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
         Route::get('dashboard/complaints', [DashboardController::class, 'complaintAnalytics'])->name('dashboard.complaints');
         Route::get('dashboard/performance', [DashboardController::class, 'performanceMonitoring'])->name('dashboard.performance');
+        Route::get('dashboard/agents', [DashboardController::class, 'agentInterface'])->name('dashboard.agents');
+        Route::post('dashboard/productivity', [DashboardController::class, 'storeProductivity'])->name('dashboard.productivity.store');
     });
 
     Route::middleware('permission:access complaints')->group(function () {

@@ -4,10 +4,15 @@ namespace App\Http\Controllers;
 
 use App\Models\BadReview;
 use App\Models\Complaint;
+use App\Models\DailyProductivity;
+use App\Models\LastStep;
 use App\Models\Oos;
 use App\Models\OrderTracking;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -18,40 +23,82 @@ class DashboardController extends Controller
         $today = Carbon::today();
         [$monthStart, $monthEnd] = $this->currentMonthRange();
 
-        $pendingComplaintCount = Complaint::query()
-            ->where('status', 'Pending')
-            ->count();
-
-        $pendingOtCount = OrderTracking::query()
-            ->where('status', 'Pending')
-            ->count();
-
-        $oosTodayCount = Oos::query()
-            ->whereDate('tanggal_input', $today)
-            ->count();
-
+        $pendingComplaintCount = Complaint::query()->where('status', 'Pending')->count();
+        $pendingOtCount = OrderTracking::query()->where('status', 'Pending')->count();
+        $oosTodayCount = Oos::query()->whereDate('tanggal_input', $today)->count();
         $totalTaskCount = $pendingComplaintCount + $pendingOtCount + $oosTodayCount;
+
+        $agentDdayStats = $this->buildAgentDdayStats($today);
 
         $agentRecap = Complaint::query()
             ->whereBetween('created_at', [$monthStart, $monthEnd])
-            ->selectRaw('cs_name as agent, COUNT(*) as total, SUM(CASE WHEN status = "Solved" THEN 1 ELSE 0 END) as solved, SUM(CASE WHEN status = "Pending" THEN 1 ELSE 0 END) as pending')
+            ->selectRaw(
+                'cs_name as agent, COUNT(*) as total,
+                SUM(CASE WHEN status = "Solved" THEN 1 ELSE 0 END) as solved,
+                SUM(CASE WHEN status = "Pending" THEN 1 ELSE 0 END) as pending'
+            )
             ->groupBy('cs_name')
             ->orderByDesc('total')
             ->get()
-            ->map(fn($item) => [
-                'agent' => $item->agent,
-                'total' => (int) $item->total,
-                'solved' => (int) $item->solved,
-                'pending' => (int) $item->pending,
+            ->map(fn ($row) => [
+                'agent' => $row->agent,
+                'total' => (int) $row->total,
+                'solved' => (int) $row->solved,
+                'pending' => (int) $row->pending,
             ]);
+
+        $todayProductivity = DailyProductivity::query()
+            ->whereDate('tanggal', $today)
+            ->orderBy('cs_name')
+            ->get();
 
         return Inertia::render('Dashboard/Overview', [
             'pendingComplaintCount' => $pendingComplaintCount,
             'pendingOtCount' => $pendingOtCount,
             'oosTodayCount' => $oosTodayCount,
             'totalTaskCount' => $totalTaskCount,
+            'agentDdayStats' => $agentDdayStats,
             'agentRecap' => $agentRecap,
+            'todayProductivity' => $todayProductivity,
+            'today' => $today->toDateString(),
         ]);
+    }
+
+    public function storeProductivity(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'cs_name' => ['required', 'string', 'max:100'],
+            'tanggal' => ['required', 'date'],
+            'complaint_handled' => ['nullable', 'integer', 'min:0'],
+            'complaint_solved' => ['nullable', 'integer', 'min:0'],
+            'bad_review_handled' => ['nullable', 'integer', 'min:0'],
+            'order_tracking_handled' => ['nullable', 'integer', 'min:0'],
+            'oos_handled' => ['nullable', 'integer', 'min:0'],
+            'total_ticket' => ['nullable', 'integer', 'min:0'],
+            'notes' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $payload = [
+            'complaint_handled' => (int) ($validated['complaint_handled'] ?? 0),
+            'complaint_solved' => (int) ($validated['complaint_solved'] ?? 0),
+            'bad_review_handled' => (int) ($validated['bad_review_handled'] ?? 0),
+            'order_tracking_handled' => (int) ($validated['order_tracking_handled'] ?? 0),
+            'oos_handled' => (int) ($validated['oos_handled'] ?? 0),
+            'notes' => $validated['notes'] ?? null,
+        ];
+
+        $payload['total_ticket'] = (int) ($validated['total_ticket']
+            ?? ($payload['complaint_handled'] + $payload['bad_review_handled'] + $payload['order_tracking_handled'] + $payload['oos_handled']));
+
+        DailyProductivity::query()->updateOrCreate(
+            [
+                'cs_name' => $validated['cs_name'],
+                'tanggal' => $validated['tanggal'],
+            ],
+            $payload,
+        );
+
+        return back()->with('success', 'Productivity harian berhasil disimpan.');
     }
 
     public function complaintAnalytics(): Response
@@ -61,48 +108,21 @@ class DashboardController extends Controller
             ->map(fn (string $date) => [
                 'date' => $date,
                 'new' => Complaint::query()->whereDate('created_at', $date)->count(),
-                'solved' => Complaint::query()->where('status', 'Solved')->whereDate('updated_at', $date)->count(),
+                'solved' => Complaint::query()
+                    ->where('status', 'Solved')
+                    ->whereDate('updated_at', $date)
+                    ->count(),
             ])
             ->all();
 
-        $pendingByCauseBy = Complaint::query()
-            ->where('status', 'Pending')
-            ->selectRaw('cause_by as label, COUNT(*) as total')
-            ->groupBy('cause_by')
-            ->orderByDesc('total')
-            ->get();
-
-        $pendingByPlatform = Complaint::query()
-            ->where('status', 'Pending')
-            ->selectRaw('platform as label, COUNT(*) as total')
-            ->groupBy('platform')
-            ->orderByDesc('total')
-            ->get();
-
-        $pendingByLevel = Complaint::query()
-            ->where('status', 'Pending')
-            ->selectRaw('complaint_power as label, COUNT(*) as total')
-            ->groupBy('complaint_power')
-            ->orderByDesc('total')
-            ->get();
+        $pendingByCauseBy = $this->pendingGroupBy('cause_by');
+        $pendingByPlatform = $this->pendingGroupBy('platform');
+        $pendingByLevel = $this->pendingGroupBy('complaint_power');
 
         $pendingBySubCase = Complaint::query()
             ->where('status', 'Pending')
             ->selectRaw('sub_case as label, COUNT(*) as total, 0 as sla_ok, 0 as sla_breach')
             ->groupBy('sub_case')
-            ->orderByDesc('total')
-            ->get();
-
-        $brandRealTime = Complaint::query()
-            ->where('status', 'Pending')
-            ->selectRaw('brand as label, COUNT(*) as total, SUM(CASE WHEN complaint_power = "Hard Complaint" THEN 1 ELSE 0 END) as hard, SUM(CASE WHEN complaint_power = "Normal Complaint" THEN 1 ELSE 0 END) as normal')
-            ->groupBy('brand')
-            ->orderByDesc('total')
-            ->get();
-
-        $complaintByStatus = Complaint::query()
-            ->selectRaw('status as label, COUNT(*) as total')
-            ->groupBy('status')
             ->orderByDesc('total')
             ->get();
 
@@ -114,7 +134,41 @@ class DashboardController extends Controller
             ->orderByDesc('total')
             ->get();
 
+        $externalSteps = LastStep::query()->where('type', 'External')->pluck('name');
+        $pendingByLastStepExternal = Complaint::query()
+            ->where('status', 'Pending')
+            ->whereIn('last_step', $externalSteps)
+            ->selectRaw('last_step as label, COUNT(*) as total')
+            ->groupBy('last_step')
+            ->orderByDesc('total')
+            ->get();
+
+        $internalSteps = LastStep::query()->where('type', 'Internal')->pluck('name');
+        $pendingByLastStepInternal = Complaint::query()
+            ->where('status', 'Pending')
+            ->whereIn('last_step', $internalSteps)
+            ->selectRaw('last_step as label, COUNT(*) as total')
+            ->groupBy('last_step')
+            ->orderByDesc('total')
+            ->get();
+
+        $brandRealTime = Complaint::query()
+            ->where('status', 'Pending')
+            ->selectRaw(
+                'brand as label, COUNT(*) as total,
+                SUM(CASE WHEN complaint_power = "Hard Complaint" THEN 1 ELSE 0 END) as hard,
+                SUM(CASE WHEN complaint_power = "Normal Complaint" THEN 1 ELSE 0 END) as normal'
+            )
+            ->groupBy('brand')
+            ->orderByDesc('total')
+            ->get();
+
         $totalComplaintCount = Complaint::query()->count();
+        $complaintByStatus = Complaint::query()
+            ->selectRaw('status as label, COUNT(*) as total')
+            ->groupBy('status')
+            ->orderByDesc('total')
+            ->get();
 
         return Inertia::render('Dashboard/ComplaintAnalytics', [
             'weeklyComplaint' => $weeklyComplaint,
@@ -122,29 +176,94 @@ class DashboardController extends Controller
             'pendingByPlatform' => $pendingByPlatform,
             'pendingByLevel' => $pendingByLevel,
             'pendingBySubCase' => $pendingBySubCase,
-            'brandRealTime' => $brandRealTime,
-            'complaintByStatus' => $complaintByStatus,
             'pendingByLastStep' => $pendingByLastStep,
+            'pendingByLastStepExternal' => $pendingByLastStepExternal,
+            'pendingByLastStepInternal' => $pendingByLastStepInternal,
+            'brandRealTime' => $brandRealTime,
             'totalComplaintCount' => $totalComplaintCount,
+            'complaintByStatus' => $complaintByStatus,
         ]);
     }
 
     public function performanceMonitoring(): Response
     {
+        $today = Carbon::today();
         [$monthStart, $monthEnd] = $this->currentMonthRange();
+        $monthStartDate = $monthStart->toDateString();
+        $monthEndDate = $monthEnd->toDateString();
 
         $weeklyBadReview = $this->weeklySimple(BadReview::query(), 'created_at');
         $weeklyOos = $this->weeklySimple(Oos::query(), 'created_at');
 
         $badReviewByBrand = BadReview::query()
-            ->whereBetween('tanggal_review', [$monthStart->toDateString(), $monthEnd->toDateString()])
+            ->whereBetween('tanggal_review', [$monthStartDate, $monthEndDate])
             ->selectRaw('brand as label, COUNT(*) as total')
             ->groupBy('brand')
             ->orderByDesc('total')
             ->get();
 
+        $badReviewByCategory = BadReview::query()
+            ->whereBetween('tanggal_review', [$monthStartDate, $monthEndDate])
+            ->selectRaw('category_review as label, COUNT(*) as total')
+            ->groupBy('category_review')
+            ->orderByDesc('total')
+            ->get();
+
+        $pendingOtBase = fn () => OrderTracking::query()->where('status', 'Pending');
+
+        $pendingOtByBrand = (clone $pendingOtBase())
+            ->selectRaw('brand as label, COUNT(*) as total')
+            ->groupBy('brand')
+            ->orderByDesc('total')
+            ->get();
+
+        $pendingOtByPlatform = (clone $pendingOtBase())
+            ->selectRaw('platform as label, COUNT(*) as total')
+            ->groupBy('platform')
+            ->orderByDesc('total')
+            ->get();
+
+        $pendingOtByLogistics = (clone $pendingOtBase())
+            ->selectRaw('logistics as label, COUNT(*) as total')
+            ->groupBy('logistics')
+            ->orderByDesc('total')
+            ->get();
+
+        $pendingOtByAutoTrack = (clone $pendingOtBase())
+            ->selectRaw('automation_track as label, COUNT(*) as total')
+            ->groupBy('automation_track')
+            ->orderByDesc('total')
+            ->get();
+
+        $pendingOtByDataSource = (clone $pendingOtBase())
+            ->selectRaw('data_source as label, COUNT(*) as total')
+            ->groupBy('data_source')
+            ->orderByDesc('total')
+            ->get();
+
+        $pendingOtByOrderDate = (clone $pendingOtBase())
+            ->whereNotNull('tanggal_order')
+            ->selectRaw('tanggal_order as label, COUNT(*) as total')
+            ->groupBy('tanggal_order')
+            ->orderByDesc('tanggal_order')
+            ->limit(14)
+            ->get();
+
+        $oosNeedingBlast = Oos::query()
+            ->whereIn('tanggal_input', [$today->toDateString(), Carbon::yesterday()->toDateString()])
+            ->where(fn ($query) => $query->whereNull('update_cs')->orWhere('update_cs', '!=', 'Done Blast'))
+            ->selectRaw('tanggal_input as label, COUNT(*) as total')
+            ->groupBy('tanggal_input')
+            ->orderByDesc('tanggal_input')
+            ->get();
+
+        $oosNeedingBlastTotal = Oos::query()
+            ->whereIn('tanggal_input', [$today->toDateString(), Carbon::yesterday()->toDateString()])
+            ->where(fn ($query) => $query->whereNull('update_cs')->orWhere('update_cs', '!=', 'Done Blast'))
+            ->count();
+
         $oosByBrand = Oos::query()
-            ->whereBetween('tanggal_input', [$monthStart->toDateString(), $monthEnd->toDateString()])
+            ->whereBetween('tanggal_input', [$monthStartDate, $monthEndDate])
             ->selectRaw('brand as label, COUNT(*) as total')
             ->groupBy('brand')
             ->orderByDesc('total')
@@ -154,7 +273,86 @@ class DashboardController extends Controller
             'weeklyBadReview' => $weeklyBadReview,
             'weeklyOos' => $weeklyOos,
             'badReviewByBrand' => $badReviewByBrand,
+            'badReviewByCategory' => $badReviewByCategory,
+            'pendingOtByBrand' => $pendingOtByBrand,
+            'pendingOtByPlatform' => $pendingOtByPlatform,
+            'pendingOtByLogistics' => $pendingOtByLogistics,
+            'pendingOtByOrderDate' => $pendingOtByOrderDate,
+            'pendingOtByAutoTrack' => $pendingOtByAutoTrack,
+            'pendingOtByDataSource' => $pendingOtByDataSource,
+            'oosNeedingBlast' => $oosNeedingBlast,
+            'oosNeedingBlastTotal' => $oosNeedingBlastTotal,
             'oosByBrand' => $oosByBrand,
+        ]);
+    }
+
+    public function agentInterface(): Response
+    {
+        $dates = collect(range(6, 0))
+            ->map(fn (int $i) => Carbon::today()->subDays($i)->toDateString())
+            ->all();
+
+        $agentComplaintStats = Complaint::query()
+            ->whereNotNull('cs_name')
+            ->selectRaw(
+                'cs_name as agent,
+                SUM(CASE WHEN status = "Pending" THEN 1 ELSE 0 END) as pending,
+                SUM(CASE WHEN status = "Whitelist" THEN 1 ELSE 0 END) as whitelist,
+                SUM(CASE WHEN status = "Solved" THEN 1 ELSE 0 END) as solved_total'
+            )
+            ->groupBy('cs_name')
+            ->orderBy('cs_name')
+            ->get()
+            ->keyBy('agent');
+
+        $dailySolvedRaw = Complaint::query()
+            ->where('status', 'Solved')
+            ->whereNotNull('cs_name')
+            ->whereDate('updated_at', '>=', Carbon::today()->subDays(6))
+            ->selectRaw('cs_name as agent, DATE(updated_at) as date, COUNT(*) as count')
+            ->groupBy('cs_name', DB::raw('DATE(updated_at)'))
+            ->get()
+            ->groupBy('agent');
+
+        $agentInterface = $agentComplaintStats->map(function ($row) use ($dates, $dailySolvedRaw) {
+            $byDate = $dailySolvedRaw->get($row->agent, collect())->keyBy('date');
+
+            return [
+                'agent' => $row->agent,
+                'pending' => (int) $row->pending,
+                'whitelist' => (int) $row->whitelist,
+                'solved_total' => (int) $row->solved_total,
+                'daily_solved' => array_map(fn ($date) => [
+                    'date' => $date,
+                    'count' => (int) ($byDate->get($date)?->count ?? 0),
+                ], $dates),
+            ];
+        })->values();
+
+        $pendingByAgentPriority = Complaint::query()
+            ->where('status', 'Pending')
+            ->whereNotNull('cs_name')
+            ->whereNotNull('last_step')
+            ->join('last_steps', 'complaints.last_step', '=', 'last_steps.name')
+            ->selectRaw('complaints.cs_name as agent, last_steps.priority_level, COUNT(*) as total')
+            ->groupBy('complaints.cs_name', 'last_steps.priority_level')
+            ->orderBy('complaints.cs_name')
+            ->orderBy('last_steps.priority_level')
+            ->get()
+            ->groupBy('agent')
+            ->map(fn (Collection $rows, string $agent) => [
+                'agent' => $agent,
+                'priorities' => $rows->map(fn ($row) => [
+                    'priority' => $row->priority_level,
+                    'total' => (int) $row->total,
+                ])->values(),
+            ])
+            ->values();
+
+        return Inertia::render('Dashboard/AgentInterface', [
+            'agentInterface' => $agentInterface,
+            'pendingByAgentPriority' => $pendingByAgentPriority,
+            'dates' => $dates,
         ]);
     }
 
@@ -165,15 +363,95 @@ class DashboardController extends Controller
         return [$now->copy()->startOfMonth(), $now->copy()->endOfMonth()];
     }
 
-    private function weeklySimple($baseQuery, string $dateCol): array
+    private function weeklySimple($baseQuery, string $dateColumn): array
     {
         return collect(range(6, 0))
             ->map(fn (int $i) => Carbon::today()->subDays($i)->toDateString())
             ->map(fn (string $date) => [
                 'date' => $date,
-                'total' => (clone $baseQuery)->whereDate($dateCol, $date)->count(),
+                'total' => (clone $baseQuery)->whereDate($dateColumn, $date)->count(),
             ])
             ->values()
             ->all();
+    }
+
+    private function pendingGroupBy(string $column): Collection
+    {
+        return Complaint::query()
+            ->where('status', 'Pending')
+            ->selectRaw("{$column} as label, COUNT(*) as total")
+            ->groupBy($column)
+            ->orderByDesc('total')
+            ->get();
+    }
+
+    private function buildAgentDdayStats(Carbon $today): Collection
+    {
+        $complaintDistributed = $this->pluckByAgent(
+            Complaint::query()->whereDate('created_at', $today)->whereNotNull('cs_name')
+        );
+        $badReviewDistributed = $this->pluckByAgent(
+            BadReview::query()->whereDate('tanggal_review', $today)->whereNotNull('cs_name')
+        );
+        $orderTrackingDistributed = $this->pluckByAgent(
+            OrderTracking::query()->whereDate('tanggal_input', $today)->whereNotNull('cs_name')
+        );
+
+        $complaintHandled = $this->pluckByAgent(
+            Complaint::query()->whereDate('updated_at', $today)->whereNotNull('cs_name')
+        );
+        $badReviewHandled = $this->pluckByAgent(
+            BadReview::query()->whereDate('tanggal_update', $today)->whereNotNull('cs_name')
+        );
+        $orderTrackingHandled = $this->pluckByAgent(
+            OrderTracking::query()->whereDate('tanggal_update', $today)->whereNotNull('cs_name')
+        );
+
+        $complaintSolved = $this->pluckByAgent(
+            Complaint::query()->where('status', 'Solved')->whereDate('updated_at', $today)->whereNotNull('cs_name')
+        );
+        $badReviewSolved = $this->pluckByAgent(
+            BadReview::query()->where('status', 'Solved')->whereDate('tanggal_update', $today)->whereNotNull('cs_name')
+        );
+        $orderTrackingSolved = $this->pluckByAgent(
+            OrderTracking::query()->where('status', 'Solved')->whereDate('tanggal_update', $today)->whereNotNull('cs_name')
+        );
+
+        $allAgents = collect(array_unique(array_merge(
+            array_keys($complaintDistributed),
+            array_keys($badReviewDistributed),
+            array_keys($orderTrackingDistributed),
+            array_keys($complaintHandled),
+            array_keys($badReviewHandled),
+            array_keys($orderTrackingHandled),
+            array_keys($complaintSolved),
+            array_keys($badReviewSolved),
+            array_keys($orderTrackingSolved),
+        )))->sort()->values();
+
+        return $allAgents->map(fn (string $agent) => [
+            'agent' => $agent,
+            'dist_complaint' => (int) ($complaintDistributed[$agent] ?? 0),
+            'dist_bad_review' => (int) ($badReviewDistributed[$agent] ?? 0),
+            'dist_ot' => (int) ($orderTrackingDistributed[$agent] ?? 0),
+            'dist_total' => (int) (($complaintDistributed[$agent] ?? 0) + ($badReviewDistributed[$agent] ?? 0) + ($orderTrackingDistributed[$agent] ?? 0)),
+            'handled_complaint' => (int) ($complaintHandled[$agent] ?? 0),
+            'handled_bad_review' => (int) ($badReviewHandled[$agent] ?? 0),
+            'handled_ot' => (int) ($orderTrackingHandled[$agent] ?? 0),
+            'handled_total' => (int) (($complaintHandled[$agent] ?? 0) + ($badReviewHandled[$agent] ?? 0) + ($orderTrackingHandled[$agent] ?? 0)),
+            'solved_complaint' => (int) ($complaintSolved[$agent] ?? 0),
+            'solved_bad_review' => (int) ($badReviewSolved[$agent] ?? 0),
+            'solved_ot' => (int) ($orderTrackingSolved[$agent] ?? 0),
+            'solved_total' => (int) (($complaintSolved[$agent] ?? 0) + ($badReviewSolved[$agent] ?? 0) + ($orderTrackingSolved[$agent] ?? 0)),
+        ]);
+    }
+
+    private function pluckByAgent($query): array
+    {
+        return $query
+            ->selectRaw('cs_name as agent, COUNT(*) as cnt')
+            ->groupBy('cs_name')
+            ->pluck('cnt', 'agent')
+            ->toArray();
     }
 }
