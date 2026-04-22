@@ -100,6 +100,22 @@ class DashboardController extends Controller
             ->orderByDesc('total')
             ->get();
 
+        $complaintByStatus = Complaint::query()
+            ->selectRaw('status as label, COUNT(*) as total')
+            ->groupBy('status')
+            ->orderByDesc('total')
+            ->get();
+
+        $pendingByLastStep = Complaint::query()
+            ->where('status', 'Pending')
+            ->whereNotNull('last_step')
+            ->selectRaw('last_step as label, COUNT(*) as total')
+            ->groupBy('last_step')
+            ->orderByDesc('total')
+            ->get();
+
+        $totalComplaintCount = Complaint::query()->count();
+
         return Inertia::render('Dashboard/ComplaintAnalytics', [
             'weeklyComplaint' => $weeklyComplaint,
             'pendingByCauseBy' => $pendingByCauseBy,
@@ -107,6 +123,9 @@ class DashboardController extends Controller
             'pendingByLevel' => $pendingByLevel,
             'pendingBySubCase' => $pendingBySubCase,
             'brandRealTime' => $brandRealTime,
+            'complaintByStatus' => $complaintByStatus,
+            'pendingByLastStep' => $pendingByLastStep,
+            'totalComplaintCount' => $totalComplaintCount,
         ]);
     }
 

@@ -95,6 +95,7 @@ test('complaint analytics dashboard is available from the dashboard submenu', fu
         'sub_case' => 'Wrong Item',
         'brand' => 'ANTA',
         'cs_name' => 'CS A',
+        'last_step' => 'Mediasi',
         'created_at' => now(),
         'updated_at' => now(),
     ]);
@@ -109,7 +110,11 @@ test('complaint analytics dashboard is available from the dashboard submenu', fu
             ->where('pendingByCauseBy.0.label', 'WH')
             ->where('pendingByLevel.0.label', 'Hard Complaint')
             ->where('pendingBySubCase.0.label', 'Wrong Item')
-            ->where('brandRealTime.0.label', 'ANTA'));
+            ->where('brandRealTime.0.label', 'ANTA')
+            ->where('complaintByStatus.0.label', 'Pending')
+            ->where('complaintByStatus.0.total', 1)
+            ->where('pendingByLastStep.0.label', 'Mediasi')
+            ->where('totalComplaintCount', 1));
 });
 
 test('performance monitor dashboard is available from the dashboard submenu', function () {
