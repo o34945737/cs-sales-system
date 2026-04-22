@@ -102,7 +102,7 @@ beforeEach(function () {
 function orderTrackingPayload(array $overrides = []): array
 {
     return array_merge([
-        'source' => 'WH',
+        'data_source' => 'WH',
         'tanggal_input' => '2026-04-21',
         'tanggal_order' => '2026-04-10',
         'brand' => 'ANTA',
@@ -288,7 +288,7 @@ test('order tracking update clears whitelist reasons when last step changes', fu
         ->actingAs($this->warehouseUser)
         ->from('/order-trackings')
         ->put("/order-trackings/{$orderTracking->id}", orderTrackingPayload([
-            'source' => 'Finance',
+            'data_source' => 'Finance',
             'platform' => 'Shopee',
             'order_id' => 'OT-UPDATE-2',
             'last_step' => 'Waiting Claim',

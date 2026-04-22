@@ -131,11 +131,11 @@ class OrderTrackingController extends Controller
             'reasonLateResponseOptions' => $reasonLateResponseOptions,
             'complaintSyncMap' => Complaint::query()
                 ->whereNotNull('order_id')
-                ->get(['order_id', 'category', 'last_step', 'status', 'reason_whitelist', 'reason_late_respons'])
+                ->get(['order_id', 'sub_case', 'last_step', 'status', 'reason_whitelist', 'reason_late_respons'])
                 ->filter(fn($c) => filled($c->order_id))
                 ->keyBy('order_id')
                 ->map(fn($c) => [
-                    'category'           => $c->category,
+                    'category'           => $c->sub_case,
                     'last_step'          => $c->last_step,
                     'status'             => $c->status,
                     'reason_whitelist'   => $c->reason_whitelist,

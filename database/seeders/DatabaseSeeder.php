@@ -27,6 +27,8 @@ class DatabaseSeeder extends Seeder
         $this->call(ReasonWhitelistSeeder::class);
         $this->call(ReasonLateResponseSeeder::class);
         $this->call(OrderTrackingErpStatusSeeder::class);
+        $this->call(OosReasonSeeder::class);
+        $this->call(OosSolutionSeeder::class);
         $this->call(ComplaintSeeder::class);
 
         $admin = User::query()->updateOrCreate(
