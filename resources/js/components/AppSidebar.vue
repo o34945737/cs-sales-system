@@ -92,11 +92,6 @@ const masterDataComplainItems = computed<NavItem[]>(() => {
         items.push({ title: 'Sub Cases', href: '/sub-cases', icon: ClipboardList });
     }
 
-    if (page.props.auth.can.view_part_of_bads) {
-        items.push({ title: 'Part Of Bad', href: '/part-of-bads', icon: Archive });
-    }
-
-
     if (page.props.auth.can.view_last_steps) {
         items.push({ title: 'Last Steps', href: '/last-steps', icon: ListChecks });
     }

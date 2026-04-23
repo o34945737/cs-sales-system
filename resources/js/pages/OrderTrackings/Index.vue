@@ -241,7 +241,6 @@ const createInitialFormState = () => ({
     update_wh: '',
     update_finance: '',
     status: '',
-    month: '',
     automation_track: '',
     tanggal_tts: '',
     reason_whitelist: '',
@@ -357,7 +356,6 @@ watch(
     () => {
         if (isHydratingEditForm.value) return;
 
-        form.month = monthPreview.value;
         form.tanggal_tts = tanggalTtsPreview.value;
         form.automation_track = automationTrackPreview.value;
         form.status = statusPreview.value;
@@ -1095,14 +1093,10 @@ const insuranceButtonClass = (value: string) =>
                                     </ul>
                                 </div>
 
-                                <div class="grid grid-cols-1 gap-4 sm:grid-cols-4">
+                                <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
                                     <div class="rounded-2xl border border-slate-100 bg-slate-50/50 p-4">
                                         <div class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Status</div>
                                         <div class="mt-1 text-[13px] font-semibold text-slate-700">{{ statusPreview }}</div>
-                                    </div>
-                                    <div class="rounded-2xl border border-blue-100 bg-blue-50/50 p-4">
-                                        <div class="text-[11px] font-bold uppercase tracking-wider text-blue-400">Month</div>
-                                        <div class="mt-1 text-[13px] font-semibold text-blue-700">{{ monthPreview || '-' }}</div>
                                     </div>
                                     <div class="rounded-2xl border border-indigo-100 bg-indigo-50/50 p-4">
                                         <div class="text-[11px] font-bold uppercase tracking-wider text-indigo-400">Tanggal TTS</div>
@@ -1123,7 +1117,7 @@ const insuranceButtonClass = (value: string) =>
                                     </div>
 
                                     <div class="space-y-4">
-                                        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                                        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                                             <div class="space-y-2">
                                                 <label class="block text-[13px] font-black uppercase tracking-wide text-slate-700">Data Source*</label>
                                                 <div class="relative">
@@ -1143,11 +1137,6 @@ const insuranceButtonClass = (value: string) =>
                                             <div class="space-y-2">
                                                 <label class="block text-[13px] font-black uppercase tracking-wide text-slate-700">Tanggal Order*</label>
                                                 <input v-model="form.tanggal_order" type="date" :class="controlClass('tanggal_order')" />
-                                            </div>
-
-                                            <div class="space-y-2">
-                                                <label class="block text-[13px] font-black uppercase tracking-wide text-slate-700">Month</label>
-                                                <input :value="monthPreview || 'Auto from tanggal input'" type="text" readonly :class="readonlyInputClass" />
                                             </div>
                                         </div>
 
@@ -1389,15 +1378,10 @@ const insuranceButtonClass = (value: string) =>
                                     </div>
 
                                     <div class="space-y-4">
-                                        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                                        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                                             <div class="space-y-2">
                                                 <label class="block text-[13px] font-black uppercase tracking-wide text-slate-700">Status</label>
                                                 <input :value="statusPreview || '-'" type="text" readonly :class="readonlyInputClass" />
-                                            </div>
-
-                                            <div class="space-y-2">
-                                                <label class="block text-[13px] font-black uppercase tracking-wide text-slate-700">Month</label>
-                                                <input :value="monthPreview || '-'" type="text" readonly :class="readonlyInputClass" />
                                             </div>
 
                                             <div class="space-y-2">
@@ -1477,7 +1461,7 @@ const insuranceButtonClass = (value: string) =>
                                                     <CheckCircle2 class="h-2.5 w-2.5" />
                                                 </div>
                                                 <p class="text-[12px] font-medium leading-tight text-white/80">
-                                                    Input manual hanya untuk field operasional. <span class="font-bold text-white">Status, Month, Automation Track, TTS</span> otomatis.
+                                                    Input manual hanya untuk field operasional. <span class="font-bold text-white">Status, Automation Track, TTS</span> otomatis.
                                                 </p>
                                             </li>
                                             <li class="flex items-start gap-2.5">

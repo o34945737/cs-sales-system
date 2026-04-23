@@ -277,7 +277,7 @@ function statusBadgeClass(label: string | null): string {
                     </div>
 
                     <div class="rounded-[32px] border border-slate-100 bg-white p-6 shadow-sm">
-                        <p class="mb-4 text-[10px] font-black uppercase tracking-widest text-slate-400">By Priority Level</p>
+                        <p class="mb-4 text-[10px] font-black uppercase tracking-widest text-slate-400">By Level Customer</p>
                         <div class="space-y-4">
                             <div v-for="row in pendingByLevel" :key="row.label ?? 'null'" class="group">
                                 <div class="mb-1.5 flex items-center justify-between">
@@ -305,12 +305,20 @@ function statusBadgeClass(label: string | null): string {
                 </div>
                 <div class="grid gap-x-10 gap-y-4 sm:grid-cols-2 lg:grid-cols-3">
                     <div v-for="row in pendingBySubCase" :key="row.label ?? 'null'" class="group">
-                        <div class="mb-1.5 flex items-center justify-between">
+                        <div class="mb-1.5 flex items-start justify-between gap-3">
                             <span class="max-w-[200px] truncate text-xs font-black text-slate-600">{{ row.label || '-' }}</span>
-                            <span class="text-xs font-black text-slate-400">{{ row.total }}</span>
+                            <div class="flex items-center gap-1.5">
+                                <span class="rounded-sm bg-emerald-50 px-1.5 text-[10px] font-bold text-emerald-600">{{ row.sla_ok }}</span>
+                                <span class="rounded-sm bg-rose-50 px-1.5 text-[10px] font-bold text-rose-500">{{ row.sla_breach }}</span>
+                                <span class="text-xs font-black text-slate-400">{{ row.total }}</span>
+                            </div>
                         </div>
                         <div class="h-1.5 overflow-hidden rounded-full bg-slate-50 shadow-inner">
                             <div class="h-full bg-violet-500" :style="{ width: barWidth(row.total, maxOf(pendingBySubCase)) }"></div>
+                        </div>
+                        <div class="mt-1.5 flex items-center justify-between text-[10px] font-bold text-slate-400">
+                            <span>SLA OK</span>
+                            <span>SLA Breach</span>
                         </div>
                     </div>
                     <p v-if="!pendingBySubCase.length" class="col-span-full text-sm text-slate-400">Tidak ada data sub case pending.</p>

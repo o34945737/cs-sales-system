@@ -12,19 +12,5 @@ class SkuCode extends Model
     protected $fillable = [
         'sku',
         'product_name',
-        'brand',
-        'available_qty',
-        'status_qty',
-        'default_value_of_product',
-        'is_active',
     ];
-
-    protected function casts(): array
-    {
-        return [
-            'available_qty' => 'integer',
-            'default_value_of_product' => 'decimal:2',
-            'is_active' => 'boolean',
-        ];
-    }
 }

@@ -38,7 +38,7 @@ test('authenticated users can visit the overview dashboard page', function () {
             ->component('Dashboard/Overview'));
 });
 
-test('overview dashboard shows points one to four plus monthly agent recap', function () {
+test('overview dashboard shows points one to four plus combined agent recap', function () {
     $user = dashboardUser();
     $this->actingAs($user);
 
@@ -65,6 +65,7 @@ test('overview dashboard shows points one to four plus monthly agent recap', fun
     Oos::create([
         'tanggal_input' => now()->toDateString(),
         'brand' => 'ANTA',
+        'cs_name' => 'CS A',
     ]);
 
     DailyProductivity::create([
@@ -90,9 +91,11 @@ test('overview dashboard shows points one to four plus monthly agent recap', fun
             ->where('oosTodayCount', 1)
             ->where('totalTaskCount', 3)
             ->where('agentRecap.0.agent', 'CS A')
-            ->where('agentRecap.0.total', 2)
+            ->where('agentRecap.0.distributed', 3)
+            ->where('agentRecap.0.handled', 2)
             ->where('agentRecap.0.solved', 1)
-            ->where('agentRecap.0.pending', 1)
+            ->where('agentRecap.0.productivity_total', 2)
+            ->where('agentDdayStats.0.dist_oos', 1)
             ->where('todayProductivity.0.cs_name', 'CS A')
             ->where('today', now()->toDateString()));
 });
@@ -115,6 +118,7 @@ test('complaint analytics dashboard is available from the dashboard submenu', fu
         'cause_by' => 'WH',
         'complaint_power' => 'Hard Complaint',
         'sub_case' => 'Wrong Item',
+        'tanggal_complaint' => now()->subDays(2)->toDateString(),
         'brand' => 'ANTA',
         'cs_name' => 'CS A',
         'last_step' => 'Mediasi',
@@ -132,6 +136,8 @@ test('complaint analytics dashboard is available from the dashboard submenu', fu
             ->where('pendingByCauseBy.0.label', 'WH')
             ->where('pendingByLevel.0.label', 'Hard Complaint')
             ->where('pendingBySubCase.0.label', 'Wrong Item')
+            ->where('pendingBySubCase.0.sla_ok', 0)
+            ->where('pendingBySubCase.0.sla_breach', 1)
             ->where('brandRealTime.0.label', 'ANTA')
             ->where('complaintByStatus.0.label', 'Pending')
             ->where('complaintByStatus.0.total', 1)

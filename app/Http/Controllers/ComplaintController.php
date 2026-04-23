@@ -9,7 +9,6 @@ use App\Models\ComplaintPower;
 use App\Models\ComplaintSource;
 use App\Models\LastStep;
 use App\Models\Oos;
-use App\Models\PartOfBad;
 use App\Models\Platform;
 use App\Models\ReasonLateResponse;
 use App\Models\ReasonWhitelist;
@@ -38,11 +37,6 @@ class ComplaintController extends Controller
             ->orderBy('name')
             ->pluck('name')
             ->all();
-        $partOfBadOptions = PartOfBad::query()
-            ->where('is_active', true)
-            ->orderBy('name')
-            ->pluck('name')
-            ->all();
         $brandOptions = Brand::query()
             ->where('is_active', true)
             ->orderBy('name')
@@ -59,18 +53,11 @@ class ComplaintController extends Controller
             ->pluck('name')
             ->all();
         $skuCodeOptions = SkuCode::query()
-            ->where('is_active', true)
             ->orderBy('sku')
-            ->get(['sku', 'product_name', 'brand', 'default_value_of_product', 'available_qty', 'status_qty'])
+            ->get(['sku', 'product_name'])
             ->map(fn(SkuCode $skuCode) => [
                 'sku' => $skuCode->sku,
                 'product_name' => $skuCode->product_name,
-                'brand' => $skuCode->brand,
-                'available_qty' => $skuCode->available_qty,
-                'status_qty' => $skuCode->status_qty,
-                'default_value_of_product' => $skuCode->default_value_of_product !== null
-                    ? (float) $skuCode->default_value_of_product
-                    : null,
             ])
             ->all();
         $causeByNames = CauseBy::query()
@@ -324,7 +311,6 @@ class ComplaintController extends Controller
             'skuCodeOptions' => $skuCodeOptions,
             'sourceOptions' => $sourceOptions,
             'complaintPowerOptions' => $complaintPowerOptions,
-            'partOfBadOptions' => $partOfBadOptions,
             'subCaseOptions' => $subCaseOptions,
             'causeByOptions' => array_values(array_unique(array_merge(
                 ['?'],
@@ -504,25 +490,11 @@ class ComplaintController extends Controller
             ->orderBy('name')
             ->pluck('name')
             ->all();
-        $partOfBadOptions = PartOfBad::query()
-            ->where('is_active', true)
-            ->orderBy('name')
-            ->pluck('name')
-            ->all();
         $brandOptions = Brand::query()
             ->where('is_active', true)
             ->orderBy('name')
             ->pluck('name')
             ->all();
-        $selectedSkuBrand = $request->filled('sku')
-            ? SkuCode::query()
-                ->where('sku', $request->input('sku'))
-                ->where('is_active', true)
-                ->value('brand')
-            : null;
-        if ($selectedSkuBrand) {
-            $brandOptions = array_values(array_unique([...$brandOptions, $selectedSkuBrand]));
-        }
         $platformOptions = Platform::query()
             ->where('is_active', true)
             ->orderBy('name')
@@ -534,7 +506,6 @@ class ComplaintController extends Controller
             ->pluck('name')
             ->all();
         $skuOptions = SkuCode::query()
-            ->where('is_active', true)
             ->whereNotNull('sku')
             ->orderBy('sku')
             ->pluck('sku')
@@ -569,14 +540,13 @@ class ComplaintController extends Controller
             ->pluck('name')
             ->all();
         $required = $forUpdate ? 'sometimes' : 'required';
-        $brandRequirement = $selectedSkuBrand ? 'nullable' : $required;
 
         return [
             'source' => [$required, 'string', Rule::in($sourceOptions)],
             'tanggal_complaint' => [$required, 'date'],
             'tanggal_order' => [$required, 'date'],
             'jam_customer_complaint' => [$required, 'string'], // Simplified validation to allow multiple formats
-            'brand' => [$brandRequirement, 'string', Rule::in($brandOptions)],
+            'brand' => [$required, 'string', Rule::in($brandOptions)],
             'platform' => [$required, 'string', Rule::in($platformOptions)],
             'order_id' => [$required, 'string'],
             'username' => [$required, 'string'],
@@ -601,7 +571,7 @@ class ComplaintController extends Controller
             ],
             'summary_case' => [$required, 'string'],
             'update_long_text' => [$required, 'string'],
-            'part_of_bad' => empty($partOfBadOptions) ? ['nullable', 'string'] : ['nullable', 'string', Rule::in($partOfBadOptions)],
+            'part_of_bad' => ['nullable', 'string', 'max:255'],
             'cs_name' => [$required, 'string', Rule::in($csNameOptions)],
             'last_step' => [$required, 'string', Rule::in($lastStepOptions)],
             'step_cs_selesai' => [$required, 'string', Rule::in(['YES', 'NO'])],

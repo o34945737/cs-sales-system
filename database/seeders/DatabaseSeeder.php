@@ -20,7 +20,6 @@ class DatabaseSeeder extends Seeder
         $this->call(PlatformSeeder::class);
         $this->call(ComplaintSourceSeeder::class);
         $this->call(ComplaintPowerSeeder::class);
-        $this->call(PartOfBadSeeder::class);
         $this->call(CauseBySeeder::class);
         $this->call(SubCaseSeeder::class);
         $this->call(LastStepSeeder::class);

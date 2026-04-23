@@ -7,8 +7,10 @@ use App\Models\Oos;
 use App\Models\OosReason;
 use App\Models\OosSolution;
 use App\Models\Platform;
+use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -21,6 +23,7 @@ class OosController extends Controller
 
     public function index(Request $request): Response
     {
+        $supportsAgentAssignment = $this->oosSupportsAgentAssignment();
         $brandOptions    = $this->brandOptions();
         $platformOptions = $this->platformOptions();
         $reasonOptions   = $this->reasonOptions();
@@ -75,6 +78,8 @@ class OosController extends Controller
             ],
             'brandOptions'    => $brandOptions,
             'platformOptions' => $platformOptions,
+            'csNameOptions'   => $supportsAgentAssignment ? $this->csNameOptions() : [],
+            'supportsAgentAssignment' => $supportsAgentAssignment,
             'reasonOptions'   => $reasonOptions,
             'solutionOptions' => $solutionOptions,
             'updateCsOptions' => self::UPDATE_CS_OPTIONS,
@@ -91,6 +96,9 @@ class OosController extends Controller
     {
         $request->merge($this->coerceNullable($request->all()));
         $validated = $request->validate($this->rules());
+        if (!$this->oosSupportsAgentAssignment()) {
+            unset($validated['cs_name']);
+        }
         Oos::create($validated);
 
         return redirect()->back()->with('success', 'Data OOS berhasil disimpan.');
@@ -100,6 +108,9 @@ class OosController extends Controller
     {
         $request->merge($this->coerceNullable($request->all()));
         $validated = $request->validate($this->rules());
+        if (!$this->oosSupportsAgentAssignment()) {
+            unset($validated['cs_name']);
+        }
         $oos->update($validated);
 
         return redirect()->back()->with('success', 'Data OOS berhasil diperbarui.');
@@ -119,6 +130,7 @@ class OosController extends Controller
             'tanggal_input'      => $oos->tanggal_input,
             'brand'              => $oos->brand,
             'platform'           => $oos->platform,
+            'cs_name'            => $this->oosSupportsAgentAssignment() ? $oos->cs_name : null,
             'order_id'           => $oos->order_id,
             'product_name'       => $oos->product_name,
             'sku'                => $oos->sku,
@@ -141,7 +153,7 @@ class OosController extends Controller
         $reasonOptions   = $this->reasonOptions();
         $solutionOptions = $this->solutionOptions();
 
-        return [
+        $rules = [
             'tanggal_input'      => ['required', 'date'],
             'brand'              => empty($brandOptions)
                 ? ['required', 'string', 'max:255']
@@ -163,6 +175,15 @@ class OosController extends Controller
             'tanggal_blast'      => ['nullable', 'date'],
             'feedback_customers' => ['nullable', 'string'],
         ];
+
+        if ($this->oosSupportsAgentAssignment()) {
+            $csNameOptions = $this->csNameOptions();
+            $rules['cs_name'] = empty($csNameOptions)
+                ? ['nullable', 'string', 'max:255']
+                : ['nullable', 'string', Rule::in($csNameOptions)];
+        }
+
+        return $rules;
     }
 
     private function coerceNullable(array $data): array
@@ -171,6 +192,10 @@ class OosController extends Controller
             'reason', 'solusi', 'update_cs', 'product_name',
             'sku', 'note_detail_varian', 'feedback_customers', 'tanggal_blast',
         ];
+
+        if ($this->oosSupportsAgentAssignment()) {
+            $fields[] = 'cs_name';
+        }
 
         foreach ($fields as $field) {
             if (array_key_exists($field, $data) && $data[$field] === '') {
@@ -191,6 +216,16 @@ class OosController extends Controller
         return Platform::query()->where('is_active', true)->orderBy('name')->pluck('name')->all();
     }
 
+    private function csNameOptions(): array
+    {
+        return User::query()
+            ->whereHas('roles', fn ($query) => $query->where('name', 'CS'))
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->pluck('name')
+            ->all();
+    }
+
     private function reasonOptions(): array
     {
         $master = OosReason::query()->where('is_active', true)->orderBy('name')->pluck('name')->all();
@@ -203,5 +238,10 @@ class OosController extends Controller
         $master = OosSolution::query()->where('is_active', true)->orderBy('name')->pluck('name')->all();
 
         return !empty($master) ? $master : self::DEFAULT_SOLUTIONS;
+    }
+
+    private function oosSupportsAgentAssignment(): bool
+    {
+        return Schema::hasColumn('oos', 'cs_name');
     }
 }

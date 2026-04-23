@@ -1,6 +1,5 @@
 <?php
 
-use App\Models\Brand;
 use App\Models\SkuCode;
 use App\Models\User;
 use Spatie\Permission\Models\Permission;
@@ -20,11 +19,6 @@ beforeEach(function () {
     ]);
 
     Role::findOrCreate('CS');
-
-    Brand::create([
-        'name' => 'ANTA',
-        'is_active' => true,
-    ]);
 });
 
 test('super admin can visit the sku code management page', function () {
@@ -52,9 +46,6 @@ test('super admin can create a sku code', function () {
     $response = $this->actingAs($admin)->post('/sku-codes', [
         'sku' => 'SKU-1001',
         'product_name' => 'Sepatu Running',
-        'brand' => 'ANTA',
-        'default_value_of_product' => 550000,
-        'is_active' => true,
     ]);
 
     $response
@@ -64,8 +55,6 @@ test('super admin can create a sku code', function () {
     $this->assertDatabaseHas('sku_codes', [
         'sku' => 'SKU-1001',
         'product_name' => 'Sepatu Running',
-        'brand' => 'ANTA',
-        'is_active' => true,
     ]);
 });
 
@@ -76,17 +65,11 @@ test('super admin can update a sku code', function () {
     $skuCode = SkuCode::create([
         'sku' => 'SKU-1001',
         'product_name' => 'Sepatu Running',
-        'brand' => 'ANTA',
-        'default_value_of_product' => 550000,
-        'is_active' => true,
     ]);
 
     $response = $this->actingAs($admin)->put("/sku-codes/{$skuCode->id}", [
         'sku' => 'SKU-1001-A',
         'product_name' => 'Sepatu Running Pro',
-        'brand' => 'ANTA',
-        'default_value_of_product' => 650000,
-        'is_active' => false,
     ]);
 
     $response
@@ -97,7 +80,6 @@ test('super admin can update a sku code', function () {
         'id' => $skuCode->id,
         'sku' => 'SKU-1001-A',
         'product_name' => 'Sepatu Running Pro',
-        'is_active' => false,
     ]);
 });
 
@@ -108,9 +90,6 @@ test('super admin can delete a sku code', function () {
     $skuCode = SkuCode::create([
         'sku' => 'SKU-1001',
         'product_name' => 'Sepatu Running',
-        'brand' => 'ANTA',
-        'default_value_of_product' => 550000,
-        'is_active' => true,
     ]);
 
     $response = $this->actingAs($admin)->delete("/sku-codes/{$skuCode->id}");

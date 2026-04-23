@@ -29,17 +29,12 @@ class BadReview extends Model
             $skuCode = $model->sku
                 ? SkuCode::query()
                     ->where('sku', $model->sku)
-                    ->where('is_active', true)
-                    ->first(['product_name', 'brand'])
+                    ->first(['product_name'])
                 : null;
 
             if ($skuCode) {
                 if (blank($model->product_name) && filled($skuCode->product_name)) {
                     $model->product_name = $skuCode->product_name;
-                }
-
-                if (blank($model->brand) && filled($skuCode->brand)) {
-                    $model->brand = $skuCode->brand;
                 }
             }
 

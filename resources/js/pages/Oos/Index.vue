@@ -52,6 +52,8 @@ const props = defineProps({
     overview: Object,
     brandOptions: Array as PropType<string[]>,
     platformOptions: Array as PropType<string[]>,
+    csNameOptions: Array as PropType<string[]>,
+    supportsAgentAssignment: Boolean,
     reasonOptions: Array as PropType<string[]>,
     solutionOptions: Array as PropType<string[]>,
     updateCsOptions: Array as PropType<string[]>,
@@ -132,6 +134,7 @@ const createInitialFormState = () => ({
     tanggal_input: today(),
     brand: '',
     platform: '',
+    cs_name: '',
     order_id: '',
     product_name: '',
     sku: '',
@@ -446,6 +449,7 @@ const updateCsClass = (v: string) =>
                                     <td class="px-4 py-4">
                                         <p class="text-[12px] font-black text-slate-900">{{ item.brand || '-' }}</p>
                                         <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400">{{ item.platform || '-' }}</p>
+                                        <p v-if="props.supportsAgentAssignment" class="text-[10px] font-medium text-slate-400">{{ item.cs_name || 'Unassigned Agent' }}</p>
                                     </td>
 
                                     <td class="px-4 py-4">
@@ -596,6 +600,7 @@ const updateCsClass = (v: string) =>
                         <div class="rounded-2xl border border-slate-100 p-5">
                             <p class="text-[10px] font-bold uppercase text-slate-400">Brand / Platform</p>
                             <p class="mt-1.5 text-[15px] font-black text-slate-900">{{ detailItem.brand || '-' }} / {{ detailItem.platform || '-' }}</p>
+                            <p v-if="props.supportsAgentAssignment" class="mt-1 text-[12px] font-bold text-slate-500">{{ detailItem.cs_name || 'Unassigned Agent' }}</p>
                         </div>
 
                         <div class="grid grid-cols-2 gap-4">
@@ -771,7 +776,19 @@ const updateCsClass = (v: string) =>
                                         </div>
                                     </div>
 
-                                    <div class="grid gap-4 sm:grid-cols-3">
+                                    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                                        <div v-if="props.supportsAgentAssignment" class="space-y-2">
+                                            <label class="block text-[13px] font-black uppercase tracking-wide text-slate-700">CS Name</label>
+                                            <div class="relative">
+                                                <select v-model="form.cs_name" :class="controlClass('cs_name', 'select')">
+                                                    <option value="">Pilih Agent</option>
+                                                    <option v-for="opt in (props.csNameOptions || [])" :key="opt" :value="opt">{{ opt }}</option>
+                                                </select>
+                                                <ChevronDown class="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                                            </div>
+                                            <p v-if="fieldError('cs_name')" class="text-[11px] text-rose-500">{{ fieldError('cs_name') }}</p>
+                                        </div>
+
                                         <div class="space-y-2">
                                             <label class="block text-[13px] font-black uppercase tracking-wide text-slate-700">No Order*</label>
                                             <input v-model="form.order_id" type="text" placeholder="Masukkan No Order" :class="controlClass('order_id')" />

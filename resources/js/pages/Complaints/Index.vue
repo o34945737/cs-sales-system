@@ -87,7 +87,6 @@ const props = defineProps({
     skuCodeOptions: Array,
     sourceOptions: Array,
     complaintPowerOptions: Array,
-    partOfBadOptions: Array,
     subCaseOptions: Array,
     causeByOptions: Array,
     lastStepOptions: Array,
@@ -125,7 +124,6 @@ const stepStatusOptions = computed(() => DEFAULT_STEP_STATUS_OPTIONS);
 const masterBrandOptions = computed(() => (Array.isArray(props.brandOptions) ? props.brandOptions : []));
 const masterPlatformOptions = computed(() => (Array.isArray(props.platformOptions) ? props.platformOptions : []));
 const masterSkuCodeOptions = computed(() => (Array.isArray(props.skuCodeOptions) ? props.skuCodeOptions : []));
-const partOfBadOptions = computed(() => (Array.isArray(props.partOfBadOptions) ? props.partOfBadOptions : []));
 const lastStepOptions = computed(() =>
     Array.isArray(props.lastStepOptions) && props.lastStepOptions.length
         ? props.lastStepOptions
@@ -523,8 +521,6 @@ const skuCatalog = computed(() => {
         if (!item?.sku) return;
         catalog[item.sku] = {
             product_name: item.product_name || '',
-            available_qty: item.available_qty || 0,
-            status_qty: item.status_qty || '-',
         };
     });
     return catalog;
@@ -598,7 +594,6 @@ watch(
         }
 
         form.product_name = matchedSku?.product_name || '';
-        form.qty = matchedSku?.available_qty ?? null;
     },
     { immediate: true, deep: true },
 );
@@ -1922,9 +1917,9 @@ const sectionChecks = computed(() => [
                                             </div>
                                         </div>
                                         <div class="rounded-2xl border border-blue-100 bg-blue-50/50 p-4">
-                                            <div class="text-[11px] font-bold uppercase tracking-wider text-blue-400">Inventory & Customer Intel</div>
+                                            <div class="text-[11px] font-bold uppercase tracking-wider text-blue-400">Product & Customer Intel</div>
                                             <div class="mt-1 text-[13px] font-semibold text-blue-700">
-                                                {{ selectedSku.available_qty ?? 0 }} Units | {{ selectedSku.status_qty || 'Normal' }}
+                                                {{ form.product_name || 'Menunggu SKU dipilih' }}
                                                 <span
                                                     v-if="oosPreview"
                                                     class="ml-2 inline-flex rounded-full bg-rose-100 px-2 py-0.5 text-[9px] font-black text-rose-600"
@@ -2114,7 +2109,7 @@ const sectionChecks = computed(() => [
                                                     <label class="block text-[13px] font-bold uppercase tracking-wide text-slate-700"
                                                         >Qty</label
                                                     >
-                                                    <input v-model="form.qty" type="text" readonly :class="readonlyInputClass" />
+                                                    <input v-model="form.qty" type="number" min="0" :class="controlClass('qty')" placeholder="Jumlah item complaint" />
                                                 </div>
                                             </div>
 
@@ -2208,17 +2203,12 @@ const sectionChecks = computed(() => [
                                                     <label class="block text-[13px] font-bold uppercase tracking-wide text-slate-700"
                                                         >Part of Bad</label
                                                     >
-                                                    <div class="relative">
-                                                        <select v-model="form.part_of_bad" :class="controlClass('part_of_bad', 'select')">
-                                                            <option value="" disabled>Pilih Part of bad</option>
-                                                            <option v-for="option in partOfBadOptions" :key="option" :value="option">
-                                                                {{ option }}
-                                                            </option>
-                                                        </select>
-                                                        <ChevronDown
-                                                            class="pointer-events-none absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400"
-                                                        />
-                                                    </div>
+                                                    <input
+                                                        v-model="form.part_of_bad"
+                                                        type="text"
+                                                        :class="controlClass('part_of_bad')"
+                                                        placeholder="Isi manual part of bad"
+                                                    />
                                                     <p v-if="fieldError('part_of_bad')" class="text-xs font-medium text-rose-600">
                                                         {{ fieldError('part_of_bad') }}
                                                     </p>
@@ -2514,16 +2504,16 @@ const sectionChecks = computed(() => [
                                                 </div>
 
                                                 <div class="rounded-xl border border-blue-100 bg-blue-50/50 p-3.5">
-                                                    <p class="text-[10px] font-bold text-blue-400">Stock Available</p>
+                                                    <p class="text-[10px] font-bold text-blue-400">Product Snapshot</p>
                                                     <p class="mt-0.5 text-[12px] font-bold text-blue-700">
-                                                        {{ selectedSku.available_qty ?? 0 }} Units
+                                                        {{ form.product_name || 'Waiting SKU selection' }}
                                                     </p>
                                                 </div>
 
                                                 <div class="rounded-xl border border-amber-100 bg-amber-50/50 p-3.5">
-                                                    <p class="text-[10px] font-bold text-amber-400">Stock Status</p>
+                                                    <p class="text-[10px] font-bold text-amber-400">OOS History</p>
                                                     <p class="mt-0.5 text-[11px] font-bold text-amber-700">
-                                                        {{ selectedSku.status_qty || 'Normal' }}
+                                                        {{ oosPreview || 'No OOS history' }}
                                                     </p>
                                                 </div>
                                             </div>

@@ -55,13 +55,11 @@ const starSummary = computed(() => props.starSummary || { all: 0, '1': 0, '2': 0
 const csSummary = computed(() => props.csSummary || []);
 
 const skuCatalog = computed(() => {
-    const catalog: Record<string, { product_name: string; available_qty: number; status_qty: string }> = {};
+    const catalog: Record<string, { product_name: string }> = {};
     (props.skuCodeOptions || []).forEach((item: any) => {
         if (item?.sku) {
             catalog[item.sku] = {
                 product_name: item.product_name || '',
-                available_qty: item.available_qty || 0,
-                status_qty: item.status_qty || '-',
             };
         }
     });
@@ -118,7 +116,6 @@ const itemToDelete = ref<Record<string, any> | null>(null);
 
 const form = useForm({
     tanggal_review: '',
-    month: '',
     brand: '',
     platform: '',
     order_id: '',
@@ -136,7 +133,6 @@ const form = useForm({
 
 const createInitialFormState = () => ({
     tanggal_review: '',
-    month: '',
     brand: '',
     platform: '',
     order_id: '',
@@ -184,6 +180,11 @@ const syncBadReviewDerivedFields = () => {
     } else if (!form.cause_by) {
         form.cause_by = '?';
     }
+};
+
+const normalizeDateOnly = (value: unknown) => {
+    if (typeof value !== 'string' || !value) return '';
+    return value.slice(0, 10);
 };
 
 const completionSummary = computed(() => {
@@ -255,6 +256,8 @@ const openEditModal = (item) => {
             }
         });
 
+        hydratedState.tanggal_update = normalizeDateOnly(hydratedState.tanggal_update);
+
         form.defaults(hydratedState);
         form.reset();
         form.clearErrors();
@@ -303,20 +306,6 @@ const submitDelete = () => {
         }
     });
 };
-
-// Auto-calculate month from tanggal_review
-watch(() => form.tanggal_review, (newDate) => {
-    if (newDate) {
-        const d = new Date(newDate);
-        if (!isNaN(d.getTime())) {
-            const monthNames = [
-                "January", "February", "March", "April", "May", "June",
-                "July", "August", "September", "October", "November", "December"
-            ];
-            form.month = `${monthNames[d.getMonth()]} ${d.getFullYear()}`;
-        }
-    }
-});
 
 watch(
     selectedSku,
@@ -854,17 +843,11 @@ const selectButtonClass = (currentValue, expectedValue) =>
                                 </div>
 
                                 <!-- Automation Preview Bar -->
-                                <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                                     <div class="rounded-2xl border border-slate-100 bg-slate-50/50 p-4">
                                         <div class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Automated Classification</div>
                                         <div class="mt-1 text-[13px] font-semibold text-slate-700">
                                             {{ statusPreview }} | {{ form.progress || 'Waiting progress' }}
-                                        </div>
-                                    </div>
-                                    <div class="rounded-2xl border border-blue-100 bg-blue-50/50 p-4">
-                                        <div class="text-[11px] font-bold uppercase tracking-wider text-blue-400">Month Overview</div>
-                                        <div class="mt-1 text-[13px] font-semibold text-blue-700">
-                                            {{ form.month || 'Waiting for date...' }}
                                         </div>
                                     </div>
                                     <div class="rounded-2xl border border-indigo-100 bg-indigo-50/50 p-4">
@@ -886,25 +869,21 @@ const selectButtonClass = (currentValue, expectedValue) =>
                                             </div>
                                             <h3 class="mt-2 text-lg font-black text-slate-900">Essential Information</h3>
                                             <p class="mt-1 text-[13px] font-medium leading-relaxed text-slate-500">
-                                                Capture the core review details so monthly reporting and ownership stay consistent.
+                                                Capture the core review details so ownership and product mapping stay consistent.
                                             </p>
                                         </div>
                                         <div class="rounded-2xl bg-indigo-50/50 p-4 ring-1 ring-indigo-100 sm:max-w-xs">
                                             <p class="text-[13px] font-medium leading-relaxed text-indigo-700">
-                                                Review month and product detail will stay aligned with the selected review date and SKU.
+                                                Product detail will stay aligned with the selected review date and SKU.
                                             </p>
                                         </div>
                                     </div>
 
                                     <div class="space-y-4">
-                                        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                                        <div class="grid gap-4 sm:grid-cols-2">
                                             <div class="space-y-2">
                                                 <label class="block text-[13px] font-black uppercase tracking-wide text-slate-700">Tanggal Review*</label>
                                                 <input v-model="form.tanggal_review" type="date" :class="controlClass('tanggal_review')" />
-                                            </div>
-                                            <div class="space-y-2">
-                                                <label class="block text-[13px] font-black uppercase tracking-wide text-slate-700">Target Month</label>
-                                                <input :value="form.month || 'Auto from review date'" type="text" readonly :class="readonlyInputClass" />
                                             </div>
                                             <div class="space-y-2">
                                                 <label class="block text-[13px] font-black uppercase tracking-wide text-slate-700">Star Rating*</label>
@@ -993,7 +972,7 @@ const selectButtonClass = (currentValue, expectedValue) =>
                                     </div>
 
                                     <div class="space-y-4">
-                                       <div class="grid gap-5 sm:grid-cols-3">
+                                       <div class="grid gap-5 sm:grid-cols-2">
                                             <div class="space-y-2">
                                                 <label class="block text-[13px] font-black uppercase tracking-wide text-slate-700">SKU Code</label>
                                                 <div class="relative">
@@ -1007,10 +986,6 @@ const selectButtonClass = (currentValue, expectedValue) =>
                                             <div class="space-y-2">
                                                 <label class="block text-[13px] font-black uppercase tracking-wide text-slate-700">Product Name</label>
                                                 <input v-model="form.product_name" type="text" :class="readonlyInputClass" readonly />
-                                            </div>
-                                            <div class="space-y-2">
-                                                <label class="block text-[13px] font-black uppercase tracking-wide text-slate-700">Qty</label>
-                                                <input :value="selectedSku.available_qty ?? '-'" type="text" :class="readonlyInputClass" readonly />
                                             </div>
                                         </div>
 
@@ -1111,7 +1086,7 @@ const selectButtonClass = (currentValue, expectedValue) =>
                                             </div>
                                             <div class="space-y-2">
                                                 <label class="block text-[13px] font-black uppercase tracking-wide text-slate-700">Tanggal Update (SLA)*</label>
-                                                <input v-model="form.tanggal_update" type="datetime-local" :class="controlClass('tanggal_update')" />
+                                                <input v-model="form.tanggal_update" type="date" :class="controlClass('tanggal_update')" />
                                             </div>
                                         </div>
                                 </section>
@@ -1134,11 +1109,7 @@ const selectButtonClass = (currentValue, expectedValue) =>
                                                 </div>
                                             </div>
 
-                                            <div class="grid gap-2.5 sm:grid-cols-2">
-                                                <div class="rounded-xl border border-slate-50 bg-slate-50/50 p-3.5">
-                                                    <p class="text-[10px] font-bold text-slate-400">Target Month</p>
-                                                    <p class="mt-0.5 text-[11px] font-bold text-slate-700">{{ form.month || '-' }}</p>
-                                                </div>
+                                            <div class="grid gap-2.5 sm:grid-cols-1">
                                                 <div class="rounded-xl border border-slate-50 bg-slate-50/50 p-3.5">
                                                     <p class="text-[10px] font-bold text-slate-400">Progress</p>
                                                     <p class="mt-0.5 text-[10px] font-black uppercase text-[var(--app-primary)]">
@@ -1159,19 +1130,11 @@ const selectButtonClass = (currentValue, expectedValue) =>
                                                 </p>
                                             </div>
 
-                                            <div class="grid gap-2.5 sm:grid-cols-2">
-                                                <div class="rounded-xl border border-blue-100 bg-blue-50/50 p-3.5">
-                                                    <p class="text-[10px] font-bold text-blue-400">Stock Available</p>
-                                                    <p class="mt-0.5 text-[12px] font-bold text-blue-700">
-                                                        {{ selectedSku.available_qty ?? 0 }} Units
-                                                    </p>
-                                                </div>
-                                                <div class="rounded-xl border border-amber-100 bg-amber-50/50 p-3.5">
-                                                    <p class="text-[10px] font-bold text-amber-400">Stock Status</p>
-                                                    <p class="mt-0.5 text-[11px] font-bold text-amber-700">
-                                                        {{ selectedSku.status_qty || '-' }}
-                                                    </p>
-                                                </div>
+                                            <div class="rounded-xl border border-amber-100 bg-amber-50/50 p-3.5">
+                                                <p class="text-[10px] font-bold text-amber-400">SKU Source</p>
+                                                <p class="mt-0.5 text-[11px] font-bold text-amber-700">
+                                                    {{ form.sku || 'Waiting SKU selection' }}
+                                                </p>
                                             </div>
                                         </div>
                                     </div>

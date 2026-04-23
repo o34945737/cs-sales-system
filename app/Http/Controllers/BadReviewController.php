@@ -24,15 +24,11 @@ class BadReviewController extends Controller
         $causeByOptions = $this->causeByOptions();
 
         $skuCodeOptions = SkuCode::query()
-            ->where('is_active', true)
             ->orderBy('sku')
-            ->get(['sku', 'product_name', 'brand', 'available_qty', 'status_qty'])
+            ->get(['sku', 'product_name'])
             ->map(fn(SkuCode $skuCode) => [
                 'sku' => $skuCode->sku,
                 'product_name' => $skuCode->product_name,
-                'brand' => $skuCode->brand,
-                'available_qty' => $skuCode->available_qty,
-                'status_qty' => $skuCode->status_qty,
             ])
             ->all();
 
@@ -188,8 +184,7 @@ class BadReviewController extends Controller
             ->all();
 
         $skuCatalog = SkuCode::query()
-            ->where('is_active', true)
-            ->get(['sku', 'brand', 'product_name'])
+            ->get(['sku', 'product_name'])
             ->keyBy('sku');
 
         $activeSkuOptions = $skuCatalog->keys()->values()->all();
@@ -197,22 +192,7 @@ class BadReviewController extends Controller
         return [
             'tanggal_review' => ['required', 'date'],
             'month' => ['nullable', 'string'],
-            'brand' => [
-                'required',
-                'string',
-                Rule::in($brandOptions),
-                function ($attribute, $value, $fail) use ($request, $skuCatalog) {
-                    $sku = $request->input('sku');
-                    if (!$sku || !$skuCatalog->has($sku)) {
-                        return;
-                    }
-
-                    $skuBrand = $skuCatalog->get($sku)?->brand;
-                    if ($skuBrand && $value !== $skuBrand) {
-                        $fail("Brand untuk SKU '{$sku}' harus '{$skuBrand}'.");
-                    }
-                },
-            ],
+            'brand' => ['required', 'string', Rule::in($brandOptions)],
             'platform' => ['required', 'string', Rule::in($platformOptions)],
             'order_id' => ['required', 'string'],
             'username' => ['required', 'string'],

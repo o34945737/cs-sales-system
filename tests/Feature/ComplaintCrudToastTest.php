@@ -93,9 +93,6 @@ beforeEach(function () {
     SkuCode::create([
         'sku' => 'SKU-1001',
         'product_name' => 'Sepatu Running',
-        'brand' => 'ANTA',
-        'default_value_of_product' => 550000,
-        'is_active' => true,
     ]);
 });
 
@@ -204,7 +201,7 @@ test('complaint claim reject flow stores whitelist details from master data', fu
     ]);
 });
 
-test('complaint can autofill product fields from active sku master', function () {
+test('complaint can autofill product name from sku master', function () {
     $user = User::factory()->create(['name' => 'CS Test']);
     $user->assignRole('CS');
 
@@ -215,7 +212,6 @@ test('complaint can autofill product fields from active sku master', function ()
             'order_id' => 'ORD-SKU-AUTO-1',
             'resi' => 'RESI-SKU-AUTO-1',
             'product_name' => '',
-            'brand' => '',
             'value_of_product' => null,
         ]));
 
@@ -228,7 +224,29 @@ test('complaint can autofill product fields from active sku master', function ()
         'sku' => 'SKU-1001',
         'product_name' => 'Sepatu Running',
         'brand' => 'ANTA',
-        'value_of_product' => 550000,
+    ]);
+});
+
+test('complaint stores manual part of bad input without master data dependency', function () {
+    $user = User::factory()->create(['name' => 'CS Test']);
+    $user->assignRole('CS');
+
+    $response = $this
+        ->actingAs($user)
+        ->from('/complaints')
+        ->post('/complaints', complaintPayload([
+            'order_id' => 'ORD-PART-OF-BAD-1',
+            'resi' => 'RESI-PART-OF-BAD-1',
+            'part_of_bad' => 'Upper mesh sobek',
+        ]));
+
+    $response
+        ->assertRedirect('/complaints')
+        ->assertSessionHas('success', 'Complaint berhasil dibuat.');
+
+    $this->assertDatabaseHas('complaints', [
+        'order_id' => 'ORD-PART-OF-BAD-1',
+        'part_of_bad' => 'Upper mesh sobek',
     ]);
 });
 

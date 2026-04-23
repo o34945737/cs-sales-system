@@ -13,6 +13,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -21,36 +22,18 @@ class DashboardController extends Controller
     public function index(): Response
     {
         $today = Carbon::today();
-        [$monthStart, $monthEnd] = $this->currentMonthRange();
 
         $pendingComplaintCount = Complaint::query()->where('status', 'Pending')->count();
         $pendingOtCount = OrderTracking::query()->where('status', 'Pending')->count();
         $oosTodayCount = Oos::query()->whereDate('tanggal_input', $today)->count();
         $totalTaskCount = $pendingComplaintCount + $pendingOtCount + $oosTodayCount;
 
-        $agentDdayStats = $this->buildAgentDdayStats($today);
-
-        $agentRecap = Complaint::query()
-            ->whereBetween('created_at', [$monthStart, $monthEnd])
-            ->selectRaw(
-                'cs_name as agent, COUNT(*) as total,
-                SUM(CASE WHEN status = "Solved" THEN 1 ELSE 0 END) as solved,
-                SUM(CASE WHEN status = "Pending" THEN 1 ELSE 0 END) as pending'
-            )
-            ->groupBy('cs_name')
-            ->orderByDesc('total')
-            ->get()
-            ->map(fn ($row) => [
-                'agent' => $row->agent,
-                'total' => (int) $row->total,
-                'solved' => (int) $row->solved,
-                'pending' => (int) $row->pending,
-            ]);
-
         $todayProductivity = DailyProductivity::query()
             ->whereDate('tanggal', $today)
             ->orderBy('cs_name')
             ->get();
+        $agentDdayStats = $this->buildAgentDdayStats($today);
+        $agentRecap = $this->buildCombinedAgentRecap($agentDdayStats, $todayProductivity);
 
         return Inertia::render('Dashboard/Overview', [
             'pendingComplaintCount' => $pendingComplaintCount,
@@ -118,13 +101,28 @@ class DashboardController extends Controller
         $pendingByCauseBy = $this->pendingGroupBy('cause_by');
         $pendingByPlatform = $this->pendingGroupBy('platform');
         $pendingByLevel = $this->pendingGroupBy('complaint_power');
-
         $pendingBySubCase = Complaint::query()
             ->where('status', 'Pending')
-            ->selectRaw('sub_case as label, COUNT(*) as total, 0 as sla_ok, 0 as sla_breach')
+            ->get(['sub_case', 'tanggal_complaint'])
             ->groupBy('sub_case')
-            ->orderByDesc('total')
-            ->get();
+            ->map(function (Collection $rows, string|null $label) {
+                $slaOk = $rows->filter(function (Complaint $complaint) {
+                    if (!$complaint->tanggal_complaint) {
+                        return true;
+                    }
+
+                    return Carbon::parse($complaint->tanggal_complaint)->diffInDays(Carbon::today()) <= 1;
+                })->count();
+
+                return [
+                    'label' => $label,
+                    'total' => $rows->count(),
+                    'sla_ok' => $slaOk,
+                    'sla_breach' => $rows->count() - $slaOk,
+                ];
+            })
+            ->sortByDesc('total')
+            ->values();
 
         $pendingByLastStep = Complaint::query()
             ->where('status', 'Pending')
@@ -387,6 +385,8 @@ class DashboardController extends Controller
 
     private function buildAgentDdayStats(Carbon $today): Collection
     {
+        $supportsOosAgent = $this->oosSupportsAgentAssignment();
+
         $complaintDistributed = $this->pluckByAgent(
             Complaint::query()->whereDate('created_at', $today)->whereNotNull('cs_name')
         );
@@ -396,6 +396,11 @@ class DashboardController extends Controller
         $orderTrackingDistributed = $this->pluckByAgent(
             OrderTracking::query()->whereDate('tanggal_input', $today)->whereNotNull('cs_name')
         );
+        $oosDistributed = $supportsOosAgent
+            ? $this->pluckByAgent(
+                Oos::query()->whereDate('tanggal_input', $today)->whereNotNull('cs_name')
+            )
+            : [];
 
         $complaintHandled = $this->pluckByAgent(
             Complaint::query()->whereDate('updated_at', $today)->whereNotNull('cs_name')
@@ -406,6 +411,14 @@ class DashboardController extends Controller
         $orderTrackingHandled = $this->pluckByAgent(
             OrderTracking::query()->whereDate('tanggal_update', $today)->whereNotNull('cs_name')
         );
+        $oosHandled = $supportsOosAgent
+            ? $this->pluckByAgent(
+                Oos::query()
+                    ->whereDate('updated_at', $today)
+                    ->whereNotNull('cs_name')
+                    ->whereColumn('updated_at', '>', 'created_at')
+            )
+            : [];
 
         $complaintSolved = $this->pluckByAgent(
             Complaint::query()->where('status', 'Solved')->whereDate('updated_at', $today)->whereNotNull('cs_name')
@@ -421,9 +434,11 @@ class DashboardController extends Controller
             array_keys($complaintDistributed),
             array_keys($badReviewDistributed),
             array_keys($orderTrackingDistributed),
+            array_keys($oosDistributed),
             array_keys($complaintHandled),
             array_keys($badReviewHandled),
             array_keys($orderTrackingHandled),
+            array_keys($oosHandled),
             array_keys($complaintSolved),
             array_keys($badReviewSolved),
             array_keys($orderTrackingSolved),
@@ -434,16 +449,58 @@ class DashboardController extends Controller
             'dist_complaint' => (int) ($complaintDistributed[$agent] ?? 0),
             'dist_bad_review' => (int) ($badReviewDistributed[$agent] ?? 0),
             'dist_ot' => (int) ($orderTrackingDistributed[$agent] ?? 0),
-            'dist_total' => (int) (($complaintDistributed[$agent] ?? 0) + ($badReviewDistributed[$agent] ?? 0) + ($orderTrackingDistributed[$agent] ?? 0)),
+            'dist_oos' => (int) ($oosDistributed[$agent] ?? 0),
+            'dist_total' => (int) (($complaintDistributed[$agent] ?? 0) + ($badReviewDistributed[$agent] ?? 0) + ($orderTrackingDistributed[$agent] ?? 0) + ($oosDistributed[$agent] ?? 0)),
             'handled_complaint' => (int) ($complaintHandled[$agent] ?? 0),
             'handled_bad_review' => (int) ($badReviewHandled[$agent] ?? 0),
             'handled_ot' => (int) ($orderTrackingHandled[$agent] ?? 0),
-            'handled_total' => (int) (($complaintHandled[$agent] ?? 0) + ($badReviewHandled[$agent] ?? 0) + ($orderTrackingHandled[$agent] ?? 0)),
+            'handled_oos' => (int) ($oosHandled[$agent] ?? 0),
+            'handled_total' => (int) (($complaintHandled[$agent] ?? 0) + ($badReviewHandled[$agent] ?? 0) + ($orderTrackingHandled[$agent] ?? 0) + ($oosHandled[$agent] ?? 0)),
             'solved_complaint' => (int) ($complaintSolved[$agent] ?? 0),
             'solved_bad_review' => (int) ($badReviewSolved[$agent] ?? 0),
             'solved_ot' => (int) ($orderTrackingSolved[$agent] ?? 0),
             'solved_total' => (int) (($complaintSolved[$agent] ?? 0) + ($badReviewSolved[$agent] ?? 0) + ($orderTrackingSolved[$agent] ?? 0)),
         ]);
+    }
+
+    private function buildCombinedAgentRecap(Collection $agentDdayStats, Collection $todayProductivity): Collection
+    {
+        $productivityByAgent = $todayProductivity
+            ->groupBy('cs_name')
+            ->map(fn (Collection $rows) => [
+                'productivity_total' => (int) $rows->sum('total_ticket'),
+                'productivity_entries' => $rows->count(),
+            ]);
+
+        $allAgents = $agentDdayStats
+            ->pluck('agent')
+            ->merge($productivityByAgent->keys())
+            ->filter()
+            ->unique()
+            ->sort()
+            ->values();
+
+        $agentStatsMap = $agentDdayStats->keyBy('agent');
+
+        return $allAgents
+            ->map(function (string $agent) use ($agentStatsMap, $productivityByAgent) {
+                $stats = $agentStatsMap->get($agent, []);
+                $productivity = $productivityByAgent->get($agent, [
+                    'productivity_total' => 0,
+                    'productivity_entries' => 0,
+                ]);
+
+                return [
+                    'agent' => $agent,
+                    'distributed' => (int) ($stats['dist_total'] ?? 0),
+                    'handled' => (int) ($stats['handled_total'] ?? 0),
+                    'solved' => (int) ($stats['solved_total'] ?? 0),
+                    'productivity_total' => (int) $productivity['productivity_total'],
+                    'productivity_entries' => (int) $productivity['productivity_entries'],
+                ];
+            })
+            ->sortByDesc(fn (array $row) => ($row['productivity_total'] * 1000000) + ($row['handled'] * 1000) + $row['distributed'])
+            ->values();
     }
 
     private function pluckByAgent($query): array
@@ -453,5 +510,10 @@ class DashboardController extends Controller
             ->groupBy('cs_name')
             ->pluck('cnt', 'agent')
             ->toArray();
+    }
+
+    private function oosSupportsAgentAssignment(): bool
+    {
+        return Schema::hasColumn('oos', 'cs_name');
     }
 }

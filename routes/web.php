@@ -18,7 +18,6 @@ use App\Http\Controllers\OrderTrackingDataSourceController;
 use App\Http\Controllers\OrderTrackingErpStatusController;
 use App\Http\Controllers\OrderTrackingRgoEntryController;
 use App\Http\Controllers\PlatformController;
-use App\Http\Controllers\PartOfBadController;
 use App\Http\Controllers\ReasonLateResponseController;
 use App\Http\Controllers\ReasonWhitelistController;
 use App\Http\Controllers\SkuCodeController;
@@ -322,21 +321,6 @@ Route::middleware(['auth', 'active', 'password.reset.required'])->group(function
             ->name('update');
         Route::delete('/{causeBy}', [CauseByController::class, 'destroy'])
             ->middleware('permission:delete cause bys')
-            ->name('destroy');
-    });
-
-    Route::prefix('part-of-bads')->name('part-of-bads.')->group(function () {
-        Route::get('/', [PartOfBadController::class, 'index'])
-            ->middleware('permission:view part of bads')
-            ->name('index');
-        Route::post('/', [PartOfBadController::class, 'store'])
-            ->middleware('permission:create part of bads')
-            ->name('store');
-        Route::put('/{partOfBad}', [PartOfBadController::class, 'update'])
-            ->middleware('permission:update part of bads')
-            ->name('update');
-        Route::delete('/{partOfBad}', [PartOfBadController::class, 'destroy'])
-            ->middleware('permission:delete part of bads')
             ->name('destroy');
     });
 

@@ -75,10 +75,6 @@ export interface Auth {
         create_cause_bys: boolean;
         update_cause_bys: boolean;
         delete_cause_bys: boolean;
-        view_part_of_bads: boolean;
-        create_part_of_bads: boolean;
-        update_part_of_bads: boolean;
-        delete_part_of_bads: boolean;
         view_users: boolean;
         create_users: boolean;
         update_users: boolean;

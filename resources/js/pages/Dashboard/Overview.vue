@@ -7,9 +7,11 @@ import { computed, ref } from 'vue';
 
 interface AgentRecapRow {
     agent: string | null;
-    total: number;
+    distributed: number;
+    handled: number;
     solved: number;
-    pending: number;
+    productivity_total: number;
+    productivity_entries: number;
 }
 
 interface AgentDdayRow {
@@ -17,10 +19,12 @@ interface AgentDdayRow {
     dist_complaint: number;
     dist_bad_review: number;
     dist_ot: number;
+    dist_oos: number;
     dist_total: number;
     handled_complaint: number;
     handled_bad_review: number;
     handled_ot: number;
+    handled_oos: number;
     handled_total: number;
     solved_complaint: number;
     solved_bad_review: number;
@@ -222,7 +226,7 @@ function submitProductivity() {
                             <tr v-for="row in agentDdayStats" :key="row.agent" class="border-b border-slate-50">
                                 <td class="px-4 py-3 font-black text-slate-800">{{ row.agent }}</td>
                                 <td class="px-4 py-3">
-                                    <div class="grid grid-cols-4 gap-2 text-center text-[11px]">
+                                    <div class="grid grid-cols-5 gap-2 text-center text-[11px]">
                                         <div class="rounded-xl bg-rose-50 px-2 py-2">
                                             <div class="font-black text-rose-600">{{ row.dist_complaint }}</div>
                                             <div class="text-slate-400">C</div>
@@ -235,6 +239,10 @@ function submitProductivity() {
                                             <div class="font-black text-blue-600">{{ row.dist_ot }}</div>
                                             <div class="text-slate-400">OT</div>
                                         </div>
+                                        <div class="rounded-xl bg-amber-50 px-2 py-2">
+                                            <div class="font-black text-amber-600">{{ row.dist_oos }}</div>
+                                            <div class="text-slate-400">OOS</div>
+                                        </div>
                                         <div class="rounded-xl bg-slate-900 px-2 py-2 text-white">
                                             <div class="font-black">{{ row.dist_total }}</div>
                                             <div class="text-slate-400">All</div>
@@ -242,7 +250,7 @@ function submitProductivity() {
                                     </div>
                                 </td>
                                 <td class="px-4 py-3">
-                                    <div class="grid grid-cols-4 gap-2 text-center text-[11px]">
+                                    <div class="grid grid-cols-5 gap-2 text-center text-[11px]">
                                         <div class="rounded-xl bg-rose-50 px-2 py-2">
                                             <div class="font-black text-rose-600">{{ row.handled_complaint }}</div>
                                             <div class="text-slate-400">C</div>
@@ -254,6 +262,10 @@ function submitProductivity() {
                                         <div class="rounded-xl bg-blue-50 px-2 py-2">
                                             <div class="font-black text-blue-600">{{ row.handled_ot }}</div>
                                             <div class="text-slate-400">OT</div>
+                                        </div>
+                                        <div class="rounded-xl bg-amber-50 px-2 py-2">
+                                            <div class="font-black text-amber-600">{{ row.handled_oos }}</div>
+                                            <div class="text-slate-400">OOS</div>
                                         </div>
                                         <div class="rounded-xl bg-slate-900 px-2 py-2 text-white">
                                             <div class="font-black">{{ row.handled_total }}</div>
@@ -293,7 +305,10 @@ function submitProductivity() {
             <div class="grid gap-6 xl:grid-cols-[1.1fr,0.9fr]">
                 <section class="rounded-[32px] border border-slate-100 bg-white p-6 shadow-sm">
                     <div class="mb-6 flex items-center justify-between">
-                        <h2 class="text-base font-black text-slate-900">Recap Agen Bulan Ini</h2>
+                        <div>
+                            <h2 class="text-base font-black text-slate-900">Rekap Agent Hari Ini</h2>
+                            <p class="text-[12px] font-medium text-slate-400">Distribusi, handled, solved, dan input produktivitas harian</p>
+                        </div>
                         <div class="flex h-8 w-8 items-center justify-center rounded-xl bg-violet-50 text-violet-500">
                             <UserCheck class="h-4 w-4" />
                         </div>
@@ -311,16 +326,24 @@ function submitProductivity() {
                                     </div>
                                     <span class="text-sm font-black text-slate-700">{{ row.agent || 'Unassigned' }}</span>
                                 </div>
-                                <span class="text-[11px] font-black text-slate-400">{{ row.total }} Tiket</span>
+                                <span class="text-[11px] font-black text-slate-400">{{ row.productivity_entries }} Input</span>
                             </div>
                             <div class="grid grid-cols-2 gap-2">
+                                <div class="rounded-xl bg-white p-3 shadow-sm">
+                                    <div class="text-[9px] font-black uppercase tracking-wider text-blue-400">Distributed</div>
+                                    <div class="text-lg font-black text-blue-600">{{ row.distributed }}</div>
+                                </div>
+                                <div class="rounded-xl bg-white p-3 shadow-sm">
+                                    <div class="text-[9px] font-black uppercase tracking-wider text-violet-400">Handled</div>
+                                    <div class="text-lg font-black text-violet-600">{{ row.handled }}</div>
+                                </div>
                                 <div class="rounded-xl bg-white p-3 shadow-sm">
                                     <div class="text-[9px] font-black uppercase tracking-wider text-emerald-400">Solved</div>
                                     <div class="text-lg font-black text-emerald-600">{{ row.solved }}</div>
                                 </div>
                                 <div class="rounded-xl bg-white p-3 shadow-sm">
-                                    <div class="text-[9px] font-black uppercase tracking-wider text-amber-400">Pending</div>
-                                    <div class="text-lg font-black text-amber-600">{{ row.pending }}</div>
+                                    <div class="text-[9px] font-black uppercase tracking-wider text-amber-400">Produktivitas</div>
+                                    <div class="text-lg font-black text-amber-600">{{ row.productivity_total }}</div>
                                 </div>
                             </div>
                         </div>

@@ -19,11 +19,6 @@ class Complaint extends Model
         return $this->belongsTo(ComplaintPower::class, 'complaint_power_id');
     }
 
-    public function partOfBad()
-    {
-        return $this->belongsTo(PartOfBad::class, 'part_of_bad_id');
-    }
-
     public function complaintSource()
     {
         return $this->belongsTo(ComplaintSource::class, 'complaint_source_id');
@@ -79,25 +74,16 @@ class Complaint extends Model
         parent::boot();
 
         static::saving(function ($model) {
-            // 0. SKU master -> autofill product, brand, dan default value bila tersedia.
+            // 0. SKU master -> autofill product name bila tersedia.
             $skuCode = $model->sku
                 ? SkuCode::query()
                 ->where('sku', $model->sku)
-                ->where('is_active', true)
-                ->first(['product_name', 'brand', 'default_value_of_product'])
+                ->first(['product_name'])
                 : null;
 
             if ($skuCode) {
                 if (blank($model->product_name)) {
                     $model->product_name = $skuCode->product_name;
-                }
-
-                if (blank($model->brand) && filled($skuCode->brand)) {
-                    $model->brand = $skuCode->brand;
-                }
-
-                if (($model->value_of_product === null || $model->value_of_product === '') && $skuCode->default_value_of_product !== null) {
-                    $model->value_of_product = $skuCode->default_value_of_product;
                 }
             }
 
@@ -110,17 +96,6 @@ class Complaint extends Model
                     ->first(['id']);
                 if ($complaintPower) {
                     $model->complaint_power_id = $complaintPower->id;
-                }
-            }
-
-            // Sync part_of_bad string to part_of_bad_id FK
-            if (filled($model->part_of_bad) && !$model->part_of_bad_id) {
-                $partOfBad = PartOfBad::query()
-                    ->where('name', $model->part_of_bad)
-                    ->where('is_active', true)
-                    ->first(['id']);
-                if ($partOfBad) {
-                    $model->part_of_bad_id = $partOfBad->id;
                 }
             }
 

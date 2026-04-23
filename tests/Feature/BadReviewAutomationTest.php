@@ -33,10 +33,6 @@ beforeEach(function () {
     SkuCode::create([
         'sku' => 'SKU-1001',
         'product_name' => 'Sepatu Running',
-        'brand' => 'ANTA',
-        'available_qty' => 8,
-        'status_qty' => 'Ready',
-        'is_active' => true,
     ]);
 
     foreach (['?', 'CS', 'BRAND'] as $name) {
@@ -194,32 +190,6 @@ test('bad review can autofill product fields from active sku master', function (
         'brand' => 'ANTA',
         'status' => 'Pending',
         'month' => 'April 2026',
-    ]);
-});
-
-test('bad review rejects brand mismatch for active sku master', function () {
-    Brand::create([
-        'name' => 'KAPPA',
-        'is_active' => true,
-    ]);
-
-    $user = User::factory()->create(['name' => 'CS Test', 'is_active' => true]);
-    $user->assignRole('CS');
-
-    $response = $this
-        ->actingAs($user)
-        ->from('/bad-reviews')
-        ->post('/bad-reviews', badReviewPayload([
-            'order_id' => 'BR-SKU-MISMATCH-1',
-            'brand' => 'KAPPA',
-        ]));
-
-    $response
-        ->assertRedirect('/bad-reviews')
-        ->assertSessionHasErrors(['brand']);
-
-    $this->assertDatabaseMissing('bad_reviews', [
-        'order_id' => 'BR-SKU-MISMATCH-1',
     ]);
 });
 
