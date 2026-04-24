@@ -8,7 +8,6 @@ use App\Http\Controllers\ComplaintSourceController;
 use App\Http\Controllers\ComplaintStepStatusController;
 use App\Http\Controllers\CauseByController;
 use App\Http\Controllers\JetTrackEntryController;
-use App\Http\Controllers\LogisticController;
 use App\Http\Controllers\LastStepController;
 use App\Http\Controllers\OosController;
 use App\Http\Controllers\OosReasonController;
@@ -159,20 +158,6 @@ Route::middleware(['auth', 'active', 'password.reset.required'])->group(function
             ->name('destroy');
     });
 
-    Route::prefix('logistics')->name('logistics.')->group(function () {
-        Route::get('/', [LogisticController::class, 'index'])
-            ->middleware('permission:view logistics')
-            ->name('index');
-        Route::post('/', [LogisticController::class, 'store'])
-            ->middleware('permission:create logistics')
-            ->name('store');
-        Route::put('/{logistic}', [LogisticController::class, 'update'])
-            ->middleware('permission:update logistics')
-            ->name('update');
-        Route::delete('/{logistic}', [LogisticController::class, 'destroy'])
-            ->middleware('permission:delete logistics')
-            ->name('destroy');
-    });
 
     Route::prefix('sub-cases')->name('sub-cases.')->group(function () {
         Route::get('/', [SubCaseController::class, 'index'])

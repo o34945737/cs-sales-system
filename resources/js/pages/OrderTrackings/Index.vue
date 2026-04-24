@@ -60,7 +60,6 @@ const props = defineProps({
     csNameOptions: Array,
     platformOptions: Array,
     sourceOptions: Array,
-    logisticsOptions: Array,
     erpStatusOptions: Array,
     paymentMethodOptions: Array,
     categoryOptions: Array,
@@ -93,7 +92,6 @@ const overview = computed(() => props.overview || { total: 0, pending: 0, solved
 const sourceOptions = computed(() =>
     Array.isArray(props.sourceOptions) && props.sourceOptions.length ? props.sourceOptions : DEFAULT_SOURCE_OPTIONS
 );
-const logisticsOptions = computed(() => (Array.isArray(props.logisticsOptions) ? props.logisticsOptions : []));
 const erpStatusOptions = computed(() => (Array.isArray(props.erpStatusOptions) ? props.erpStatusOptions : []));
 const paymentMethodOptions = computed(() =>
     Array.isArray(props.paymentMethodOptions) && props.paymentMethodOptions.length
@@ -1177,13 +1175,7 @@ const insuranceButtonClass = (value: string) =>
 
                                             <div class="space-y-2">
                                                 <label class="block text-[13px] font-black uppercase tracking-wide text-slate-700">Logistics*</label>
-                                                <div class="relative">
-                                                    <select v-model="form.logistics" :class="controlClass('logistics', 'select')">
-                                                        <option value="" disabled>Pilih Logistics</option>
-                                                        <option v-for="item in logisticsOptions" :key="item" :value="item">{{ item }}</option>
-                                                    </select>
-                                                    <ChevronDown class="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
-                                                </div>
+                                                <input v-model="form.logistics" type="text" placeholder="Nama ekspedisi" :class="controlClass('logistics')" />
                                             </div>
 
                                             <div class="space-y-2">

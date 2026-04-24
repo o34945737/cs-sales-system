@@ -6,7 +6,6 @@ use App\Models\Brand;
 use App\Models\Complaint;
 use App\Models\JetTrackEntry;
 use App\Models\LastStep;
-use App\Models\Logistic;
 use App\Models\OrderTracking;
 use App\Models\OrderTrackingDataSource;
 use App\Models\OrderTrackingErpStatus;
@@ -30,7 +29,6 @@ class OrderTrackingController extends Controller
         $sourceOptions = $this->sourceOptions();
         $brandOptions = $this->brandOptions();
         $platformOptions = $this->platformOptions();
-        $logisticsOptions = $this->logisticsOptions();
         $erpStatusOptions = $this->erpStatusOptions();
         $csNameOptions = $this->csNameOptions();
         $categoryOptions = $this->categoryOptions();
@@ -123,7 +121,6 @@ class OrderTrackingController extends Controller
             'csNameOptions' => $csNameOptions,
             'platformOptions' => $platformOptions,
             'sourceOptions' => $sourceOptions,
-            'logisticsOptions' => $logisticsOptions,
             'categoryOptions' => $categoryOptions,
             'lastStepOptions' => $lastStepOptions,
             'reasonWhitelistOptions' => $reasonWhitelistOptions,
@@ -242,7 +239,6 @@ class OrderTrackingController extends Controller
         $sourceOptions = $this->sourceOptions();
         $brandOptions = $this->brandOptions();
         $platformOptions = $this->platformOptions();
-        $logisticsOptions = $this->logisticsOptions();
         $csNameOptions = $this->csNameOptions();
         $categoryOptions = $this->categoryOptions();
         $lastStepNames = collect($this->lastStepOptions())
@@ -268,9 +264,7 @@ class OrderTrackingController extends Controller
                 : [$required, 'string', Rule::in($platformOptions)],
             'order_id' => [$required, 'string', 'max:255'],
             'value' => ['nullable', 'numeric', 'min:0'],
-            'logistics' => empty($logisticsOptions)
-                ? [$required, 'string', 'max:255']
-                : [$required, 'string', Rule::in($logisticsOptions)],
+            'logistics' => [$required, 'string', 'max:255'],
             'awb' => ['nullable', 'string', 'max:255'],
             'erp_status' => empty($erpStatusOptions)
                 ? ['nullable', 'string', 'max:255']
@@ -390,15 +384,6 @@ class OrderTrackingController extends Controller
     private function platformOptions(): array
     {
         return Platform::query()
-            ->where('is_active', true)
-            ->orderBy('name')
-            ->pluck('name')
-            ->all();
-    }
-
-    private function logisticsOptions(): array
-    {
-        return Logistic::query()
             ->where('is_active', true)
             ->orderBy('name')
             ->pluck('name')

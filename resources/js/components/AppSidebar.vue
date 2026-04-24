@@ -106,9 +106,6 @@ const otherConfigItems = computed<NavItem[]>(() => {
         items.push({ title: 'Complaint Sources', href: '/complaint-sources', icon: Database });
     }
 
-    if (page.props.auth.can.view_logistics) {
-        items.push({ title: 'Logistics', href: '/logistics', icon: Truck });
-    }
 
     if (page.props.auth.can.view_order_tracking_erp_statuses) {
         items.push({ title: 'ERP Statuses', href: '/order-tracking-erp-statuses', icon: FireExtinguisherIcon });
