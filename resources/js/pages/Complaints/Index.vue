@@ -26,7 +26,15 @@ const DEFAULT_COMPLAINT_POWER_OPTIONS = ['Hard Complaint', 'Normal Complaint'];
 const DEFAULT_STEP_STATUS_OPTIONS = ['YES', 'NO'];
 const DEFAULT_PRIORITY_OPTIONS = ['Cool', 'Mines', 'P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7'];
 
-const uniqueOptions = (values) => [...new Set(values.filter(Boolean))];
+const normalizeOptionValue = (value) => {
+    if (typeof value !== 'string') {
+        return value;
+    }
+
+    return value.trim();
+};
+const uniqueOptions = (values) => [...new Set(values.map((value) => normalizeOptionValue(value)).filter(Boolean))];
+const mergeStringOptions = (...groups) => uniqueOptions(groups.flatMap((group) => (Array.isArray(group) ? group : [])));
 const pickPreferredOption = (options, preferred = '') => {
     const normalizedOptions = Array.isArray(options) ? options.filter(Boolean) : [];
 
@@ -96,6 +104,7 @@ const props = defineProps({
     oosOrderIds: Array,
     autoCauseByMap: Object,
 });
+const currentEditItem = ref(null);
 
 const complaintPage = computed(() => ({
     ...createEmptyPaginator(),
@@ -109,184 +118,242 @@ const statusSummary = computed(() => props.status_summary || {});
 const prioritySummary = computed(() => (props.priority_summary && !Array.isArray(props.priority_summary) ? props.priority_summary : {}));
 const overview = computed(() => props.overview || {});
 const sourceOptions = computed(() =>
-    Array.isArray(props.sourceOptions) && props.sourceOptions.length ? props.sourceOptions : DEFAULT_SOURCE_OPTIONS,
+    mergeStringOptions(
+        Array.isArray(props.sourceOptions) && props.sourceOptions.length ? props.sourceOptions : DEFAULT_SOURCE_OPTIONS,
+        complaintRows.value.map((item) => item.source),
+        [filterState.value.source, form.source, currentEditItem.value?.source],
+    ),
 );
 const complaintPowerOptions = computed(() =>
-    (Array.isArray(props.complaintPowerOptions) && props.complaintPowerOptions.length
-        ? props.complaintPowerOptions
-        : DEFAULT_COMPLAINT_POWER_OPTIONS
+    mergeStringOptions(
+        Array.isArray(props.complaintPowerOptions) && props.complaintPowerOptions.length
+            ? props.complaintPowerOptions
+            : DEFAULT_COMPLAINT_POWER_OPTIONS,
+        complaintRows.value.map((item) => item.complaint_power),
+        [form.complaint_power],
     ).map((value) => ({
         label: value.toUpperCase(),
         value,
     })),
 );
 const stepStatusOptions = computed(() => DEFAULT_STEP_STATUS_OPTIONS);
+const csNameOptions = computed(() =>
+    mergeStringOptions(
+        Array.isArray(props.csNameOptions) ? props.csNameOptions : [],
+        complaintRows.value.map((item) => item.cs_name),
+        [form.cs_name, currentEditItem.value?.cs_name],
+    ),
+);
 const masterBrandOptions = computed(() => (Array.isArray(props.brandOptions) ? props.brandOptions : []));
 const masterPlatformOptions = computed(() => (Array.isArray(props.platformOptions) ? props.platformOptions : []));
 const masterSkuCodeOptions = computed(() => (Array.isArray(props.skuCodeOptions) ? props.skuCodeOptions : []));
 const lastStepOptions = computed(() =>
-    Array.isArray(props.lastStepOptions) && props.lastStepOptions.length
-        ? props.lastStepOptions
-        : [
-              {
-                  label: 'Claim Receive (10x shipping fee)',
-                  value: 'Claim Receive (10x shipping fee)',
-                  status_result: 'Solved',
-                  priority_level: 'Cool',
-              },
-              { label: 'Claim Receive (Full)', value: 'Claim Receive (Full)', status_result: 'Solved', priority_level: 'Cool' },
-              { label: 'Claim Reject', value: 'Claim Reject', status_result: 'Whitelist', priority_level: 'Mines' },
-              {
-                  label: 'Complaint Canceled by buyer/No Respons',
-                  value: 'Complaint Canceled by buyer/No Respons',
-                  status_result: 'Solved',
-                  priority_level: 'Cool',
-              },
-              {
-                  label: 'Follow Up Courier (MP Non aktif)',
-                  value: 'Follow Up Courier (MP Non aktif)',
-                  status_result: 'Pending',
-                  priority_level: 'P3',
-              },
-              { label: 'Analysis MP (Late Delivery)', value: 'Analysis MP (Late Delivery)', status_result: 'Pending', priority_level: 'P5' },
-              { label: 'Analysis MP (Non Late Delivery)', value: 'Analysis MP (Non Late Delivery)', status_result: 'Pending', priority_level: 'P1' },
-              {
-                  label: 'Kingdee Processing (Waiting AWB for replacement product)',
-                  value: 'Kingdee Processing (Waiting AWB for replacement product)',
-                  status_result: 'Pending',
-                  priority_level: 'P6',
-              },
-              {
-                  label: 'On the way return & plan banding',
-                  value: 'On the way return & plan banding',
-                  status_result: 'Pending',
-                  priority_level: 'P2',
-              },
-              { label: 'On the way return & plan refund', value: 'On the way return & plan refund', status_result: 'Pending', priority_level: 'P3' },
-              {
-                  label: 'On the way return & plan replace',
-                  value: 'On the way return & plan replace',
-                  status_result: 'Pending',
-                  priority_level: 'P4',
-              },
-              { label: 'Pending return & plan banding', value: 'Pending return & plan banding', status_result: 'Pending', priority_level: 'P3' },
-              { label: 'Pending return & plan refund', value: 'Pending return & plan refund', status_result: 'Pending', priority_level: 'P3' },
-              { label: 'Pending return & plan replace', value: 'Pending return & plan replace', status_result: 'Pending', priority_level: 'P4' },
-              { label: 'Pending RGO & plan refund', value: 'Pending RGO & plan refund', status_result: 'Pending', priority_level: 'P3' },
-              {
-                  label: 'Product has been delivered (Late Delivery)',
-                  value: 'Product has been delivered (Late Delivery)',
-                  status_result: 'Solved',
-                  priority_level: 'Cool',
-              },
-              {
-                  label: 'Refund has been transferred by finance (SPF)',
-                  value: 'Refund has been transferred by finance (SPF)',
-                  status_result: 'Solved',
-                  priority_level: 'Cool',
-              },
-              {
-                  label: 'Refund processing by finance (SPF)',
-                  value: 'Refund processing by finance (SPF)',
-                  status_result: 'Pending',
-                  priority_level: 'P6',
-              },
-              { label: 'Replacement product on the way', value: 'Replacement product on the way', status_result: 'Pending', priority_level: 'P6' },
-              { label: 'Return Refund (Full)', value: 'Return Refund (Full)', status_result: 'Solved', priority_level: 'Cool' },
-              { label: 'Return Refund (Partial)', value: 'Return Refund (Partial)', status_result: 'Solved', priority_level: 'Cool' },
-              { label: 'Seller Win', value: 'Seller Win', status_result: 'Solved', priority_level: 'Cool' },
-              {
-                  label: 'The replacement product has been received by the buyer',
-                  value: 'The replacement product has been received by the buyer',
-                  status_result: 'Solved',
-                  priority_level: 'Cool',
-              },
-              { label: 'Follow Up to After Sales Team', value: 'Follow Up to After Sales Team', status_result: 'Pending', priority_level: 'P1' },
-              { label: 'Waiting Claim', value: 'Waiting Claim', status_result: 'Pending', priority_level: 'P7' },
-              { label: 'Waiting Money Receive', value: 'Waiting Money Receive', status_result: 'Pending', priority_level: 'P7' },
-              { label: 'Waiting Data From Customer', value: 'Waiting Data From Customer', status_result: 'Pending', priority_level: 'P3' },
-              { label: 'Follow Up KAE to Brand', value: 'Follow Up KAE to Brand', status_result: 'Pending', priority_level: 'P2' },
-              { label: 'Follow Up WH', value: 'Follow Up WH', status_result: 'Pending', priority_level: 'P1' },
-              { label: 'Follow Up KAE to KAM', value: 'Follow Up KAE to KAM', status_result: 'Pending', priority_level: 'P2' },
-              { label: 'Return not authorized', value: 'Return not authorized', status_result: 'Pending', priority_level: 'P5' },
-              {
-                  label: 'Return follow-up (No further action)',
-                  value: 'Return follow-up (No further action)',
-                  status_result: 'Solved',
-                  priority_level: 'Cool',
-              },
-          ],
+    [
+        ...(Array.isArray(props.lastStepOptions) && props.lastStepOptions.length
+            ? props.lastStepOptions
+            : [
+                  {
+                      label: 'Claim Receive (10x shipping fee)',
+                      value: 'Claim Receive (10x shipping fee)',
+                      status_result: 'Solved',
+                      priority_level: 'Cool',
+                  },
+                  { label: 'Claim Receive (Full)', value: 'Claim Receive (Full)', status_result: 'Solved', priority_level: 'Cool' },
+                  { label: 'Claim Reject', value: 'Claim Reject', status_result: 'Whitelist', priority_level: 'Mines' },
+                  {
+                      label: 'Complaint Canceled by buyer/No Respons',
+                      value: 'Complaint Canceled by buyer/No Respons',
+                      status_result: 'Solved',
+                      priority_level: 'Cool',
+                  },
+                  {
+                      label: 'Follow Up Courier (MP Non aktif)',
+                      value: 'Follow Up Courier (MP Non aktif)',
+                      status_result: 'Pending',
+                      priority_level: 'P3',
+                  },
+                  { label: 'Analysis MP (Late Delivery)', value: 'Analysis MP (Late Delivery)', status_result: 'Pending', priority_level: 'P5' },
+                  {
+                      label: 'Analysis MP (Non Late Delivery)',
+                      value: 'Analysis MP (Non Late Delivery)',
+                      status_result: 'Pending',
+                      priority_level: 'P1',
+                  },
+                  {
+                      label: 'Kingdee Processing (Waiting AWB for replacement product)',
+                      value: 'Kingdee Processing (Waiting AWB for replacement product)',
+                      status_result: 'Pending',
+                      priority_level: 'P6',
+                  },
+                  {
+                      label: 'On the way return & plan banding',
+                      value: 'On the way return & plan banding',
+                      status_result: 'Pending',
+                      priority_level: 'P2',
+                  },
+                  {
+                      label: 'On the way return & plan refund',
+                      value: 'On the way return & plan refund',
+                      status_result: 'Pending',
+                      priority_level: 'P3',
+                  },
+                  {
+                      label: 'On the way return & plan replace',
+                      value: 'On the way return & plan replace',
+                      status_result: 'Pending',
+                      priority_level: 'P4',
+                  },
+                  { label: 'Pending return & plan banding', value: 'Pending return & plan banding', status_result: 'Pending', priority_level: 'P3' },
+                  { label: 'Pending return & plan refund', value: 'Pending return & plan refund', status_result: 'Pending', priority_level: 'P3' },
+                  { label: 'Pending return & plan replace', value: 'Pending return & plan replace', status_result: 'Pending', priority_level: 'P4' },
+                  { label: 'Pending RGO & plan refund', value: 'Pending RGO & plan refund', status_result: 'Pending', priority_level: 'P3' },
+                  {
+                      label: 'Product has been delivered (Late Delivery)',
+                      value: 'Product has been delivered (Late Delivery)',
+                      status_result: 'Solved',
+                      priority_level: 'Cool',
+                  },
+                  {
+                      label: 'Refund has been transferred by finance (SPF)',
+                      value: 'Refund has been transferred by finance (SPF)',
+                      status_result: 'Solved',
+                      priority_level: 'Cool',
+                  },
+                  {
+                      label: 'Refund processing by finance (SPF)',
+                      value: 'Refund processing by finance (SPF)',
+                      status_result: 'Pending',
+                      priority_level: 'P6',
+                  },
+                  {
+                      label: 'Replacement product on the way',
+                      value: 'Replacement product on the way',
+                      status_result: 'Pending',
+                      priority_level: 'P6',
+                  },
+                  { label: 'Return Refund (Full)', value: 'Return Refund (Full)', status_result: 'Solved', priority_level: 'Cool' },
+                  { label: 'Return Refund (Partial)', value: 'Return Refund (Partial)', status_result: 'Solved', priority_level: 'Cool' },
+                  { label: 'Seller Win', value: 'Seller Win', status_result: 'Solved', priority_level: 'Cool' },
+                  {
+                      label: 'The replacement product has been received by the buyer',
+                      value: 'The replacement product has been received by the buyer',
+                      status_result: 'Solved',
+                      priority_level: 'Cool',
+                  },
+                  { label: 'Follow Up to After Sales Team', value: 'Follow Up to After Sales Team', status_result: 'Pending', priority_level: 'P1' },
+                  { label: 'Waiting Claim', value: 'Waiting Claim', status_result: 'Pending', priority_level: 'P7' },
+                  { label: 'Waiting Money Receive', value: 'Waiting Money Receive', status_result: 'Pending', priority_level: 'P7' },
+                  { label: 'Waiting Data From Customer', value: 'Waiting Data From Customer', status_result: 'Pending', priority_level: 'P3' },
+                  { label: 'Follow Up KAE to Brand', value: 'Follow Up KAE to Brand', status_result: 'Pending', priority_level: 'P2' },
+                  { label: 'Follow Up WH', value: 'Follow Up WH', status_result: 'Pending', priority_level: 'P1' },
+                  { label: 'Follow Up KAE to KAM', value: 'Follow Up KAE to KAM', status_result: 'Pending', priority_level: 'P2' },
+                  { label: 'Return not authorized', value: 'Return not authorized', status_result: 'Pending', priority_level: 'P5' },
+                  {
+                      label: 'Return follow-up (No further action)',
+                      value: 'Return follow-up (No further action)',
+                      status_result: 'Solved',
+                      priority_level: 'Cool',
+                  },
+              ]),
+        ...mergeStringOptions(
+            complaintRows.value.map((item) => item.last_step),
+            [form.last_step, currentEditItem.value?.last_step],
+        )
+            .filter((value) => value)
+            .map((value) => ({
+                label: value,
+                value,
+                status_result: 'Pending',
+                priority_level: null,
+            })),
+    ].filter((option, index, array) => array.findIndex((entry) => entry?.value === option?.value) === index),
 );
 
 const subCaseOptions = computed(() =>
-    Array.isArray(props.subCaseOptions) && props.subCaseOptions.length
-        ? props.subCaseOptions
-        : [
-              'Bad Quality Product',
-              'Bad Service',
-              'Change Mind',
-              'Damaged Packaging',
-              'Damaged Product',
-              'Expired',
-              'Fake Return',
-              'Late Delivery',
-              'Under Delivery Product',
-              'Misunderstanding of the product',
-              'No Reason',
-              'Promotion',
-              'Wrong Product',
-              'OOS',
-              'Refund DP',
-              'Lost Product',
-          ],
+    mergeStringOptions(
+        Array.isArray(props.subCaseOptions) && props.subCaseOptions.length
+            ? props.subCaseOptions
+            : [
+                  'Bad Quality Product',
+                  'Bad Service',
+                  'Change Mind',
+                  'Damaged Packaging',
+                  'Damaged Product',
+                  'Expired',
+                  'Fake Return',
+                  'Late Delivery',
+                  'Under Delivery Product',
+                  'Misunderstanding of the product',
+                  'No Reason',
+                  'Promotion',
+                  'Wrong Product',
+                  'OOS',
+                  'Refund DP',
+                  'Lost Product',
+              ],
+        complaintRows.value.map((item) => item.sub_case),
+        [filterState.value.sub_case, form.sub_case, currentEditItem.value?.sub_case],
+    ),
 );
 
 const causeByOptions = computed(() =>
-    Array.isArray(props.causeByOptions) && props.causeByOptions.length
-        ? props.causeByOptions
-        : [
-              '?',
-              'J&T',
-              'SAP EXPRESS',
-              'ANTERAJA',
-              'LEX',
-              'POS',
-              'NINJA',
-              'SICEPAT',
-              'KURIR REKOMENDASI',
-              'SPX',
-              'INDOPAKET',
-              'GTL',
-              'CUSTOM LOGISTICS',
-              'GRAB',
-              'JNE',
-              'GOJEK',
-              'CS',
-              'Chat++',
-              'STREAMER',
-              'KAE',
-              'WH',
-              'PART',
-          ],
+    mergeStringOptions(
+        Array.isArray(props.causeByOptions) && props.causeByOptions.length
+            ? props.causeByOptions
+            : [
+                  '?',
+                  'J&T',
+                  'SAP EXPRESS',
+                  'ANTERAJA',
+                  'LEX',
+                  'POS',
+                  'NINJA',
+                  'SICEPAT',
+                  'KURIR REKOMENDASI',
+                  'SPX',
+                  'INDOPAKET',
+                  'GTL',
+                  'CUSTOM LOGISTICS',
+                  'GRAB',
+                  'JNE',
+                  'GOJEK',
+                  'CS',
+                  'Chat++',
+                  'STREAMER',
+                  'KAE',
+                  'WH',
+                  'PART',
+              ],
+        complaintRows.value.map((item) => item.cause_by),
+        [form.cause_by, currentEditItem.value?.cause_by],
+    ),
 );
 
 const reasonWhitelistOptions = computed(() =>
-    Array.isArray(props.reasonWhitelistOptions) && props.reasonWhitelistOptions.length
-        ? props.reasonWhitelistOptions
-        : [
-              'No repacking indication',
-              'Packing not proper',
-              "Customer's evidence is stonger than us",
-              'Our evidences are not strong (platform T&C)',
-              'CCTV does not show receipt number',
-              'Late Respons',
-          ],
+    mergeStringOptions(
+        Array.isArray(props.reasonWhitelistOptions) && props.reasonWhitelistOptions.length
+            ? props.reasonWhitelistOptions
+            : [
+                  'No repacking indication',
+                  'Packing not proper',
+                  "Customer's evidence is stonger than us",
+                  'Our evidences are not strong (platform T&C)',
+                  'CCTV does not show receipt number',
+                  'Late Respons',
+              ],
+        complaintRows.value.map((item) => item.reason_whitelist),
+        [form.reason_whitelist, currentEditItem.value?.reason_whitelist],
+    ),
 );
 
 const reasonLateResponseOptions = computed(() =>
-    Array.isArray(props.reasonLateResponseOptions) && props.reasonLateResponseOptions.length
-        ? props.reasonLateResponseOptions
-        : ['CS', 'KAE', 'Finance', 'WH', 'PH'],
+    mergeStringOptions(
+        Array.isArray(props.reasonLateResponseOptions) && props.reasonLateResponseOptions.length
+            ? props.reasonLateResponseOptions
+            : ['CS', 'KAE', 'Finance', 'WH', 'PH'],
+        complaintRows.value.map((item) => item.reason_late_respons),
+        [form.reason_late_respons, currentEditItem.value?.reason_late_respons],
+    ),
 );
 
 const autoCauseByMap = computed(() => (props.autoCauseByMap && !Array.isArray(props.autoCauseByMap) ? props.autoCauseByMap : {}));
@@ -410,11 +477,6 @@ const formatDate = (value) => {
         : new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }).format(parsed);
 };
 
-const formatCurrency = (value) => {
-    if (value === null || value === undefined || value === '') return '-';
-    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(Number(value) || 0);
-};
-
 const resolveStatus = (lastStep) => {
     return lastStepMetaMap.value[lastStep]?.status || 'Pending';
 };
@@ -503,16 +565,28 @@ const resetFilters = () => {
 };
 
 const complaintBrandOptions = computed(() =>
-    masterBrandOptions.value.length ? masterBrandOptions.value : uniqueOptions(complaintRows.value.map((item) => item.brand)),
+    mergeStringOptions(
+        masterBrandOptions.value.length ? masterBrandOptions.value : complaintRows.value.map((item) => item.brand),
+        complaintRows.value.map((item) => item.brand),
+        [filterState.value.brand, form.brand, currentEditItem.value?.brand],
+    ),
 );
 const complaintBrandFilterOptions = computed(() => ['All', ...complaintBrandOptions.value]);
 
 const complaintPlatformOptions = computed(() =>
-    masterPlatformOptions.value.length ? masterPlatformOptions.value : uniqueOptions(complaintRows.value.map((item) => item.platform)),
+    mergeStringOptions(
+        masterPlatformOptions.value.length ? masterPlatformOptions.value : complaintRows.value.map((item) => item.platform),
+        complaintRows.value.map((item) => item.platform),
+        [filterState.value.platform, form.platform, currentEditItem.value?.platform],
+    ),
 );
 
 const skuOptions = computed(() =>
-    uniqueOptions([...masterSkuCodeOptions.value.map((item) => item?.sku), ...complaintRows.value.map((item) => item.sku)]),
+    mergeStringOptions(
+        masterSkuCodeOptions.value.map((item) => item?.sku),
+        complaintRows.value.map((item) => item.sku),
+        [form.sku, currentEditItem.value?.sku],
+    ),
 );
 
 const skuCatalog = computed(() => {
@@ -547,7 +621,6 @@ const createInitialFormState = () => ({
     cs_name: '',
     last_step: '',
     tanggal_step_cs_selesai: '',
-    update_ai: '',
     step_cs_selesai: 'NO',
     tanggal_update: today(),
     auto_sync_sla: '',
@@ -558,7 +631,6 @@ const createInitialFormState = () => ({
     video_unboxing: null,
     username: '',
     history: '',
-    complaint_count: 0,
     oos: '',
     reason_whitelist: '',
     reason_late_respons: '',
@@ -566,6 +638,9 @@ const createInitialFormState = () => ({
 });
 
 const form = useForm(createInitialFormState());
+const complaintCount = ref(0);
+const existingVideoPath = ref('');
+const existingProofAttachmentPath = ref('');
 
 const selectedSku = computed(() => skuCatalog.value[form.sku] || {});
 const resolvedAutoCauseBy = computed(() => autoCauseByMap.value[form.sub_case] || null);
@@ -602,7 +677,7 @@ watch(
 const fetchCustomerHistory = debounce(async (username: string) => {
     if (!username) {
         form.history = '';
-        form.complaint_count = 0;
+        complaintCount.value = 0;
         return;
     }
 
@@ -610,10 +685,10 @@ const fetchCustomerHistory = debounce(async (username: string) => {
         const response = await axios.get(route('complaints.history', username));
         if (response.data) {
             form.history = response.data.label || '';
-            form.complaint_count = response.data.count ?? 0;
+            complaintCount.value = response.data.count ?? 0;
         } else {
             form.history = '';
-            form.complaint_count = 0;
+            complaintCount.value = 0;
         }
     } catch (error) {
         console.error('Failed to fetch customer history:', error);
@@ -716,9 +791,9 @@ const autoSyncSlaPreview = computed(() => {
 
 const historyLabelPreview = computed(() => {
     if (!form.username) return '';
-    // Edit mode: complaint_count tidak di-fetch, pakai form.history langsung
-    if (form.complaint_count === 0 && form.history) return form.history;
-    const count = form.complaint_count || 0;
+    // Edit mode: complaintCount tidak di-fetch, pakai form.history langsung
+    if (complaintCount.value === 0 && form.history) return form.history;
+    const count = complaintCount.value || 0;
     if (count === 0) return '';
     if (count === 1) return 'Customer ini complaint ke 2';
     return `Customer ini complaint ke ${count + 1}x`;
@@ -733,7 +808,22 @@ const oosPreview = computed(() => {
 const causeByLocked = computed(() => Boolean(resolvedAutoCauseBy.value));
 
 const reportCategoryPreview = computed(() => resolvedAutoCauseBy.value);
-const videoLabel = computed(() => form.video_unboxing?.name || 'Upload video unboxing');
+const fileNameFromPath = (value) => {
+    if (!value) return '';
+    const normalizedValue = String(value).replace(/\\/g, '/');
+    return normalizedValue.split('/').pop() || normalizedValue;
+};
+const storageAssetUrl = (value) => {
+    if (!value) return '';
+    const normalizedValue = String(value);
+    if (/^https?:\/\//i.test(normalizedValue) || normalizedValue.startsWith('/')) {
+        return normalizedValue;
+    }
+    return `/storage/${normalizedValue.replace(/^\/+/, '')}`;
+};
+const currentVideoUrl = computed(() => storageAssetUrl(existingVideoPath.value));
+const currentProofAttachmentUrl = computed(() => storageAssetUrl(existingProofAttachmentPath.value));
+const videoLabel = computed(() => form.video_unboxing?.name || fileNameFromPath(existingVideoPath.value) || 'Upload video unboxing');
 
 const modalMode = ref('create'); // 'create' or 'edit'
 const editId = ref(null);
@@ -743,7 +833,9 @@ const setVideoFile = (event) => {
     form.video_unboxing = file || null;
 };
 
-const proofAttachmentLabel = computed(() => form.proof_attachment?.name || 'Upload proof attachment');
+const proofAttachmentLabel = computed(
+    () => form.proof_attachment?.name || fileNameFromPath(existingProofAttachmentPath.value) || 'Upload proof attachment',
+);
 
 const setProofAttachmentFile = (event) => {
     const [file] = event.target.files || [];
@@ -779,6 +871,10 @@ const discardForm = () => {
     submitError.value = '';
     fetchCustomerHistory.cancel();
     isHydratingEditForm.value = false;
+    currentEditItem.value = null;
+    complaintCount.value = 0;
+    existingVideoPath.value = '';
+    existingProofAttachmentPath.value = '';
     form.defaults(createInitialFormState());
     form.reset();
     form.clearErrors();
@@ -793,6 +889,10 @@ const openCreateModal = () => {
     editId.value = null;
     fetchCustomerHistory.cancel();
     isHydratingEditForm.value = false;
+    currentEditItem.value = null;
+    complaintCount.value = 0;
+    existingVideoPath.value = '';
+    existingProofAttachmentPath.value = '';
     form.defaults(createInitialFormState());
     form.reset();
     form.clearErrors();
@@ -806,26 +906,70 @@ const openEditModal = (item) => {
     fetchCustomerHistory.cancel();
     detailItem.value = null;
 
+    // Use flag to prevent watchers from firing during hydration
     isHydratingEditForm.value = true;
     isModalOpen.value = true;
 
-    nextTick(() => {
+    nextTick(async () => {
         const initialState = createInitialFormState();
         const hydratedState = { ...initialState };
-        Object.keys(initialState).forEach((key) => {
-            if (item[key] !== undefined) hydratedState[key] = item[key];
-        });
-        if (item.level_customer) hydratedState.complaint_power = item.level_customer;
 
+        // 1. First populate from available row data (Immediate)
+        Object.keys(initialState).forEach((key) => {
+            if (['video_unboxing', 'proof_attachment'].includes(key)) {
+                hydratedState[key] = null;
+                return;
+            }
+
+            if (item[key] !== undefined) {
+                hydratedState[key] = normalizeOptionValue(item[key]);
+            }
+        });
+
+        existingVideoPath.value = item.video_unboxing || '';
+        existingProofAttachmentPath.value = item.proof_attachment || '';
+
+        // Apply first hydration
         form.defaults(hydratedState);
         form.reset();
         form.clearErrors();
 
-        syncComplaintDerivedFields();
+        // 2. Fetch full data from database for potentially missing fields
+        try {
+            const response = await axios.get(route('complaints.show', item.id));
+            const complaint = response.data.complaint || (response.data && response.data.id ? response.data : {});
 
-        nextTick(() => {
-            isHydratingEditForm.value = false;
-        });
+            if (complaint && Object.keys(complaint).length > 0) {
+                currentEditItem.value = complaint;
+                existingVideoPath.value = complaint.video_unboxing || '';
+                existingProofAttachmentPath.value = complaint.proof_attachment || '';
+
+                const updatedState = { ...hydratedState };
+                Object.keys(initialState).forEach((key) => {
+                    if (['video_unboxing', 'proof_attachment'].includes(key)) return;
+
+                    if (Object.prototype.hasOwnProperty.call(complaint, key)) {
+                        updatedState[key] = normalizeOptionValue(complaint[key]);
+                    }
+                });
+
+                form.defaults(updatedState);
+                form.reset();
+
+                // Sync derived fields after full load
+                form.product_name = form.product_name || selectedSku.value?.product_name || '';
+                form.status = resolveStatus(form.last_step);
+                form.priority = resolvePriority(form.last_step) || 'P3';
+            }
+        } catch (error) {
+            console.error('Background fetch failed:', error);
+            // Non-blocking error, we already have table data
+        } finally {
+            await nextTick();
+            setTimeout(() => {
+                isHydratingEditForm.value = false;
+            }, 150);
+        }
     });
 };
 
@@ -871,7 +1015,6 @@ const submitForm = () => {
             report_category: reportCategoryPreview.value || null,
             history: data.history || null,
             complaint_power,
-            level_customer: complaint_power,
             oos: oosValue,
             reason_whitelist: showReasonWhitelist.value ? data.reason_whitelist : null,
             reason_late_respons: showReasonLateRespons.value ? data.reason_late_respons : null,
@@ -913,7 +1056,7 @@ const priorityFilterClass = (priority) =>
 
 const statusDotClass = (status) => (status === 'Solved' ? 'bg-emerald-500' : status === 'Whitelist' ? 'bg-rose-500' : 'bg-amber-500');
 
-const fieldError = (field) => form.errors[field];
+const fieldError = (field: string) => (form.errors as Record<string, string>)[field];
 
 const controlClass = (field, variant = 'input') => {
     const baseClass = variant === 'select' ? selectClass : variant === 'textarea' ? textAreaClass : inputClass;
@@ -1112,7 +1255,7 @@ const sectionChecks = computed(() => [
                                         @change="setSourceFilter($event.target.value)"
                                     >
                                         <option value="All">ANY SOURCE</option>
-                                        <option v-for="source in props.sourceOptions" :key="source" :value="source">
+                                        <option v-for="source in sourceOptions" :key="source" :value="source">
                                             {{ source }}
                                         </option>
                                     </select>
@@ -1127,7 +1270,7 @@ const sectionChecks = computed(() => [
                                         @change="setPlatformFilter($event.target.value)"
                                     >
                                         <option value="All">ANY PLATFORM</option>
-                                        <option v-for="platform in props.platformOptions" :key="platform" :value="platform">
+                                        <option v-for="platform in complaintPlatformOptions" :key="platform" :value="platform">
                                             {{ platform }}
                                         </option>
                                     </select>
@@ -1168,11 +1311,13 @@ const sectionChecks = computed(() => [
                                         v-if="hasActiveFilters"
                                         type="button"
                                         @click="resetFilters"
-                                        class="flex h-10 items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-3.5 text-[11px] font-black uppercase tracking-wider text-rose-600 shadow-sm transition-all hover:bg-rose-100 hover:border-rose-300"
+                                        class="flex h-10 items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-3.5 text-[11px] font-black uppercase tracking-wider text-rose-600 shadow-sm transition-all hover:border-rose-300 hover:bg-rose-100"
                                     >
                                         <RotateCcw class="h-3.5 w-3.5" />
                                         <span>Reset</span>
-                                        <span class="flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[9px] font-black text-white">
+                                        <span
+                                            class="flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[9px] font-black text-white"
+                                        >
                                             {{ activeFilterCount }}
                                         </span>
                                     </button>
@@ -1654,7 +1799,8 @@ const sectionChecks = computed(() => [
                                     </div>
                                 </div>
 
-                                <div class="flex flex-col gap-5 border-t border-slate-100 bg-slate-50/30 px-6 py-6 sm:flex-row sm:items-center sm:justify-between"
+                                <div
+                                    class="flex flex-col gap-5 border-t border-slate-100 bg-slate-50/30 px-6 py-6 sm:flex-row sm:items-center sm:justify-between"
                                 >
                                     <p class="text-[13px] font-bold text-slate-400">
                                         <span class="text-slate-900">Listing {{ complaintPage.from || 0 }} - {{ complaintPage.to || 0 }}</span>
@@ -1780,10 +1926,6 @@ const sectionChecks = computed(() => [
                                         </p>
                                     </div>
                                     <div>
-                                        <p class="text-[10px] font-bold uppercase tracking-[0.15rem] text-slate-400">Value of Product</p>
-                                        <p class="mt-2 text-[15px] font-bold text-emerald-600">{{ formatCurrency(detailItem.value_of_product) }}</p>
-                                    </div>
-                                    <div>
                                         <p class="text-[10px] font-bold uppercase tracking-[0.15rem] text-slate-400">Issue Category</p>
                                         <p class="mt-2 text-[15px] font-bold text-[var(--app-ink)]">{{ detailItem.sub_case || '-' }}</p>
                                     </div>
@@ -1799,6 +1941,47 @@ const sectionChecks = computed(() => [
                                     <p class="mt-3 text-[15px] font-medium leading-relaxed text-slate-600">
                                         {{ detailItem.update_long_text || '-' }}
                                     </p>
+                                </div>
+
+                                <div class="border-t border-slate-200/50 pt-5">
+                                    <p class="text-[10px] font-bold uppercase tracking-[0.15rem] text-slate-400">Evidence & Attachments</p>
+                                    <p class="mt-3 text-[15px] font-medium leading-relaxed text-slate-600">{{ detailItem.proof || '-' }}</p>
+
+                                    <div class="mt-4 grid gap-3 sm:grid-cols-2">
+                                        <div class="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+                                            <p class="text-[10px] font-bold uppercase tracking-[0.15rem] text-slate-400">Video Unboxing</p>
+                                            <p class="mt-2 truncate text-[13px] font-semibold text-slate-600">
+                                                {{ fileNameFromPath(detailItem.video_unboxing) || 'Tidak ada file' }}
+                                            </p>
+                                            <a
+                                                v-if="storageAssetUrl(detailItem.video_unboxing)"
+                                                :href="storageAssetUrl(detailItem.video_unboxing)"
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                class="mt-3 inline-flex items-center gap-2 rounded-xl bg-slate-900 px-3 py-2 text-[11px] font-black uppercase tracking-wide text-white transition hover:bg-slate-800"
+                                            >
+                                                <Eye class="h-3.5 w-3.5" />
+                                                Lihat File
+                                            </a>
+                                        </div>
+
+                                        <div class="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+                                            <p class="text-[10px] font-bold uppercase tracking-[0.15rem] text-slate-400">Proof Attachment</p>
+                                            <p class="mt-2 truncate text-[13px] font-semibold text-slate-600">
+                                                {{ fileNameFromPath(detailItem.proof_attachment) || 'Tidak ada file' }}
+                                            </p>
+                                            <a
+                                                v-if="storageAssetUrl(detailItem.proof_attachment)"
+                                                :href="storageAssetUrl(detailItem.proof_attachment)"
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                class="mt-3 inline-flex items-center gap-2 rounded-xl bg-[var(--app-primary)] px-3 py-2 text-[11px] font-black uppercase tracking-wide text-white transition hover:bg-[var(--app-primary-dark)]"
+                                            >
+                                                <Eye class="h-3.5 w-3.5" />
+                                                Lihat File
+                                            </a>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -1901,11 +2084,11 @@ const sectionChecks = computed(() => [
                                     </div>
 
                                     <div
-                                        v-if="form.errors.general"
+                                        v-if="(form.errors as any).general"
                                         class="rounded-[18px] border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-700"
                                     >
                                         <p class="font-bold uppercase tracking-wider">System Error</p>
-                                        <p class="mt-1">{{ form.errors.general }}</p>
+                                        <p class="mt-1">{{ (form.errors as any).general }}</p>
                                     </div>
 
                                     <!-- Automation Preview Bar -->
@@ -2106,10 +2289,14 @@ const sectionChecks = computed(() => [
                                                 </div>
 
                                                 <div class="space-y-2">
-                                                    <label class="block text-[13px] font-bold uppercase tracking-wide text-slate-700"
-                                                        >Qty</label
-                                                    >
-                                                    <input v-model="form.qty" type="number" min="0" :class="controlClass('qty')" placeholder="Jumlah item complaint" />
+                                                    <label class="block text-[13px] font-bold uppercase tracking-wide text-slate-700">Qty</label>
+                                                    <input
+                                                        v-model="form.qty"
+                                                        type="number"
+                                                        min="0"
+                                                        :class="controlClass('qty')"
+                                                        placeholder="Jumlah item complaint"
+                                                    />
                                                 </div>
                                             </div>
 
@@ -2408,6 +2595,25 @@ const sectionChecks = computed(() => [
                                                         }}</span>
                                                         <input type="file" class="hidden" accept="video/*" @change="setVideoFile" />
                                                     </label>
+                                                    <div
+                                                        v-if="modalMode === 'edit' && currentVideoUrl && !form.video_unboxing"
+                                                        class="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2"
+                                                    >
+                                                        <span class="truncate text-[11px] font-semibold text-slate-600">
+                                                            Existing: {{ fileNameFromPath(existingVideoPath) }}
+                                                        </span>
+                                                        <a
+                                                            :href="currentVideoUrl"
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            class="shrink-0 text-[11px] font-black uppercase tracking-wide text-[var(--app-primary)] hover:underline"
+                                                        >
+                                                            Lihat
+                                                        </a>
+                                                    </div>
+                                                    <p v-if="fieldError('video_unboxing')" class="text-xs font-medium text-rose-600">
+                                                        {{ fieldError('video_unboxing') }}
+                                                    </p>
                                                 </div>
 
                                                 <div class="space-y-1.5">
@@ -2421,8 +2627,32 @@ const sectionChecks = computed(() => [
                                                         <span class="w-full overflow-hidden truncate px-1 text-[12px] font-medium text-slate-500">{{
                                                             proofAttachmentLabel
                                                         }}</span>
-                                                        <input type="file" class="hidden" @change="setProofAttachmentFile" />
+                                                        <input
+                                                            type="file"
+                                                            class="hidden"
+                                                            accept=".jpg,.jpeg,.png,.pdf,.mp4,.mov,.ogg,.qt,image/*,video/*,application/pdf"
+                                                            @change="setProofAttachmentFile"
+                                                        />
                                                     </label>
+                                                    <div
+                                                        v-if="modalMode === 'edit' && currentProofAttachmentUrl && !form.proof_attachment"
+                                                        class="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2"
+                                                    >
+                                                        <span class="truncate text-[11px] font-semibold text-slate-600">
+                                                            Existing: {{ fileNameFromPath(existingProofAttachmentPath) }}
+                                                        </span>
+                                                        <a
+                                                            :href="currentProofAttachmentUrl"
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            class="shrink-0 text-[11px] font-black uppercase tracking-wide text-[var(--app-primary)] hover:underline"
+                                                        >
+                                                            Lihat
+                                                        </a>
+                                                    </div>
+                                                    <p v-if="fieldError('proof_attachment')" class="text-xs font-medium text-rose-600">
+                                                        {{ fieldError('proof_attachment') }}
+                                                    </p>
                                                 </div>
                                             </div>
 

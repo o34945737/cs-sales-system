@@ -212,7 +212,6 @@ test('complaint can autofill product name from sku master', function () {
             'order_id' => 'ORD-SKU-AUTO-1',
             'resi' => 'RESI-SKU-AUTO-1',
             'product_name' => '',
-            'value_of_product' => null,
         ]));
 
     $response

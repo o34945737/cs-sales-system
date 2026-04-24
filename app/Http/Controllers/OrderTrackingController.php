@@ -32,6 +32,7 @@ class OrderTrackingController extends Controller
         $erpStatusOptions = $this->erpStatusOptions();
         $csNameOptions = $this->csNameOptions();
         $categoryOptions = $this->categoryOptions();
+        $causeByOptions = $this->causeByOptions();
         $lastStepOptions = $this->lastStepOptions();
         $reasonWhitelistOptions = $this->reasonWhitelistOptions();
         $reasonLateResponseOptions = $this->reasonLateResponseOptions();
@@ -48,7 +49,7 @@ class OrderTrackingController extends Controller
                         ->orWhere('order_id', 'like', "%{$search}%")
                         ->orWhere('brand', 'like', "%{$search}%")
                         ->orWhere('platform', 'like', "%{$search}%")
-                        ->orWhere('logistics', 'like', "%{$search}%")
+                        ->orWhere('cause_by', 'like', "%{$search}%")
                         ->orWhere('awb', 'like', "%{$search}%")
                         ->orWhere('erp_status', 'like', "%{$search}%")
                         ->orWhere('cs_name', 'like', "%{$search}%")
@@ -122,10 +123,18 @@ class OrderTrackingController extends Controller
             'platformOptions' => $platformOptions,
             'sourceOptions' => $sourceOptions,
             'categoryOptions' => $categoryOptions,
+            'causeByOptions' => $causeByOptions,
             'lastStepOptions' => $lastStepOptions,
             'reasonWhitelistOptions' => $reasonWhitelistOptions,
             'erpStatusOptions' => $erpStatusOptions,
             'reasonLateResponseOptions' => $reasonLateResponseOptions,
+            'autoCauseByMap' => SubCase::query()
+                ->where('is_active', true)
+                ->whereNotNull('default_cause_by')
+                ->orderBy('name')
+                ->get(['name', 'default_cause_by'])
+                ->mapWithKeys(fn(SubCase $subCase) => [$subCase->name => $subCase->default_cause_by])
+                ->all(),
             'complaintSyncMap' => Complaint::query()
                 ->whereNotNull('order_id')
                 ->get(['order_id', 'sub_case', 'last_step', 'status', 'reason_whitelist', 'reason_late_respons'])
@@ -199,7 +208,7 @@ class OrderTrackingController extends Controller
             'platform' => $orderTracking->platform,
             'order_id' => $orderTracking->order_id,
             'value' => $orderTracking->value !== null ? (float) $orderTracking->value : null,
-            'logistics' => $orderTracking->logistics,
+            'cause_by' => $orderTracking->cause_by,
             'awb' => $orderTracking->awb,
             'erp_status' => $orderTracking->erp_status,
             'payment_method' => $orderTracking->payment_method,
@@ -241,6 +250,7 @@ class OrderTrackingController extends Controller
         $platformOptions = $this->platformOptions();
         $csNameOptions = $this->csNameOptions();
         $categoryOptions = $this->categoryOptions();
+        $causeByOptions = $this->causeByOptions();
         $lastStepNames = collect($this->lastStepOptions())
             ->pluck('value')
             ->filter()
@@ -264,7 +274,9 @@ class OrderTrackingController extends Controller
                 : [$required, 'string', Rule::in($platformOptions)],
             'order_id' => [$required, 'string', 'max:255'],
             'value' => ['nullable', 'numeric', 'min:0'],
-            'logistics' => [$required, 'string', 'max:255'],
+            'cause_by' => empty($causeByOptions)
+                ? [$required, 'string', 'max:255']
+                : [$required, 'string', Rule::in($causeByOptions)],
             'awb' => ['nullable', 'string', 'max:255'],
             'erp_status' => empty($erpStatusOptions)
                 ? ['nullable', 'string', 'max:255']
@@ -403,6 +415,15 @@ class OrderTrackingController extends Controller
     private function categoryOptions(): array
     {
         return SubCase::query()
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->pluck('name')
+            ->all();
+    }
+
+    private function causeByOptions(): array
+    {
+        return \App\Models\CauseBy::query()
             ->where('is_active', true)
             ->orderBy('name')
             ->pluck('name')

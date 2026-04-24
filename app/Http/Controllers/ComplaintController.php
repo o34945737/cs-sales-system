@@ -15,11 +15,12 @@ use App\Models\ReasonWhitelist;
 use App\Models\SkuCode;
 use App\Models\SubCase;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
-use Throwable;
 use Inertia\Inertia;
+use Throwable;
 
 class ComplaintController extends Controller
 {
@@ -338,17 +339,12 @@ class ComplaintController extends Controller
     public function store(Request $request)
     {
         $rules = $this->complaintRules($request);
-        $request->validate($rules, [
+        $data = $request->validate($rules, [
             'tanggal_step_cs_selesai.required_if' => 'Tanggal harus diisi jika Step CS Selesai = YES.',
             'reason_whitelist.required_if' => 'Reason Whitelist wajib diisi jika Last Step = Claim Reject.',
             'reason_late_respons.required_if' => 'Reason Late Respons wajib diisi jika Whitelist = Late Respons.',
             'jam_customer_complaint.date_format' => 'Format jam harus HH:mm atau HH:mm:ss.',
         ]);
-
-        $data = collect($request->all())->except(['_token', 'video_unboxing', 'proof_attachment', 'riwayat_oos'])->toArray();
-
-        // Sync Foreign Keys based on provided names
-        $this->syncForeignKeys($data);
 
         try {
             if ($request->hasFile('video_unboxing')) {
@@ -375,7 +371,7 @@ class ComplaintController extends Controller
     public function getCustomerHistory($username)
     {
         $count = Complaint::where('username', $username)->count();
-        
+
         $label = '';
         if ($count === 1) {
             $label = 'Customer ini complaint ke 2';
@@ -387,24 +383,26 @@ class ComplaintController extends Controller
         return response()->json([
             'username' => $username,
             'count' => $count,
-            'label' => $label
+            'label' => $label,
+        ]);
+    }
+
+    public function show(Complaint $complaint)
+    {
+        return response()->json([
+            'complaint' => $complaint,
         ]);
     }
 
     public function update(Request $request, Complaint $complaint)
     {
         $rules = $this->complaintRules($request, forUpdate: true);
-        $request->validate($rules, [
+        $data = $request->validate($rules, [
             'tanggal_step_cs_selesai.required_if' => 'Tanggal harus diisi jika Step CS Selesai = YES.',
             'reason_whitelist.required_if' => 'Reason Whitelist wajib diisi jika Last Step = Claim Reject.',
             'reason_late_respons.required_if' => 'Reason Late Respons wajib diisi jika Whitelist = Late Respons.',
             'jam_customer_complaint.date_format' => 'Format jam harus HH:mm atau HH:mm:ss.',
         ]);
-
-        $data = collect($request->all())->except(['_token', '_method', 'video_unboxing', 'proof_attachment', 'riwayat_oos'])->toArray();
-        
-        // Sync Foreign Keys based on provided names
-        $this->syncForeignKeys($data);
 
         try {
             if ($request->hasFile('video_unboxing')) {
@@ -425,28 +423,6 @@ class ComplaintController extends Controller
         return redirect()->back()->with('success', 'Complaint berhasil diperbarui.');
     }
 
-    private function syncForeignKeys(array &$data)
-    {
-        if (isset($data['brand'])) {
-            $data['brand_id'] = Brand::where('name', $data['brand'])->value('id');
-        }
-        if (isset($data['platform'])) {
-            $data['platform_id'] = Platform::where('name', $data['platform'])->value('id');
-        }
-        if (isset($data['sku'])) {
-            $data['sku_code_id'] = SkuCode::where('sku', $data['sku'])->value('id');
-        }
-        if (isset($data['sub_case'])) {
-            $data['sub_case_id'] = SubCase::where('name', $data['sub_case'])->value('id');
-        }
-        if (isset($data['last_step'])) {
-            $data['last_step_id'] = LastStep::where('name', $data['last_step'])->value('id');
-        }
-        if (isset($data['cs_name'])) {
-            $data['cs_user_id'] = User::where('name', $data['cs_name'])->value('id');
-        }
-    }
-
     public function destroy(Complaint $complaint)
     {
         try {
@@ -464,7 +440,7 @@ class ComplaintController extends Controller
     {
         $request->validate([
             'ids' => ['required', 'array'],
-            'ids.*' => ['exists:complaints,id']
+            'ids.*' => ['exists:complaints,id'],
         ]);
 
         try {
@@ -562,7 +538,7 @@ class ComplaintController extends Controller
                 function ($attribute, $value, $fail) use ($request) {
                     $subCase = $request->input('sub_case');
                     if ($subCase) {
-                        $defaultCauseBy = \App\Models\SubCase::where('name', $subCase)->value('default_cause_by');
+                        $defaultCauseBy = SubCase::where('name', $subCase)->value('default_cause_by');
                         if ($defaultCauseBy && $value !== $defaultCauseBy) {
                             $fail("Cause/By untuk Sub Case '{$subCase}' harus '{$defaultCauseBy}'.");
                         }
@@ -577,12 +553,10 @@ class ComplaintController extends Controller
             'step_cs_selesai' => [$required, 'string', Rule::in(['YES', 'NO'])],
             'complaint_power' => empty($complaintPowerOptions) ? [$required, 'string'] : [$required, 'string', Rule::in($complaintPowerOptions)],
             'history' => ['nullable', 'string'],
-            'level_customer' => empty($complaintPowerOptions) ? ['nullable', 'string'] : ['nullable', 'string', Rule::in($complaintPowerOptions)],
             'tanggal_update' => [$required, 'date'],
             'tanggal_step_cs_selesai' => ['required_if:step_cs_selesai,YES', 'nullable', 'date'],
             'reason_whitelist' => ['required_if:last_step,Claim Reject', 'nullable', 'string', Rule::in($reasonWhitelistOptions)],
             'reason_late_respons' => ['required_if:reason_whitelist,Late Respons', 'nullable', 'string', Rule::in($reasonLateResponseOptions)],
-            'value_of_product' => ['nullable', 'numeric', 'min:0'],
             'proof' => ['nullable', 'string', 'max:1000'],
             'proof_attachment' => [$forUpdate ? 'sometimes' : 'nullable', 'nullable', 'file', 'mimes:jpg,jpeg,png,pdf,mp4,mov,ogg,qt', 'max:20000'],
             'video_unboxing' => [$forUpdate ? 'sometimes' : 'nullable', 'nullable', 'file', 'mimes:mp4,mov,ogg,qt', 'max:20000'],

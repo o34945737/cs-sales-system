@@ -2,10 +2,8 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
 // use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
-use Spatie\Permission\Models\Role;
 
 class DatabaseSeeder extends Seeder
 {
@@ -21,6 +19,7 @@ class DatabaseSeeder extends Seeder
         $this->call(ComplaintSourceSeeder::class);
         $this->call(ComplaintPowerSeeder::class);
         $this->call(CauseBySeeder::class);
+        $this->call(SkuCodeSeeder::class);
         $this->call(SubCaseSeeder::class);
         $this->call(LastStepSeeder::class);
         $this->call(ReasonWhitelistSeeder::class);
@@ -28,35 +27,9 @@ class DatabaseSeeder extends Seeder
         $this->call(OrderTrackingErpStatusSeeder::class);
         $this->call(OosReasonSeeder::class);
         $this->call(OosSolutionSeeder::class);
+        $this->call(UserSeeder::class);
+        $this->call(OosSeeder::class);
+        $this->call(OrderTrackingSeeder::class);
         $this->call(ComplaintSeeder::class);
-
-        $admin = User::query()->updateOrCreate(
-            ['email' => 'admin@example.com'],
-            [
-                'name' => 'Super Admin',
-                'password' => '12345678',
-                'is_active' => true,
-            ]
-        );
-        $admin->assignRole(Role::findByName('Super Admin'));
-
-        $user = User::query()->updateOrCreate(
-            ['email' => 'test@example.com'],
-            [
-                'name' => 'Test User',
-                'password' => '12345678',
-                'is_active' => true,
-            ]
-        );
-        $user->assignRole(Role::findByName('CS'));
-
-        User::query()
-            ->with('roles')
-            ->get()
-            ->filter(fn(User $existingUser) => $existingUser->roles->isEmpty())
-            ->each(function (User $existingUser): void {
-                $defaultRole = User::role('Super Admin')->exists() ? 'CS' : 'Super Admin';
-                $existingUser->assignRole(Role::findByName($defaultRole));
-            });
     }
 }

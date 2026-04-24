@@ -63,9 +63,11 @@ const props = defineProps({
     erpStatusOptions: Array,
     paymentMethodOptions: Array,
     categoryOptions: Array,
+    causeByOptions: Array,
     lastStepOptions: Array,
     reasonWhitelistOptions: Array,
     reasonLateResponseOptions: Array,
+    autoCauseByMap: Object,
     complaintSyncMap: Object, // { [orderId]: { category, last_step, status, reason_whitelist, reason_late_respons } }
     rgoOrderIds: Array,
     jetTrackMap: Object,      // { [awb]: "KONDISI ..." }
@@ -93,6 +95,7 @@ const sourceOptions = computed(() =>
     Array.isArray(props.sourceOptions) && props.sourceOptions.length ? props.sourceOptions : DEFAULT_SOURCE_OPTIONS
 );
 const erpStatusOptions = computed(() => (Array.isArray(props.erpStatusOptions) ? props.erpStatusOptions : []));
+const causeByOptions = computed(() => (Array.isArray(props.causeByOptions) ? props.causeByOptions : []));
 const paymentMethodOptions = computed(() =>
     Array.isArray(props.paymentMethodOptions) && props.paymentMethodOptions.length
         ? props.paymentMethodOptions
@@ -105,6 +108,7 @@ const platformFilterOptions = computed(() => ['All', ...(props.platformOptions |
 const categoryFilterOptions = computed(() => ['All', ...(props.categoryOptions || [])]);
 
 const categoryOptions = computed(() => (Array.isArray(props.categoryOptions) ? props.categoryOptions : []));
+const autoCauseByMap = computed(() => (props.autoCauseByMap && !Array.isArray(props.autoCauseByMap) ? props.autoCauseByMap : {}));
 const lastStepOptions = computed(() => (Array.isArray(props.lastStepOptions) ? props.lastStepOptions : []));
 const reasonWhitelistOptions = computed(() => (Array.isArray(props.reasonWhitelistOptions) ? props.reasonWhitelistOptions : []));
 const reasonLateResponseOptions = computed(() => (Array.isArray(props.reasonLateResponseOptions) ? props.reasonLateResponseOptions : []));
@@ -222,7 +226,7 @@ const createInitialFormState = () => ({
     platform: '',
     order_id: '',
     value: null as number | null,
-    logistics: '',
+    cause_by: '',
     awb: '',
     erp_status: '',
     payment_method: '',
@@ -274,6 +278,9 @@ const resolveStatusFromLastStep = (lastStep: string) => {
     const matched = lastStepOptions.value.find((item: any) => item?.value === lastStep);
     return matched?.status_result || 'Pending';
 };
+
+const resolvedAutoCauseBy = computed(() => autoCauseByMap.value[form.category] || null);
+const causeByLocked = computed(() => Boolean(resolvedAutoCauseBy.value));
 
 const monthPreview = computed(() => {
     if (!form.tanggal_input) return '';
@@ -366,6 +373,19 @@ watch(
         }
     },
     { immediate: true }
+);
+
+watch(
+    () => form.category,
+    () => {
+        if (isHydratingEditForm.value) return;
+
+        if (resolvedAutoCauseBy.value) {
+            form.cause_by = resolvedAutoCauseBy.value;
+        } else if (!form.cause_by || form.cause_by === '?') {
+            form.cause_by = '?';
+        }
+    }
 );
 
 const videoLabel = computed(() => form.video_unboxing_wh?.name || 'Upload video unboxing');
@@ -765,7 +785,7 @@ const insuranceButtonClass = (value: string) =>
                                                 v-model="search"
                                                 type="text"
                                                 class="h-11 w-full rounded-2xl border border-slate-200 bg-slate-50/50 pl-11 pr-4 text-[13px] font-medium text-slate-900 outline-none transition-all focus:border-[var(--app-primary)] focus:bg-white focus:ring-4 focus:ring-[var(--app-primary)]/10"
-                                                placeholder="Search order ID, AWB, logistics, brand..."
+                                                placeholder="Search order ID, AWB, cause by, brand..."
                                             />
                                         </div>
 
@@ -790,7 +810,7 @@ const insuranceButtonClass = (value: string) =>
                                                 <th class="px-4 py-4">Order Date</th>
                                                 <th class="px-4 py-4">Order</th>
                                                 <th class="px-4 py-4">Brand / Platform</th>
-                                                <th class="px-4 py-4">Logistics / AWB</th>
+                                                <th class="px-4 py-4">Cause By / AWB</th>
                                                 <th class="px-4 py-4">Agent</th>
                                                 <th class="px-4 py-4 text-center">Status</th>
                                                 <th class="px-4 py-4">Track</th>
@@ -842,7 +862,7 @@ const insuranceButtonClass = (value: string) =>
 
                                                 <td class="px-4 py-4">
                                                     <div class="space-y-0.5">
-                                                        <p class="text-[12px] font-black text-slate-900">{{ item.logistics || '-' }}</p>
+                                                        <p class="text-[12px] font-black text-slate-900">{{ item.cause_by || '-' }}</p>
                                                         <p class="text-[10px] font-bold text-slate-400">{{ item.awb || '-' }}</p>
                                                     </div>
                                                 </td>
@@ -995,7 +1015,7 @@ const insuranceButtonClass = (value: string) =>
                                     <p class="text-[10px] font-bold uppercase text-slate-400">Order Summary</p>
                                     <p class="mt-1 text-lg font-black text-slate-900">{{ detailItem.brand || '-' }} / {{ detailItem.platform || '-' }}</p>
                                     <p class="text-[13px] font-medium text-slate-500">
-                                        {{ detailItem.logistics || '-' }} / {{ detailItem.awb || '-' }}
+                                        {{ detailItem.cause_by || '-' }} / {{ detailItem.awb || '-' }}
                                     </p>
                                 </div>
                             </div>
@@ -1174,8 +1194,15 @@ const insuranceButtonClass = (value: string) =>
                                             </div>
 
                                             <div class="space-y-2">
-                                                <label class="block text-[13px] font-black uppercase tracking-wide text-slate-700">Logistics*</label>
-                                                <input v-model="form.logistics" type="text" placeholder="Nama ekspedisi" :class="controlClass('logistics')" />
+                                                <label class="block text-[13px] font-black uppercase tracking-wide text-slate-700">Cause By*</label>
+                                                <div class="relative">
+                                                    <select v-model="form.cause_by" :class="controlClass('cause_by', 'select')" :disabled="causeByLocked">
+                                                        <option value="" disabled>Pilih Cause By</option>
+                                                        <option v-for="item in causeByOptions" :key="item" :value="item">{{ item }}</option>
+                                                    </select>
+                                                    <ChevronDown v-if="!causeByLocked" class="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                                                </div>
+                                                <p v-if="causeByLocked" class="text-[10px] font-bold text-blue-500 uppercase tracking-tight">Locked by Issue Category</p>
                                             </div>
 
                                             <div class="space-y-2">
