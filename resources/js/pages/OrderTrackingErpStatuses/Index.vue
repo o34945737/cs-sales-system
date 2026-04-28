@@ -15,14 +15,17 @@ import { type BreadcrumbItem, type SharedData } from '@/types';
 import { Head, router, useForm, usePage } from '@inertiajs/vue3';
 import debounce from 'lodash/debounce';
 import {
+    AlertTriangle,
     CheckCircle2,
     ChevronLeft,
     ChevronRight,
     Database,
+    FileCheck2,
     PencilLine,
     Plus,
     Search,
     Trash2,
+    Upload,
     XCircle,
 } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
@@ -84,6 +87,38 @@ const activeErpStatus = ref<ManagedErpStatus | null>(null);
 const canCreateErpStatuses = computed(() => page.props.auth?.can?.create_order_tracking_erp_statuses ?? false);
 const canUpdateErpStatuses = computed(() => page.props.auth?.can?.update_order_tracking_erp_statuses ?? false);
 const canDeleteErpStatuses = computed(() => page.props.auth?.can?.delete_order_tracking_erp_statuses ?? false);
+const canImportErpStatuses = computed(() => page.props.auth?.can?.import_order_tracking_erp_statuses ?? false);
+
+const isImportOpen = ref(false);
+const importFile = ref<File | null>(null);
+const importFileInput = ref<HTMLInputElement | null>(null);
+const importResult = computed(() => page.props.flash?.import_result ?? null);
+const importForm = useForm({ file: null as File | null });
+
+const openImportModal = () => {
+    importFile.value = null;
+    importForm.clearErrors();
+    isImportOpen.value = true;
+};
+
+const onFileChange = (e: Event) => {
+    const target = e.target as HTMLInputElement;
+    importFile.value = target.files?.[0] ?? null;
+};
+
+const submitImport = () => {
+    if (!importFile.value) return;
+    importForm.file = importFile.value;
+    importForm.post(route('order-tracking-erp-statuses.import'), {
+        forceFormData: true,
+        preserveScroll: true,
+        onSuccess: () => {
+            isImportOpen.value = false;
+            importFile.value = null;
+            if (importFileInput.value) importFileInput.value.value = '';
+        },
+    });
+};
 
 const createForm = useForm({
     name: '',
@@ -254,8 +289,19 @@ const statusBadgeClass = (active: boolean) =>
                             </p>
                         </div>
 
-                        <div v-if="canCreateErpStatuses" class="flex items-center justify-end">
+                        <div class="flex items-center justify-end gap-2">
                             <Button
+                                v-if="canImportErpStatuses"
+                                type="button"
+                                size="sm"
+                                class="h-9 rounded-xl border border-slate-300 bg-white px-4 text-xs font-bold text-slate-700 shadow-sm hover:bg-slate-50"
+                                @click="openImportModal"
+                            >
+                                <Upload class="h-3.5 w-3.5" />
+                                Import ERP
+                            </Button>
+                            <Button
+                                v-if="canCreateErpStatuses"
                                 type="button"
                                 size="sm"
                                 class="h-9 rounded-xl bg-[var(--app-primary)] px-5 text-xs font-bold text-white shadow-lg hover:bg-[var(--app-primary-dark)]"
@@ -585,6 +631,86 @@ const statusBadgeClass = (active: boolean) =>
                         >
                             <Trash2 class="mr-2 h-4 w-4" />
                             {{ deleteForm.processing ? 'Deleting...' : 'Delete ERP Status' }}
+                        </Button>
+                    </div>
+                </div>
+            </DialogContent>
+        </Dialog>
+
+        <!-- Import Result Alert -->
+        <div
+            v-if="importResult"
+            class="fixed bottom-6 right-6 z-50 w-80 rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl"
+        >
+            <div class="mb-3 flex items-center gap-2">
+                <FileCheck2 class="h-5 w-5 text-emerald-500" />
+                <p class="text-sm font-black text-slate-900">Hasil Import ERP</p>
+            </div>
+            <div class="space-y-1 text-xs font-semibold text-slate-600">
+                <p v-if="importResult.updated" class="text-emerald-600">✓ {{ importResult.updated }} order tracking diperbarui</p>
+                <p v-if="importResult.pending" class="text-amber-600">⏳ {{ importResult.pending }} order_id belum ada di tracking (tersimpan di history)</p>
+                <p v-if="importResult.failed" class="text-rose-600">✗ {{ importResult.failed }} baris gagal</p>
+            </div>
+            <ul v-if="importResult.errors?.length" class="mt-2 max-h-28 overflow-y-auto space-y-0.5">
+                <li v-for="err in importResult.errors" :key="err" class="text-[10px] text-rose-500">{{ err }}</li>
+            </ul>
+        </div>
+
+        <!-- Import Modal -->
+        <Dialog v-model:open="isImportOpen">
+            <DialogContent class="max-w-md overflow-hidden rounded-[28px] border-0 p-0 shadow-2xl">
+                <div class="bg-gradient-to-br from-blue-50 to-white px-7 py-8">
+                    <DialogHeader>
+                        <DialogTitle class="text-2xl font-black text-slate-900">Import ERP Status</DialogTitle>
+                        <DialogDescription class="mt-1 text-sm font-medium text-slate-500">
+                            Upload file CSV berisi <strong>no, order_id, erp_status</strong>.
+                        </DialogDescription>
+                    </DialogHeader>
+                </div>
+
+                <div class="space-y-5 bg-white px-7 py-6">
+                    <div class="flex items-center justify-between rounded-xl border border-dashed border-blue-200 bg-blue-50/40 px-4 py-3">
+                        <div class="flex items-center gap-2 text-xs font-semibold text-slate-600">
+                            <AlertTriangle class="h-4 w-4 text-amber-500" />
+                            Download template sebelum mengisi data
+                        </div>
+                        <a
+                            :href="route('order-tracking-erp-statuses.template')"
+                            class="rounded-lg bg-[var(--app-primary)] px-3 py-1.5 text-xs font-bold text-white hover:bg-[var(--app-primary-dark)]"
+                        >
+                            Download
+                        </a>
+                    </div>
+
+                    <div class="space-y-2">
+                        <Label class="text-xs font-black uppercase tracking-wide text-slate-700">File CSV *</Label>
+                        <input
+                            ref="importFileInput"
+                            type="file"
+                            accept=".csv,.txt"
+                            class="block w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs text-slate-700 file:mr-3 file:rounded-lg file:border-0 file:bg-[var(--app-primary)] file:px-3 file:py-1 file:text-xs file:font-bold file:text-white"
+                            @change="onFileChange"
+                        />
+                        <InputError :message="importForm.errors.file" />
+                    </div>
+
+                    <div class="flex items-center justify-end gap-3 border-t border-slate-100 pt-4">
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            class="h-10 rounded-xl px-5 text-sm font-bold text-slate-500"
+                            @click="isImportOpen = false"
+                        >
+                            Batal
+                        </Button>
+                        <Button
+                            type="button"
+                            :disabled="!importFile || importForm.processing"
+                            class="h-10 rounded-xl bg-[var(--app-primary)] px-5 text-sm font-bold text-white shadow-md disabled:opacity-40"
+                            @click="submitImport"
+                        >
+                            <Upload class="mr-1.5 h-4 w-4" />
+                            {{ importForm.processing ? 'Uploading...' : 'Import Sekarang' }}
                         </Button>
                     </div>
                 </div>

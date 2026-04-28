@@ -18,6 +18,7 @@ use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Throwable;
@@ -341,9 +342,12 @@ class ComplaintController extends Controller
         $rules = $this->complaintRules($request);
         $data = $request->validate($rules, [
             'tanggal_step_cs_selesai.required_if' => 'Tanggal harus diisi jika Step CS Selesai = YES.',
-            'reason_whitelist.required_if' => 'Reason Whitelist wajib diisi jika Last Step = Claim Reject.',
             'reason_late_respons.required_if' => 'Reason Late Respons wajib diisi jika Whitelist = Late Respons.',
             'jam_customer_complaint.date_format' => 'Format jam harus HH:mm atau HH:mm:ss.',
+            'video_unboxing.mimes' => 'Video unboxing harus berupa file video dengan format mp4, mov, ogg, atau qt.',
+            'video_unboxing.max' => 'Ukuran video unboxing maksimal 5 MB.',
+            'proof_attachment.mimes' => 'Proof attachment harus berupa file dengan format jpg, jpeg, png, pdf, mp4, mov, ogg, atau qt.',
+            'proof_attachment.max' => 'Ukuran proof attachment maksimal 500 KB.',
         ]);
 
         try {
@@ -402,15 +406,27 @@ class ComplaintController extends Controller
             'reason_whitelist.required_if' => 'Reason Whitelist wajib diisi jika Last Step = Claim Reject.',
             'reason_late_respons.required_if' => 'Reason Late Respons wajib diisi jika Whitelist = Late Respons.',
             'jam_customer_complaint.date_format' => 'Format jam harus HH:mm atau HH:mm:ss.',
+            'video_unboxing.mimes' => 'Video unboxing harus berupa file video dengan format mp4, mov, ogg, atau qt.',
+            'video_unboxing.max' => 'Ukuran video unboxing maksimal 5 MB.',
+            'proof_attachment.mimes' => 'Proof attachment harus berupa file dengan format jpg, jpeg, png, pdf, mp4, mov, ogg, atau qt.',
+            'proof_attachment.max' => 'Ukuran proof attachment maksimal 500 KB.',
         ]);
 
         try {
             if ($request->hasFile('video_unboxing')) {
+                $oldVideoUnboxing = $complaint->video_unboxing;
                 $data['video_unboxing'] = $request->file('video_unboxing')->store('complaints/videos', 'public');
+                $this->deletePublicFile($oldVideoUnboxing);
+            } else {
+                unset($data['video_unboxing']);
             }
 
             if ($request->hasFile('proof_attachment')) {
+                $oldProofAttachment = $complaint->proof_attachment;
                 $data['proof_attachment'] = $request->file('proof_attachment')->store('complaints/proofs', 'public');
+                $this->deletePublicFile($oldProofAttachment);
+            } else {
+                unset($data['proof_attachment']);
             }
 
             $complaint->update($data);
@@ -439,12 +455,12 @@ class ComplaintController extends Controller
     public function bulkDestroy(Request $request)
     {
         $request->validate([
-            'ids' => ['required', 'array'],
-            'ids.*' => ['exists:complaints,id'],
+            'ids' => ['required', 'array', 'min:1'],
+            'ids.*' => ['integer', 'distinct', 'exists:complaints,id'],
         ]);
 
         try {
-            Complaint::whereIn('id', $request->ids)->delete();
+            Complaint::whereIn('id', $request->input('ids', []))->delete();
         } catch (Throwable $exception) {
             report($exception);
 
@@ -558,8 +574,17 @@ class ComplaintController extends Controller
             'reason_whitelist' => ['required_if:last_step,Claim Reject', 'nullable', 'string', Rule::in($reasonWhitelistOptions)],
             'reason_late_respons' => ['required_if:reason_whitelist,Late Respons', 'nullable', 'string', Rule::in($reasonLateResponseOptions)],
             'proof' => ['nullable', 'string', 'max:1000'],
-            'proof_attachment' => [$forUpdate ? 'sometimes' : 'nullable', 'nullable', 'file', 'mimes:jpg,jpeg,png,pdf,mp4,mov,ogg,qt', 'max:20000'],
-            'video_unboxing' => [$forUpdate ? 'sometimes' : 'nullable', 'nullable', 'file', 'mimes:mp4,mov,ogg,qt', 'max:20000'],
+            'proof_attachment' => [$forUpdate ? 'sometimes' : 'nullable', 'nullable', 'file', 'mimes:jpg,jpeg,png,pdf,mp4,mov,ogg,qt', 'max:500'],
+            'video_unboxing' => [$forUpdate ? 'sometimes' : 'nullable', 'nullable', 'file', 'mimes:mp4,mov,ogg,qt', 'max:5120'],
         ];
+    }
+
+    private function deletePublicFile(?string $path): void
+    {
+        if (! $path || preg_match('/^https?:\/\//i', $path)) {
+            return;
+        }
+
+        Storage::disk('public')->delete(ltrim($path, '/'));
     }
 }

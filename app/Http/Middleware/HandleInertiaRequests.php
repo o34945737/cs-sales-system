@@ -45,6 +45,7 @@ class HandleInertiaRequests extends Middleware
             'flash' => [
                 'success' => fn() => $request->session()->get('success'),
                 'error' => fn() => $request->session()->get('error'),
+                'import_result' => fn() => $request->session()->get('import_result'),
             ],
             'auth' => [
                 'user' => $user ? [
@@ -110,10 +111,12 @@ class HandleInertiaRequests extends Middleware
                     'create_order_tracking_erp_statuses' => $user?->can('create order tracking erp statuses') ?? false,
                     'update_order_tracking_erp_statuses' => $user?->can('update order tracking erp statuses') ?? false,
                     'delete_order_tracking_erp_statuses' => $user?->can('delete order tracking erp statuses') ?? false,
+                    'import_order_tracking_erp_statuses' => $user?->can('import order tracking erp statuses') ?? false,
                     'view_order_tracking_rgo_entries' => $user?->can('view order tracking rgo entries') ?? false,
                     'create_order_tracking_rgo_entries' => $user?->can('create order tracking rgo entries') ?? false,
                     'update_order_tracking_rgo_entries' => $user?->can('update order tracking rgo entries') ?? false,
                     'delete_order_tracking_rgo_entries' => $user?->can('delete order tracking rgo entries') ?? false,
+                    'import_order_tracking_rgo_entries' => $user?->can('import order tracking rgo entries') ?? false,
                     'view_jet_track_entries' => $user?->can('view jet track entries') ?? false,
                     'create_jet_track_entries' => $user?->can('create jet track entries') ?? false,
                     'update_jet_track_entries' => $user?->can('update jet track entries') ?? false,

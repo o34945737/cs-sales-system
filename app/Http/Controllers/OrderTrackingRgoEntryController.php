@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\OrderTracking;
 use App\Models\OrderTrackingRgoEntry;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -78,6 +79,83 @@ class OrderTrackingRgoEntryController extends Controller
         $orderTrackingRgoEntry->delete();
 
         return redirect()->route('order-tracking-rgo-entries.index')->with('success', 'Data RGO order tracking berhasil dihapus.');
+    }
+
+    public function downloadTemplate()
+    {
+        $csv = "no,order_id,notes,is_active\n";
+        $csv .= "1,ORD-12345,,1\n";
+        $csv .= "2,ORD-12346,Refund processed,1\n";
+        $csv .= "3,ORD-12347,Return approved,1\n";
+
+        return response($csv)
+            ->header('Content-Type', 'text/csv')
+            ->header('Content-Disposition', 'attachment; filename="rgo-import-template.csv"');
+    }
+
+    public function import(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'file' => ['required', 'file', 'mimes:csv,txt', 'max:10240'],
+        ]);
+
+        $results = ['created' => 0, 'updated' => 0, 'failed' => 0, 'errors' => []];
+        $importedOrderIds = [];
+
+        $handle = fopen($request->file('file')->getRealPath(), 'r');
+        fgetcsv($handle); // skip header row
+
+        $rowNum = 1;
+        while (($row = fgetcsv($handle)) !== false) {
+            $rowNum++;
+
+            if (count($row) < 2) {
+                $results['failed']++;
+                $results['errors'][] = "Baris {$rowNum}: format tidak valid (kurang kolom)";
+                continue;
+            }
+
+            [, $orderId] = $row;
+            $notes    = isset($row[2]) ? trim($row[2]) : null;
+            $isActive = isset($row[3]) ? (bool)(int)trim($row[3]) : true;
+            $orderId  = trim($orderId);
+
+            if (!$orderId) {
+                $results['failed']++;
+                $results['errors'][] = "Baris {$rowNum}: order_id kosong";
+                continue;
+            }
+
+            $existing = OrderTrackingRgoEntry::where('order_id', $orderId)->first();
+
+            if ($existing) {
+                $existing->update([
+                    'notes'     => $notes ?: $existing->notes,
+                    'is_active' => $isActive,
+                ]);
+                $results['updated']++;
+            } else {
+                OrderTrackingRgoEntry::create([
+                    'order_id' => $orderId,
+                    'notes'    => $notes ?: null,
+                    'is_active' => $isActive,
+                ]);
+                $results['created']++;
+            }
+
+            $importedOrderIds[] = $orderId;
+        }
+
+        fclose($handle);
+
+        // Re-compute automation_track for matching order_trackings
+        if (!empty($importedOrderIds)) {
+            OrderTracking::whereIn('order_id', $importedOrderIds)
+                ->whereNull('automation_track')
+                ->update(['automation_track' => 'Sudah diRGO']);
+        }
+
+        return back()->with('import_result', $results);
     }
 
     private function transformEntry(OrderTrackingRgoEntry $entry): array

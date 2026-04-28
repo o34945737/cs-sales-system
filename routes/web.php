@@ -45,7 +45,6 @@ Route::middleware(['auth', 'active', 'password.reset.required'])->group(function
     Route::middleware('permission:access complaints')->group(function () {
         Route::get('complaints/history/{username}', [ComplaintController::class, 'getCustomerHistory'])->name('complaints.history');
         Route::post('complaints/bulk-delete', [ComplaintController::class, 'bulkDestroy'])
-            ->middleware('permission:delete complaints')
             ->name('complaints.bulk-delete');
         Route::resource('complaints', ComplaintController::class);
     });
@@ -67,6 +66,12 @@ Route::middleware(['auth', 'active', 'password.reset.required'])->group(function
             'order-tracking-erp-statuses' => 'order_tracking_erp_status',
         ])
         ->only(['index', 'store', 'update', 'destroy']);
+    Route::get('order-tracking-erp-statuses/template', [OrderTrackingErpStatusController::class, 'downloadTemplate'])
+        ->middleware('permission:import order tracking erp statuses')
+        ->name('order-tracking-erp-statuses.template');
+    Route::post('order-tracking-erp-statuses/import', [OrderTrackingErpStatusController::class, 'import'])
+        ->middleware('permission:import order tracking erp statuses')
+        ->name('order-tracking-erp-statuses.import');
 
     Route::prefix('brands')->name('brands.')->group(function () {
         Route::get('/', [BrandController::class, 'index'])
@@ -241,6 +246,12 @@ Route::middleware(['auth', 'active', 'password.reset.required'])->group(function
         Route::post('/', [OrderTrackingRgoEntryController::class, 'store'])
             ->middleware('permission:create order tracking rgo entries')
             ->name('store');
+        Route::get('/template', [OrderTrackingRgoEntryController::class, 'downloadTemplate'])
+            ->middleware('permission:import order tracking rgo entries')
+            ->name('template');
+        Route::post('/import', [OrderTrackingRgoEntryController::class, 'import'])
+            ->middleware('permission:import order tracking rgo entries')
+            ->name('import');
         Route::put('/{orderTrackingRgoEntry}', [OrderTrackingRgoEntryController::class, 'update'])
             ->middleware('permission:update order tracking rgo entries')
             ->name('update');

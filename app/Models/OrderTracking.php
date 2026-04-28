@@ -16,6 +16,17 @@ class OrderTracking extends Model
     {
         parent::boot();
 
+        static::creating(function ($model) {
+            if ($model->order_id && !filled($model->erp_status)) {
+                $history = OrderTrackingErpStatusHistory::where('order_id', $model->order_id)
+                    ->latest()
+                    ->first(['erp_status']);
+                if ($history) {
+                    $model->erp_status = $history->erp_status;
+                }
+            }
+        });
+
         static::saving(function ($model) {
             // Month
             if ($model->tanggal_input) {

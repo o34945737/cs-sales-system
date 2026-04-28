@@ -399,11 +399,16 @@ const bulkDeleteForm = useForm({
     ids: [],
 });
 
+const currentPageIds = computed(() => complaintRows.value.map((row) => row.id));
+const isAllCurrentPageSelected = computed(
+    () => currentPageIds.value.length > 0 && currentPageIds.value.every((id) => selectedIds.value.includes(id)),
+);
+
 const toggleSelectAll = () => {
-    if (selectedIds.value.length === complaintRows.value.length) {
-        selectedIds.value = [];
+    if (isAllCurrentPageSelected.value) {
+        selectedIds.value = selectedIds.value.filter((id) => !currentPageIds.value.includes(id));
     } else {
-        selectedIds.value = complaintRows.value.map((row) => row.id);
+        selectedIds.value = Array.from(new Set([...selectedIds.value, ...currentPageIds.value]));
     }
 };
 
@@ -417,12 +422,16 @@ const toggleSelect = (id) => {
 };
 
 const confirmBulkDelete = () => {
+    if (!selectedIds.value.length) return;
     isBulkDeleteModalOpen.value = true;
 };
 
 const submitBulkDelete = () => {
+    if (!selectedIds.value.length) return;
+
     bulkDeleteForm.ids = [...selectedIds.value];
     bulkDeleteForm.post(route('complaints.bulk-delete'), {
+        preserveScroll: true,
         onSuccess: () => {
             isBulkDeleteModalOpen.value = false;
             selectedIds.value = [];
@@ -431,6 +440,7 @@ const submitBulkDelete = () => {
 };
 
 const visitIndex = (overrides = {}, options = {}) => {
+    selectedIds.value = [];
     router.get(
         route('complaints.index'),
         {
@@ -1626,7 +1636,7 @@ const sectionChecks = computed(() => [
                                                         <input
                                                             type="checkbox"
                                                             class="h-4 w-4 cursor-pointer rounded-md border-slate-300 text-[var(--app-primary)] transition-all focus:ring-[var(--app-primary)]"
-                                                            :checked="complaintRows.length > 0 && selectedIds.length === complaintRows.length"
+                                                            :checked="isAllCurrentPageSelected"
                                                             @change="toggleSelectAll"
                                                         />
                                                     </div>
@@ -2949,7 +2959,7 @@ const sectionChecks = computed(() => [
                                 class="flex h-11 items-center gap-2.5 rounded-[18px] bg-rose-500 px-6 text-[13px] font-black text-white shadow-lg shadow-rose-500/30 transition-all hover:bg-rose-600 hover:shadow-rose-600/40 active:scale-95"
                             >
                                 <Trash2 class="h-4 w-4" />
-                                <span>Hapus Massal</span>
+                                <span>Hapus Semua</span>
                             </button>
                         </div>
                     </div>

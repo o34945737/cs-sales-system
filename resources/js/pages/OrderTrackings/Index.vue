@@ -226,7 +226,7 @@ const createInitialFormState = () => ({
     platform: '',
     order_id: '',
     value: null as number | null,
-    cause_by: '',
+    cause_by: '?',
     awb: '',
     erp_status: '',
     payment_method: '',
@@ -382,7 +382,7 @@ watch(
 
         if (resolvedAutoCauseBy.value) {
             form.cause_by = resolvedAutoCauseBy.value;
-        } else if (!form.cause_by || form.cause_by === '?') {
+        } else {
             form.cause_by = '?';
         }
     }
@@ -553,6 +553,11 @@ const statusDotClass = (status: string) =>
 
 const insuranceButtonClass = (value: string) =>
     form.insurance_info === value
+        ? 'border-[var(--app-primary)] bg-[var(--app-primary)] text-white shadow-md'
+        : 'border-slate-200 bg-white text-slate-600 hover:border-[var(--app-primary)]/40 hover:bg-slate-50';
+
+const selectButtonClass = (currentValue: string, expectedValue: string) =>
+    currentValue === expectedValue
         ? 'border-[var(--app-primary)] bg-[var(--app-primary)] text-white shadow-md'
         : 'border-slate-200 bg-white text-slate-600 hover:border-[var(--app-primary)]/40 hover:bg-slate-50';
 </script>
@@ -810,8 +815,8 @@ const insuranceButtonClass = (value: string) =>
                                                 <th class="px-4 py-4">Order Date</th>
                                                 <th class="px-4 py-4">Order</th>
                                                 <th class="px-4 py-4">Brand / Platform</th>
-                                                <th class="px-4 py-4">Cause By / AWB</th>
-                                                <th class="px-4 py-4">Agent</th>
+                                                <th class="px-4 py-4">Sub Case / By</th>
+                                                <th class="px-4 py-4">Agent / AWB</th>
                                                 <th class="px-4 py-4 text-center">Status</th>
                                                 <th class="px-4 py-4">Track</th>
                                                 <th class="py-4 pl-4 pr-6 text-right">Action</th>
@@ -862,8 +867,8 @@ const insuranceButtonClass = (value: string) =>
 
                                                 <td class="px-4 py-4">
                                                     <div class="space-y-0.5">
-                                                        <p class="text-[12px] font-black text-slate-900">{{ item.cause_by || '-' }}</p>
-                                                        <p class="text-[10px] font-bold text-slate-400">{{ item.awb || '-' }}</p>
+                                                        <p class="text-[12px] font-black text-slate-900">{{ item.category || '-' }}</p>
+                                                        <p class="text-[10px] font-bold text-slate-400">{{ item.cause_by || '-' }}</p>
                                                     </div>
                                                 </td>
 
@@ -874,7 +879,7 @@ const insuranceButtonClass = (value: string) =>
                                                         </div>
                                                         <div class="space-y-0.5">
                                                             <p class="text-[12px] font-bold text-slate-700">{{ item.cs_name || 'Unassigned' }}</p>
-                                                            <p class="text-[10px] font-medium text-slate-400">{{ item.category || '-' }}</p>
+                                                            <p class="text-[10px] font-medium text-slate-400">{{ item.awb || '-' }}</p>
                                                         </div>
                                                     </div>
                                                 </td>
@@ -1015,7 +1020,10 @@ const insuranceButtonClass = (value: string) =>
                                     <p class="text-[10px] font-bold uppercase text-slate-400">Order Summary</p>
                                     <p class="mt-1 text-lg font-black text-slate-900">{{ detailItem.brand || '-' }} / {{ detailItem.platform || '-' }}</p>
                                     <p class="text-[13px] font-medium text-slate-500">
-                                        {{ detailItem.cause_by || '-' }} / {{ detailItem.awb || '-' }}
+                                        {{ detailItem.category || '-' }} / {{ detailItem.cause_by || '-' }}
+                                    </p>
+                                    <p class="text-[12px] font-medium text-slate-400">
+                                        AWB: {{ detailItem.awb || '-' }}
                                     </p>
                                 </div>
                             </div>
@@ -1187,22 +1195,10 @@ const insuranceButtonClass = (value: string) =>
                                             </div>
                                         </div>
 
-                                        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                                        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                                             <div class="space-y-2">
                                                 <label class="block text-[13px] font-black uppercase tracking-wide text-slate-700">Value</label>
                                                 <input v-model="form.value" type="number" placeholder="Nominal order" :class="controlClass('value')" />
-                                            </div>
-
-                                            <div class="space-y-2">
-                                                <label class="block text-[13px] font-black uppercase tracking-wide text-slate-700">Cause By*</label>
-                                                <div class="relative">
-                                                    <select v-model="form.cause_by" :class="controlClass('cause_by', 'select')" :disabled="causeByLocked">
-                                                        <option value="" disabled>Pilih Cause By</option>
-                                                        <option v-for="item in causeByOptions" :key="item" :value="item">{{ item }}</option>
-                                                    </select>
-                                                    <ChevronDown v-if="!causeByLocked" class="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
-                                                </div>
-                                                <p v-if="causeByLocked" class="text-[10px] font-bold text-blue-500 uppercase tracking-tight">Locked by Issue Category</p>
                                             </div>
 
                                             <div class="space-y-2">
@@ -1264,22 +1260,6 @@ const insuranceButtonClass = (value: string) =>
                                             </div>
 
                                             <div class="space-y-2">
-                                                <label class="block text-[13px] font-black uppercase tracking-wide text-slate-700">Category*</label>
-                                                <template v-if="isComplaintLinked">
-                                                    <input :value="categoryPreview || '-'" type="text" readonly :class="readonlyInputClass" />
-                                                </template>
-                                                <template v-else>
-                                                    <div class="relative">
-                                                        <select v-model="form.category" :class="controlClass('category', 'select')">
-                                                            <option value="" disabled>Pilih Category</option>
-                                                            <option v-for="item in categoryOptions" :key="item" :value="item">{{ item }}</option>
-                                                        </select>
-                                                        <ChevronDown class="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
-                                                    </div>
-                                                </template>
-                                            </div>
-
-                                            <div class="space-y-2">
                                                 <label class="block text-[13px] font-black uppercase tracking-wide text-slate-700">Last Step*</label>
                                                 <template v-if="isComplaintLinked">
                                                     <input :value="lastStepPreview || '-'" type="text" readonly :class="readonlyInputClass" />
@@ -1296,6 +1276,54 @@ const insuranceButtonClass = (value: string) =>
                                                     </div>
                                                 </template>
                                             </div>
+
+                                            <div class="space-y-2">
+                                                <label class="block text-[13px] font-black uppercase tracking-wide text-slate-700">Sub Case*</label>
+                                                <template v-if="isComplaintLinked">
+                                                    <input :value="categoryPreview || '-'" type="text" readonly :class="readonlyInputClass" />
+                                                </template>
+                                                <template v-else>
+                                                    <div class="relative">
+                                                        <select v-model="form.category" :class="controlClass('category', 'select')">
+                                                            <option value="" disabled>Pilih Category</option>
+                                                            <option v-for="item in categoryOptions" :key="item" :value="item">{{ item }}</option>
+                                                        </select>
+                                                        <ChevronDown class="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                                                    </div>
+                                                </template>
+                                            </div>
+                                        </div>
+
+                                        <div class="space-y-3 pt-1">
+                                            <div class="flex items-center justify-between gap-3">
+                                                <label class="block text-[13px] font-black uppercase tracking-wide text-slate-700">Cause By*</label>
+                                                <span v-if="causeByLocked" class="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--accent)]">Auto from Category</span>
+                                            </div>
+                                            <div class="flex flex-wrap gap-2">
+                                                <template v-if="causeByLocked">
+                                                    <button
+                                                        type="button"
+                                                        class="cursor-not-allowed rounded-lg border px-4 py-3 text-[15px] font-bold transition"
+                                                        :class="selectButtonClass(form.cause_by, form.cause_by)"
+                                                        disabled
+                                                    >
+                                                        {{ form.cause_by }}
+                                                    </button>
+                                                </template>
+                                                <template v-else>
+                                                    <button
+                                                        v-for="option in causeByOptions"
+                                                        :key="option"
+                                                        type="button"
+                                                        class="rounded-lg border px-4 py-3 text-[15px] font-bold transition"
+                                                        :class="selectButtonClass(form.cause_by, option)"
+                                                        @click="form.cause_by = option"
+                                                    >
+                                                        {{ option }}
+                                                    </button>
+                                                </template>
+                                            </div>
+                                            <p v-if="fieldError('cause_by')" class="mt-2 text-xs font-medium text-rose-600">{{ fieldError('cause_by') }}</p>
                                         </div>
 
                                         <div class="space-y-2">

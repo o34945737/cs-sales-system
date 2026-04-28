@@ -87,8 +87,8 @@ class DashboardController extends Controller
     public function complaintAnalytics(): Response
     {
         $weeklyComplaint = collect(range(6, 0))
-            ->map(fn (int $i) => Carbon::today()->subDays($i)->toDateString())
-            ->map(fn (string $date) => [
+            ->map(fn(int $i) => Carbon::today()->subDays($i)->toDateString())
+            ->map(fn(string $date) => [
                 'date' => $date,
                 'new' => Complaint::query()->whereDate('created_at', $date)->count(),
                 'solved' => Complaint::query()
@@ -207,7 +207,7 @@ class DashboardController extends Controller
             ->orderByDesc('total')
             ->get();
 
-        $pendingOtBase = fn () => OrderTracking::query()->where('status', 'Pending');
+        $pendingOtBase = fn() => OrderTracking::query()->where('status', 'Pending');
 
         $pendingOtByBrand = (clone $pendingOtBase())
             ->selectRaw('brand as label, COUNT(*) as total')
@@ -221,9 +221,9 @@ class DashboardController extends Controller
             ->orderByDesc('total')
             ->get();
 
-        $pendingOtByLogistics = (clone $pendingOtBase())
-            ->selectRaw('logistics as label, COUNT(*) as total')
-            ->groupBy('logistics')
+        $pendingOtByCauseBy = (clone $pendingOtBase())
+            ->selectRaw('cause_by as label, COUNT(*) as total')
+            ->groupBy('cause_by')
             ->orderByDesc('total')
             ->get();
 
@@ -249,7 +249,7 @@ class DashboardController extends Controller
 
         $oosNeedingBlast = Oos::query()
             ->whereIn('tanggal_input', [$today->toDateString(), Carbon::yesterday()->toDateString()])
-            ->where(fn ($query) => $query->whereNull('update_cs')->orWhere('update_cs', '!=', 'Done Blast'))
+            ->where(fn($query) => $query->whereNull('update_cs')->orWhere('update_cs', '!=', 'Done Blast'))
             ->selectRaw('tanggal_input as label, COUNT(*) as total')
             ->groupBy('tanggal_input')
             ->orderByDesc('tanggal_input')
@@ -257,7 +257,7 @@ class DashboardController extends Controller
 
         $oosNeedingBlastTotal = Oos::query()
             ->whereIn('tanggal_input', [$today->toDateString(), Carbon::yesterday()->toDateString()])
-            ->where(fn ($query) => $query->whereNull('update_cs')->orWhere('update_cs', '!=', 'Done Blast'))
+            ->where(fn($query) => $query->whereNull('update_cs')->orWhere('update_cs', '!=', 'Done Blast'))
             ->count();
 
         $oosByBrand = Oos::query()
@@ -274,7 +274,7 @@ class DashboardController extends Controller
             'badReviewByCategory' => $badReviewByCategory,
             'pendingOtByBrand' => $pendingOtByBrand,
             'pendingOtByPlatform' => $pendingOtByPlatform,
-            'pendingOtByLogistics' => $pendingOtByLogistics,
+            'pendingOtByCauseBy' => $pendingOtByCauseBy,
             'pendingOtByOrderDate' => $pendingOtByOrderDate,
             'pendingOtByAutoTrack' => $pendingOtByAutoTrack,
             'pendingOtByDataSource' => $pendingOtByDataSource,
@@ -287,7 +287,7 @@ class DashboardController extends Controller
     public function agentInterface(): Response
     {
         $dates = collect(range(6, 0))
-            ->map(fn (int $i) => Carbon::today()->subDays($i)->toDateString())
+            ->map(fn(int $i) => Carbon::today()->subDays($i)->toDateString())
             ->all();
 
         $agentComplaintStats = Complaint::query()
@@ -320,7 +320,7 @@ class DashboardController extends Controller
                 'pending' => (int) $row->pending,
                 'whitelist' => (int) $row->whitelist,
                 'solved_total' => (int) $row->solved_total,
-                'daily_solved' => array_map(fn ($date) => [
+                'daily_solved' => array_map(fn($date) => [
                     'date' => $date,
                     'count' => (int) ($byDate->get($date)?->count ?? 0),
                 ], $dates),
@@ -338,9 +338,9 @@ class DashboardController extends Controller
             ->orderBy('last_steps.priority_level')
             ->get()
             ->groupBy('agent')
-            ->map(fn (Collection $rows, string $agent) => [
+            ->map(fn(Collection $rows, string $agent) => [
                 'agent' => $agent,
-                'priorities' => $rows->map(fn ($row) => [
+                'priorities' => $rows->map(fn($row) => [
                     'priority' => $row->priority_level,
                     'total' => (int) $row->total,
                 ])->values(),
@@ -364,8 +364,8 @@ class DashboardController extends Controller
     private function weeklySimple($baseQuery, string $dateColumn): array
     {
         return collect(range(6, 0))
-            ->map(fn (int $i) => Carbon::today()->subDays($i)->toDateString())
-            ->map(fn (string $date) => [
+            ->map(fn(int $i) => Carbon::today()->subDays($i)->toDateString())
+            ->map(fn(string $date) => [
                 'date' => $date,
                 'total' => (clone $baseQuery)->whereDate($dateColumn, $date)->count(),
             ])
@@ -444,7 +444,7 @@ class DashboardController extends Controller
             array_keys($orderTrackingSolved),
         )))->sort()->values();
 
-        return $allAgents->map(fn (string $agent) => [
+        return $allAgents->map(fn(string $agent) => [
             'agent' => $agent,
             'dist_complaint' => (int) ($complaintDistributed[$agent] ?? 0),
             'dist_bad_review' => (int) ($badReviewDistributed[$agent] ?? 0),
@@ -467,7 +467,7 @@ class DashboardController extends Controller
     {
         $productivityByAgent = $todayProductivity
             ->groupBy('cs_name')
-            ->map(fn (Collection $rows) => [
+            ->map(fn(Collection $rows) => [
                 'productivity_total' => (int) $rows->sum('total_ticket'),
                 'productivity_entries' => $rows->count(),
             ]);
@@ -499,7 +499,7 @@ class DashboardController extends Controller
                     'productivity_entries' => (int) $productivity['productivity_entries'],
                 ];
             })
-            ->sortByDesc(fn (array $row) => ($row['productivity_total'] * 1000000) + ($row['handled'] * 1000) + $row['distributed'])
+            ->sortByDesc(fn(array $row) => ($row['productivity_total'] * 1000000) + ($row['handled'] * 1000) + $row['distributed'])
             ->values();
     }
 

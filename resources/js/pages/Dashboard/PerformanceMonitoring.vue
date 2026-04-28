@@ -21,7 +21,7 @@ const props = defineProps<{
     badReviewByCategory: LabelTotal[];
     pendingOtByBrand: LabelTotal[];
     pendingOtByPlatform: LabelTotal[];
-    pendingOtByLogistics: LabelTotal[];
+    pendingOtByCauseBy: LabelTotal[];
     pendingOtByOrderDate: LabelTotal[];
     pendingOtByAutoTrack: LabelTotal[];
     pendingOtByDataSource: LabelTotal[];
@@ -205,10 +205,10 @@ function refreshPage() {
                     <div>
                         <p class="mb-3 text-[10px] font-black uppercase tracking-widest text-slate-400">By Logistics</p>
                         <div class="space-y-3">
-                            <div v-for="row in pendingOtByLogistics" :key="row.label ?? 'null'" class="flex items-center gap-3">
+                            <div v-for="row in pendingOtByCauseBy" :key="row.label ?? 'null'" class="flex items-center gap-3">
                                 <span class="w-20 truncate text-xs font-bold text-slate-600">{{ row.label || '-' }}</span>
                                 <div class="h-2 flex-1 overflow-hidden rounded-full bg-slate-50">
-                                    <div class="h-full bg-teal-400" :style="{ width: barWidth(row.total, maxOf(pendingOtByLogistics)) }"></div>
+                                    <div class="h-full bg-teal-400" :style="{ width: barWidth(row.total, maxOf(pendingOtByCauseBy)) }"></div>
                                 </div>
                                 <span class="w-8 text-right text-xs font-black text-slate-400">{{ row.total }}</span>
                             </div>

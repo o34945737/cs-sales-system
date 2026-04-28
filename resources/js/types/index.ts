@@ -55,10 +55,12 @@ export interface Auth {
         create_order_tracking_erp_statuses: boolean;
         update_order_tracking_erp_statuses: boolean;
         delete_order_tracking_erp_statuses: boolean;
+        import_order_tracking_erp_statuses: boolean;
         view_order_tracking_rgo_entries: boolean;
         create_order_tracking_rgo_entries: boolean;
         update_order_tracking_rgo_entries: boolean;
         delete_order_tracking_rgo_entries: boolean;
+        import_order_tracking_rgo_entries: boolean;
         view_jet_track_entries: boolean;
         create_jet_track_entries: boolean;
         update_jet_track_entries: boolean;
@@ -109,6 +111,13 @@ export interface SharedData extends Record<string, unknown> {
     flash: {
         success?: string;
         error?: string;
+        import_result?: {
+            updated?: number;
+            created?: number;
+            pending?: number;
+            failed?: number;
+            errors?: string[];
+        };
     };
     ziggy: {
         location: string;

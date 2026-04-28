@@ -85,7 +85,7 @@ const props = defineProps<{
     badReviewByCategory: LabelTotal[];
     pendingOtByBrand: LabelTotal[];
     pendingOtByPlatform: LabelTotal[];
-    pendingOtByLogistics: LabelTotal[];
+    pendingOtByCauseBy: LabelTotal[];
     pendingOtByOrderDate: LabelTotal[];
     pendingOtByAutoTrack: LabelTotal[];
     pendingOtByDataSource: LabelTotal[];
@@ -649,18 +649,18 @@ const quickLinks = computed(() => {
                     <div class="app-grid-card p-4">
                         <p class="text-[10px] font-black uppercase tracking-wider text-slate-400 mb-2">By Logistics</p>
                         <div class="space-y-1.5">
-                            <div v-for="row in pendingOtByLogistics" :key="row.label ?? 'null'" class="flex items-center gap-2">
+                            <div v-for="row in pendingOtByCauseBy" :key="row.label ?? 'null'" class="flex items-center gap-2">
                                 <div class="flex-1 min-w-0">
                                     <div class="flex items-center justify-between mb-0.5">
                                         <span class="text-xs font-semibold text-[var(--app-ink)] truncate">{{ row.label || '-' }}</span>
                                         <span class="text-xs font-black text-slate-500 ml-2">{{ row.total }}</span>
                                     </div>
                                     <div class="h-1.5 w-full rounded-full bg-slate-100">
-                                        <div class="h-1.5 rounded-full bg-teal-400" :style="{ width: barWidth(row.total, maxOf(pendingOtByLogistics)) }"></div>
+                                        <div class="h-1.5 rounded-full bg-teal-400" :style="{ width: barWidth(row.total, maxOf(pendingOtByCauseBy)) }"></div>
                                     </div>
                                 </div>
                             </div>
-                            <div v-if="!pendingOtByLogistics.length" class="text-xs text-slate-400 text-center py-3">Tidak ada data</div>
+                            <div v-if="!pendingOtByCauseBy.length" class="text-xs text-slate-400 text-center py-3">Tidak ada data</div>
                         </div>
                     </div>
 
