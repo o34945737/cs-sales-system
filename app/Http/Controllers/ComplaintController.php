@@ -17,6 +17,7 @@ use App\Models\SubCase;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
@@ -29,71 +30,51 @@ class ComplaintController extends Controller
     {
         $priorityOrder = ['Cool', 'Mines', 'P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7'];
 
-        $sourceOptions = ComplaintSource::query()
-            ->where('is_active', true)
-            ->orderBy('name')
-            ->pluck('name')
-            ->all();
-        $complaintPowerOptions = ComplaintPower::query()
-            ->where('is_active', true)
-            ->orderBy('name')
-            ->pluck('name')
-            ->all();
-        $brandOptions = Brand::query()
-            ->where('is_active', true)
-            ->orderBy('name')
-            ->pluck('name')
-            ->all();
-        $platformOptions = Platform::query()
-            ->where('is_active', true)
-            ->orderBy('name')
-            ->pluck('name')
-            ->all();
-        $subCaseOptions = SubCase::query()
-            ->where('is_active', true)
-            ->orderBy('name')
-            ->pluck('name')
-            ->all();
-        $skuCodeOptions = SkuCode::query()
-            ->orderBy('sku')
-            ->get(['sku', 'product_name'])
-            ->map(fn(SkuCode $skuCode) => [
-                'sku' => $skuCode->sku,
-                'product_name' => $skuCode->product_name,
-            ])
-            ->all();
-        $causeByNames = CauseBy::query()
-            ->where('is_active', true)
-            ->orderBy('name')
-            ->pluck('name')
-            ->all();
-        $lastStepOptions = LastStep::query()
-            ->where('is_active', true)
-            ->orderBy('name')
-            ->get(['name', 'status_result', 'priority_level'])
-            ->map(fn(LastStep $lastStep) => [
-                'label' => $lastStep->name,
-                'value' => $lastStep->name,
-                'status_result' => $lastStep->status_result,
-                'priority_level' => $lastStep->priority_level,
-            ])
-            ->all();
-        $reasonWhitelistOptions = ReasonWhitelist::query()
-            ->where('is_active', true)
-            ->orderBy('name')
-            ->pluck('name')
-            ->all();
-        $reasonLateResponseOptions = ReasonLateResponse::query()
-            ->where('is_active', true)
-            ->orderBy('name')
-            ->pluck('name')
-            ->all();
-        $csNameOptions = User::query()
-            ->whereHas('roles', fn($q) => $q->where('name', 'CS'))
-            ->where('is_active', true)
-            ->orderBy('name')
-            ->pluck('name')
-            ->all();
+        $ttl = 300; // 5 menit
+
+        $sourceOptions = Cache::remember('options.complaint_sources', $ttl, fn() =>
+            ComplaintSource::query()->where('is_active', true)->orderBy('name')->pluck('name')->all()
+        );
+        $complaintPowerOptions = Cache::remember('options.complaint_powers', $ttl, fn() =>
+            ComplaintPower::query()->where('is_active', true)->orderBy('name')->pluck('name')->all()
+        );
+        $brandOptions = Cache::remember('options.brands', $ttl, fn() =>
+            Brand::query()->where('is_active', true)->orderBy('name')->pluck('name')->all()
+        );
+        $platformOptions = Cache::remember('options.platforms', $ttl, fn() =>
+            Platform::query()->where('is_active', true)->orderBy('name')->pluck('name')->all()
+        );
+        $subCaseOptions = Cache::remember('options.sub_cases', $ttl, fn() =>
+            SubCase::query()->where('is_active', true)->orderBy('name')->pluck('name')->all()
+        );
+        $skuCodeOptions = Cache::remember('options.sku_codes', $ttl, fn() =>
+            SkuCode::query()->orderBy('sku')->get(['sku', 'product_name'])
+                ->map(fn(SkuCode $s) => ['sku' => $s->sku, 'product_name' => $s->product_name])
+                ->all()
+        );
+        $causeByNames = Cache::remember('options.cause_bys', $ttl, fn() =>
+            CauseBy::query()->where('is_active', true)->orderBy('name')->pluck('name')->all()
+        );
+        $lastStepOptions = Cache::remember('options.last_steps', $ttl, fn() =>
+            LastStep::query()->where('is_active', true)->orderBy('name')
+                ->get(['name', 'status_result', 'priority_level'])
+                ->map(fn(LastStep $ls) => [
+                    'label' => $ls->name,
+                    'value' => $ls->name,
+                    'status_result' => $ls->status_result,
+                    'priority_level' => $ls->priority_level,
+                ])->all()
+        );
+        $reasonWhitelistOptions = Cache::remember('options.reason_whitelists', $ttl, fn() =>
+            ReasonWhitelist::query()->where('is_active', true)->orderBy('name')->pluck('name')->all()
+        );
+        $reasonLateResponseOptions = Cache::remember('options.reason_late_responses', $ttl, fn() =>
+            ReasonLateResponse::query()->where('is_active', true)->orderBy('name')->pluck('name')->all()
+        );
+        $csNameOptions = Cache::remember('options.cs_names', $ttl, fn() =>
+            User::query()->whereHas('roles', fn($q) => $q->where('name', 'CS'))
+                ->where('is_active', true)->orderBy('name')->pluck('name')->all()
+        );
 
         $allowedSortFields = [
             'created_at',
@@ -363,7 +344,7 @@ class ComplaintController extends Controller
         } catch (\Exception $exception) {
             report($exception);
 
-            return back()->withErrors(['general' => 'Database Error: ' . $exception->getMessage()])->withInput();
+            return back()->withErrors(['general' => 'Gagal menyimpan complaint. Silakan coba lagi.'])->withInput();
         }
 
         return redirect()->back()->with('success', 'Complaint berhasil dibuat.');
@@ -433,7 +414,7 @@ class ComplaintController extends Controller
         } catch (\Exception $exception) {
             report($exception);
 
-            return back()->withErrors(['general' => 'Database Error: ' . $exception->getMessage()])->withInput();
+            return back()->withErrors(['general' => 'Gagal memperbarui complaint. Silakan coba lagi.'])->withInput();
         }
 
         return redirect()->back()->with('success', 'Complaint berhasil diperbarui.');

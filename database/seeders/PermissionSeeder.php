@@ -79,6 +79,7 @@ class PermissionSeeder extends Seeder
             'create jet track entries',
             'update jet track entries',
             'delete jet track entries',
+            'import jet track entries',
             'view oos reasons',
             'create oos reasons',
             'update oos reasons',

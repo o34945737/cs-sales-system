@@ -65,6 +65,7 @@ export interface Auth {
         create_jet_track_entries: boolean;
         update_jet_track_entries: boolean;
         delete_jet_track_entries: boolean;
+        import_jet_track_entries: boolean;
         view_oos_reasons: boolean;
         create_oos_reasons: boolean;
         update_oos_reasons: boolean;

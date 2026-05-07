@@ -8,9 +8,11 @@ import {
     ChevronDown,
     ClipboardList,
     Eye,
+    FileText,
     Pencil,
+    PlayCircle,
     Plus,
-    RotateCcw,
+    RotateCcw, 
     Search,
     Trash2,
     Upload,
@@ -175,7 +177,52 @@ const activeFilterCount = computed(() =>
     ].filter(Boolean).length
 );
 
+// ============ Bulk Delete ============
+const selectedIds = ref<number[]>([]);
+const isBulkDeleteModalOpen = ref(false);
+const bulkDeleteForm = useForm({ ids: [] as number[] });
+
+const currentPageIds = computed(() => orderTrackingRows.value.map((item: any) => item.id));
+const isAllSelected = computed(
+    () => currentPageIds.value.length > 0 && currentPageIds.value.every((id: number) => selectedIds.value.includes(id)),
+);
+
+const toggleSelectAll = () => {
+    if (isAllSelected.value) {
+        selectedIds.value = selectedIds.value.filter((id) => !currentPageIds.value.includes(id));
+    } else {
+        selectedIds.value = Array.from(new Set([...selectedIds.value, ...currentPageIds.value]));
+    }
+};
+
+const toggleSelect = (id: number) => {
+    const index = selectedIds.value.indexOf(id);
+    if (index !== -1) {
+        selectedIds.value.splice(index, 1);
+    } else {
+        selectedIds.value.push(id);
+    }
+};
+
+const confirmBulkDelete = () => {
+    if (!selectedIds.value.length) return;
+    isBulkDeleteModalOpen.value = true;
+};
+
+const submitBulkDelete = () => {
+    if (!selectedIds.value.length) return;
+    bulkDeleteForm.ids = [...selectedIds.value];
+    bulkDeleteForm.post(route('order-trackings.bulk-delete'), {
+        preserveScroll: true,
+        onSuccess: () => {
+            isBulkDeleteModalOpen.value = false;
+            selectedIds.value = [];
+        },
+    });
+};
+
 const visitIndex = (overrides = {}, options = {}) => {
+    selectedIds.value = [];
     router.get(
         route('order-trackings.index'),
         {
@@ -795,6 +842,15 @@ const selectButtonClass = (currentValue: string, expectedValue: string) =>
                                         </div>
 
                                         <button
+                                            v-if="selectedIds.length > 0"
+                                            type="button"
+                                            class="flex h-12 items-center justify-center gap-2 rounded-2xl bg-rose-600 px-6 text-[14px] font-black text-white shadow-[0_15px_30px_rgba(220,38,38,0.25)] transition-all hover:bg-rose-700 hover:-translate-y-1 active:scale-[0.98]"
+                                            @click="confirmBulkDelete"
+                                        >
+                                            <Trash2 class="h-5 w-5" />
+                                            <span>Delete ({{ selectedIds.length }})</span>
+                                        </button>
+                                        <button
                                             type="button"
                                             class="group flex h-12 items-center justify-center gap-2 rounded-2xl bg-[var(--app-primary)] px-6 text-[14px] font-black text-white shadow-[0_15px_30px_rgba(53,103,232,0.25)] transition-all hover:-translate-y-1 hover:bg-[var(--app-primary-dark)] hover:shadow-[0_20px_40px_rgba(53,103,232,0.35)] active:scale-[0.98]"
                                             @click="openCreateModal"
@@ -809,6 +865,14 @@ const selectButtonClass = (currentValue: string, expectedValue: string) =>
                                     <table class="w-full min-w-[1180px] border-collapse text-left">
                                         <thead>
                                             <tr class="border-b border-slate-100 bg-slate-50/30 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+                                                <th class="py-4 pl-4 pr-2 w-10">
+                                                    <input
+                                                        type="checkbox"
+                                                        class="h-4 w-4 cursor-pointer rounded border-slate-300 text-[var(--app-primary)] focus:ring-[var(--app-primary)]"
+                                                        :checked="isAllSelected"
+                                                        @change="toggleSelectAll"
+                                                    />
+                                                </th>
                                                 <th class="py-4 pl-6 pr-4">No</th>
                                                 <th class="px-4 py-4">Source</th>
                                                 <th class="px-4 py-4">Input Date</th>
@@ -827,7 +891,16 @@ const selectButtonClass = (currentValue: string, expectedValue: string) =>
                                                 v-for="(item, index) in orderTrackingRows"
                                                 :key="item.id"
                                                 class="group align-top transition-colors hover:bg-slate-50/70"
+                                                :class="selectedIds.includes(item.id) ? 'bg-blue-50/30' : ''"
                                             >
+                                                <td class="py-4 pl-4 pr-2">
+                                                    <input
+                                                        type="checkbox"
+                                                        class="h-4 w-4 cursor-pointer rounded border-slate-300 text-[var(--app-primary)] focus:ring-[var(--app-primary)]"
+                                                        :checked="selectedIds.includes(item.id)"
+                                                        @change="toggleSelect(item.id)"
+                                                    />
+                                                </td>
                                                 <td class="py-4 pl-6 pr-4">
                                                     <span class="text-[10px] font-black text-slate-400">
                                                         {{ ((orderTrackingPage.current_page || 1) - 1) * (orderTrackingPage.per_page || 10) + index + 1 }}
@@ -880,6 +953,14 @@ const selectButtonClass = (currentValue: string, expectedValue: string) =>
                                                         <div class="space-y-0.5">
                                                             <p class="text-[12px] font-bold text-slate-700">{{ item.cs_name || 'Unassigned' }}</p>
                                                             <p class="text-[10px] font-medium text-slate-400">{{ item.awb || '-' }}</p>
+                                                            <div v-if="item.awb && jetTrackMap[item.awb]" class="flex items-center gap-1.5 pt-0.5">
+                                                                <a v-if="jetTrackMap[item.awb].video_url" :href="jetTrackMap[item.awb].video_url" target="_blank" class="inline-flex items-center gap-0.5 text-[9px] font-black uppercase tracking-wide text-blue-600 hover:text-blue-800">
+                                                                    <PlayCircle class="h-2.5 w-2.5" /> Video
+                                                                </a>
+                                                                <a v-if="jetTrackMap[item.awb].warehouse_doc_link" :href="jetTrackMap[item.awb].warehouse_doc_link" target="_blank" class="inline-flex items-center gap-0.5 text-[9px] font-black uppercase tracking-wide text-emerald-600 hover:text-emerald-800">
+                                                                    <FileText class="h-2.5 w-2.5" /> WH Doc
+                                                                </a>
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 </td>
@@ -1025,6 +1106,14 @@ const selectButtonClass = (currentValue: string, expectedValue: string) =>
                                     <p class="text-[12px] font-medium text-slate-400">
                                         AWB: {{ detailItem.awb || '-' }}
                                     </p>
+                                    <div v-if="detailItem.awb && jetTrackMap[detailItem.awb]" class="mt-1 flex items-center gap-2">
+                                        <a v-if="jetTrackMap[detailItem.awb].video_url" :href="jetTrackMap[detailItem.awb].video_url" target="_blank" class="inline-flex items-center gap-1 text-[11px] font-bold text-blue-600 hover:text-blue-800">
+                                            <PlayCircle class="h-3.5 w-3.5" /> Video JetTrack
+                                        </a>
+                                        <a v-if="jetTrackMap[detailItem.awb].warehouse_doc_link" :href="jetTrackMap[detailItem.awb].warehouse_doc_link" target="_blank" class="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 hover:text-emerald-800">
+                                            <FileText class="h-3.5 w-3.5" /> WH Doc
+                                        </a>
+                                    </div>
                                 </div>
                             </div>
                         </section>
@@ -1560,6 +1649,44 @@ const selectButtonClass = (currentValue: string, expectedValue: string) =>
                 </div>
             </div>
         </transition>
+
+        <!-- Bulk delete confirmation modal -->
+        <transition name="fade">
+            <div v-if="isBulkDeleteModalOpen" class="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/40 px-4 backdrop-blur-sm" @click.self="isBulkDeleteModalOpen = false">
+                <div class="w-full max-w-md overflow-hidden rounded-[32px] bg-white shadow-2xl">
+                    <div class="bg-rose-50 px-8 py-10">
+                        <div class="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-rose-600 shadow-sm ring-1 ring-rose-100">
+                            <Trash2 class="h-7 w-7" />
+                        </div>
+                        <h3 class="text-3xl font-black tracking-tight text-slate-900">Hapus Data Terpilih</h3>
+                        <p class="mt-2 text-[15px] font-medium leading-relaxed text-slate-500">
+                            <b>{{ selectedIds.length }} data</b> akan dihapus secara permanen. Tindakan ini tidak bisa dibatalkan.
+                        </p>
+                    </div>
+                    <div class="flex gap-3 bg-white p-8">
+                        <button @click="isBulkDeleteModalOpen = false" class="h-12 flex-1 rounded-2xl bg-slate-50 text-[14px] font-black text-slate-500">Batal</button>
+                        <button @click="submitBulkDelete" :disabled="bulkDeleteForm.processing" class="h-12 flex-[2] rounded-2xl bg-rose-600 text-[14px] font-black text-white shadow-lg shadow-rose-500/20 disabled:opacity-60">
+                            {{ bulkDeleteForm.processing ? 'Menghapus...' : 'Ya, Hapus Semua' }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </transition>
+
+        <!-- Floating bulk action bar -->
+        <div v-if="selectedIds.length > 0" class="fixed bottom-10 left-1/2 z-40 -translate-x-1/2">
+            <div class="flex items-center gap-3 rounded-2xl bg-slate-900 px-6 py-3.5 shadow-2xl">
+                <span class="text-[13px] font-black text-white">{{ selectedIds.length }} dipilih</span>
+                <div class="h-4 w-px bg-slate-700"></div>
+                <button @click="confirmBulkDelete" :disabled="bulkDeleteForm.processing" class="flex items-center gap-2 rounded-xl bg-rose-600 px-4 py-2 text-[12px] font-black text-white transition-all hover:bg-rose-500 disabled:opacity-60">
+                    <Trash2 class="h-3.5 w-3.5" />
+                    <span>{{ bulkDeleteForm.processing ? 'Menghapus...' : 'Hapus Semua' }}</span>
+                </button>
+                <button @click="selectedIds = []" class="rounded-xl px-3 py-2 text-slate-400 transition-all hover:text-white">
+                    <X class="h-4 w-4" />
+                </button>
+            </div>
+        </div>
     </AppLayout>
 </template>
 

@@ -97,6 +97,7 @@ function statusBadgeClass(label: string | null): string {
             return 'bg-slate-50 text-slate-600 border-slate-100';
     }
 }
+
 </script>
 
 <template>
@@ -113,10 +114,7 @@ function statusBadgeClass(label: string | null): string {
                         <p class="text-[13px] font-medium text-slate-500">Performance trends and bottleneck analysis</p>
                     </div>
                 </div>
-                <button
-                    class="group flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-bold text-slate-600 shadow-sm transition-all hover:bg-slate-50 active:scale-95"
-                    @click="refreshPage"
-                >
+                <button class="group flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-bold text-slate-600 shadow-sm transition-all hover:bg-slate-50 active:scale-95" @click="refreshPage">
                     <RefreshCw class="h-3.5 w-3.5 transition-transform group-hover:rotate-180" />
                     <span>Sync Metrics</span>
                 </button>

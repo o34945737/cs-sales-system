@@ -2,14 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Exports\OrderTrackingErpTemplateExport;
 use App\Http\Requests\StoreOrderTrackingErpStatusRequest;
 use App\Http\Requests\UpdateOrderTrackingErpStatusRequest;
-use App\Models\OrderTracking;
+use App\Imports\OrderTrackingErpImport;
 use App\Models\OrderTrackingErpStatus;
-use App\Models\OrderTrackingErpStatusHistory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
+use Maatwebsite\Excel\Facades\Excel;
 
 class OrderTrackingErpStatusController extends Controller
 {
@@ -77,73 +78,20 @@ class OrderTrackingErpStatusController extends Controller
 
     public function downloadTemplate()
     {
-        $csv = "no,order_id,erp_status\n";
-        $csv .= "1,ORD-12345,Pending\n";
-        $csv .= "2,ORD-12346,Process\n";
-        $csv .= "3,ORD-12347,Done\n";
-
-        return response($csv)
-            ->header('Content-Type', 'text/csv')
-            ->header('Content-Disposition', 'attachment; filename="erp-import-template.csv"');
+        return Excel::download(new OrderTrackingErpTemplateExport(), 'erp-import-template.xlsx');
     }
 
     public function import(Request $request)
     {
         $request->validate([
-            'file' => ['required', 'file', 'mimes:csv,txt', 'max:10240'],
+            'file' => ['required', 'file', 'mimes:xlsx,xls,csv,txt', 'max:10240'],
         ]);
 
-        $validStatuses = OrderTrackingErpStatus::where('is_active', true)->pluck('name')->all();
-        $batchId = 'ERP-' . now()->format('YmdHis') . '-' . Str::upper(Str::random(4));
-        $results = ['updated' => 0, 'pending' => 0, 'failed' => 0, 'errors' => []];
+        $batchId  = 'ERP-' . now()->format('YmdHis') . '-' . Str::upper(Str::random(4));
+        $importer = new OrderTrackingErpImport($batchId, auth()->id());
 
-        $handle = fopen($request->file('file')->getRealPath(), 'r');
-        fgetcsv($handle); // skip header row
+        Excel::import($importer, $request->file('file'));
 
-        $rowNum = 1;
-        while (($row = fgetcsv($handle)) !== false) {
-            $rowNum++;
-
-            if (count($row) < 3) {
-                $results['failed']++;
-                $results['errors'][] = "Baris {$rowNum}: format tidak valid (kurang kolom)";
-                continue;
-            }
-
-            [, $orderId, $erpStatus] = $row;
-            $orderId   = trim($orderId);
-            $erpStatus = trim($erpStatus);
-
-            if (!$orderId) {
-                $results['failed']++;
-                $results['errors'][] = "Baris {$rowNum}: order_id kosong";
-                continue;
-            }
-
-            if (!empty($validStatuses) && !in_array($erpStatus, $validStatuses, true)) {
-                $results['failed']++;
-                $results['errors'][] = "Baris {$rowNum}: erp_status '{$erpStatus}' tidak ada di master";
-                continue;
-            }
-
-            OrderTrackingErpStatusHistory::create([
-                'order_id'    => $orderId,
-                'erp_status'  => $erpStatus,
-                'batch_id'    => $batchId,
-                'uploaded_by' => auth()->id(),
-            ]);
-
-            $updated = OrderTracking::where('order_id', $orderId)->update(['erp_status' => $erpStatus]);
-
-            if ($updated > 0) {
-                $results['updated']++;
-            } else {
-                $results['pending']++;
-            }
-        }
-
-        fclose($handle);
-
-        return back()->with('import_result', $results);
+        return back()->with('import_result', $importer->results);
     }
 }

@@ -8,16 +8,42 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem, type SharedData } from '@/types';
 import { Head, router, useForm, usePage } from '@inertiajs/vue3';
 import debounce from 'lodash/debounce';
-import { CheckCircle2, ChevronLeft, ChevronRight, Database, PencilLine, Plus, Search, Trash2, XCircle } from 'lucide-vue-next';
+import { AlertTriangle, CheckCircle2, ChevronLeft, ChevronRight, Database, FileCheck2, FileText, PencilLine, PlayCircle, Plus, Search, Trash2, Upload, XCircle } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 
 interface ManagedJetTrackEntry {
     id: number;
     awb: string;
+    order_id: string | null;
+    source_url: string | null;
     kondisi_barang: string;
+    video_url: string | null;
+    warehouse_doc_link: string | null;
     notes: string | null;
     is_active: boolean;
     created_at: string | null;
+}
+
+function extractOrderIdFromUrl(url: string): string {
+    if (!url) return '';
+    let m: RegExpMatchArray | null;
+
+    m = url.match(/tradeOrderId=(\d+)/);
+    if (m) return m[1];
+
+    m = url.match(/order_sn=([A-Z0-9]+)/i);
+    if (m) return m[1];
+
+    m = url.match(/orderId=(\d+)/);
+    if (m) return m[1];
+
+    m = url.match(/tokopedia\.com\/[^/]+\/order\/(\d+)/i);
+    if (m) return m[1];
+
+    m = url.match(/order[_-]?id[=:]([A-Z0-9-]+)/i);
+    if (m) return m[1];
+
+    return '';
 }
 
 interface PaginatorLink {
@@ -59,10 +85,52 @@ const activeEntry = ref<ManagedJetTrackEntry | null>(null);
 const canCreateEntries = computed(() => page.props.auth.can.create_jet_track_entries);
 const canUpdateEntries = computed(() => page.props.auth.can.update_jet_track_entries);
 const canDeleteEntries = computed(() => page.props.auth.can.delete_jet_track_entries);
+const canImportEntries = computed(() => page.props.auth.can.import_jet_track_entries);
 
-const createForm = useForm({ awb: '', kondisi_barang: '', notes: '', is_active: true });
-const editForm = useForm({ awb: '', kondisi_barang: '', notes: '', is_active: true });
+const isImportOpen = ref(false);
+const importFile = ref<File | null>(null);
+const importFileInput = ref<HTMLInputElement | null>(null);
+const importResult = computed(() => page.props.flash?.import_result ?? null);
+const importForm = useForm({ file: null as File | null });
+
+const openImportModal = () => {
+    importFile.value = null;
+    importForm.clearErrors();
+    isImportOpen.value = true;
+};
+
+const onFileChange = (e: Event) => {
+    const target = e.target as HTMLInputElement;
+    importFile.value = target.files?.[0] ?? null;
+};
+
+const submitImport = () => {
+    if (!importFile.value) return;
+    importForm.file = importFile.value;
+    importForm.post(route('jet-track-entries.import'), {
+        forceFormData: true,
+        preserveScroll: true,
+        onSuccess: () => {
+            isImportOpen.value = false;
+            importFile.value = null;
+            if (importFileInput.value) importFileInput.value.value = '';
+        },
+    });
+};
+
+const createForm = useForm({ awb: '', order_id: '', source_url: '', kondisi_barang: '', video_url: '', warehouse_doc_link: '', notes: '', is_active: true });
+const editForm = useForm({ awb: '', order_id: '', source_url: '', kondisi_barang: '', video_url: '', warehouse_doc_link: '', notes: '', is_active: true });
 const deleteForm = useForm({});
+
+watch(() => createForm.source_url, (url) => {
+    const extracted = extractOrderIdFromUrl(url);
+    if (extracted) createForm.order_id = extracted;
+});
+
+watch(() => editForm.source_url, (url) => {
+    const extracted = extractOrderIdFromUrl(url);
+    if (extracted) editForm.order_id = extracted;
+});
 
 const pageData = computed(() => props.jetTrackEntries);
 const rows = computed(() => props.jetTrackEntries.data ?? []);
@@ -89,7 +157,7 @@ watch(search, debounce(() => visitIndex({ page: 1 }), 350));
 watch(statusFilter, () => visitIndex({ page: 1 }, false));
 
 const resetCreateForm = () => {
-    createForm.defaults({ awb: '', kondisi_barang: '', notes: '', is_active: true });
+    createForm.defaults({ awb: '', order_id: '', source_url: '', kondisi_barang: '', video_url: '', warehouse_doc_link: '', notes: '', is_active: true });
     createForm.reset();
     createForm.clearErrors();
 };
@@ -103,7 +171,11 @@ const openEditModal = (entry: ManagedJetTrackEntry) => {
     activeEntry.value = entry;
     editForm.defaults({
         awb: entry.awb,
+        order_id: entry.order_id || '',
+        source_url: entry.source_url || '',
         kondisi_barang: entry.kondisi_barang,
+        video_url: entry.video_url || '',
+        warehouse_doc_link: entry.warehouse_doc_link || '',
         notes: entry.notes || '',
         is_active: entry.is_active,
     });
@@ -175,8 +247,24 @@ const statusBadgeClass = (active: boolean) =>
                             </p>
                         </div>
 
-                        <div v-if="canCreateEntries" class="flex items-center justify-end">
-                            <Button type="button" size="sm" class="h-9 rounded-xl bg-[var(--app-primary)] px-5 text-xs font-bold text-white shadow-lg hover:bg-[var(--app-primary-dark)]" @click="openCreateModal">
+                        <div class="flex items-center justify-end gap-2">
+                            <Button
+                                v-if="canImportEntries"
+                                type="button"
+                                size="sm"
+                                class="h-9 rounded-xl border border-slate-300 bg-white px-4 text-xs font-bold text-slate-700 shadow-sm hover:bg-slate-50"
+                                @click="openImportModal"
+                            >
+                                <Upload class="h-3.5 w-3.5" />
+                                Import AWB
+                            </Button>
+                            <Button
+                                v-if="canCreateEntries"
+                                type="button"
+                                size="sm"
+                                class="h-9 rounded-xl bg-[var(--app-primary)] px-5 text-xs font-bold text-white shadow-lg hover:bg-[var(--app-primary-dark)]"
+                                @click="openCreateModal"
+                            >
                                 <Plus class="h-3.5 w-3.5" />
                                 Tambah AWB
                             </Button>
@@ -220,8 +308,9 @@ const statusBadgeClass = (active: boolean) =>
                             <table class="min-w-full divide-y divide-slate-100 text-[13px]">
                                 <thead class="bg-slate-50/50">
                                     <tr class="text-left text-[10px] font-black uppercase tracking-widest text-slate-400">
-                                        <th class="px-4 py-3">AWB</th>
+                                        <th class="px-4 py-3">AWB / Order ID</th>
                                         <th class="px-4 py-3">Kondisi Barang</th>
+                                        <th class="px-4 py-3">Links</th>
                                         <th class="px-4 py-3">Notes</th>
                                         <th class="px-4 py-3">Status</th>
                                         <th class="px-4 py-3 text-right">Action</th>
@@ -236,11 +325,23 @@ const statusBadgeClass = (active: boolean) =>
                                                 </div>
                                                 <div>
                                                     <p class="font-bold leading-tight text-slate-900">{{ entry.awb }}</p>
-                                                    <p class="text-[10px] font-bold uppercase tracking-tighter text-slate-400">ID: #{{ entry.id }}</p>
+                                                    <p v-if="entry.order_id" class="text-[10px] font-bold text-[var(--app-primary)]">{{ entry.order_id }}</p>
+                                                    <p v-else class="text-[10px] font-bold uppercase tracking-tighter text-slate-400">ID: #{{ entry.id }}</p>
                                                 </div>
                                             </div>
                                         </td>
                                         <td class="px-4 py-3 font-semibold text-slate-700">{{ entry.kondisi_barang }}</td>
+                                        <td class="px-4 py-3">
+                                            <div class="flex flex-col gap-1">
+                                                <a v-if="entry.video_url" :href="entry.video_url" target="_blank" class="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wide text-blue-600 hover:text-blue-800">
+                                                    <PlayCircle class="h-3 w-3" /> Video
+                                                </a>
+                                                <a v-if="entry.warehouse_doc_link" :href="entry.warehouse_doc_link" target="_blank" class="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wide text-emerald-600 hover:text-emerald-800">
+                                                    <FileText class="h-3 w-3" /> WH Doc
+                                                </a>
+                                                <span v-if="!entry.video_url && !entry.warehouse_doc_link" class="text-[10px] text-slate-300">-</span>
+                                            </div>
+                                        </td>
                                         <td class="px-4 py-3 text-slate-600">{{ entry.notes || '-' }}</td>
                                         <td class="px-4 py-3">
                                             <span class="inline-flex rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-wider shadow-sm" :class="statusBadgeClass(entry.is_active)">
@@ -259,7 +360,7 @@ const statusBadgeClass = (active: boolean) =>
                                         </td>
                                     </tr>
                                     <tr v-if="rows.length === 0">
-                                        <td colspan="5" class="px-4 py-10 text-center font-bold text-slate-400">Tidak ada data ditemukan</td>
+                                        <td colspan="6" class="px-4 py-10 text-center font-bold text-slate-400">Tidak ada data ditemukan</td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -281,6 +382,86 @@ const statusBadgeClass = (active: boolean) =>
             </div>
         </div>
 
+        <!-- Import Result Toast -->
+        <div
+            v-if="importResult"
+            class="fixed bottom-6 right-6 z-50 w-80 rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl"
+        >
+            <div class="mb-3 flex items-center gap-2">
+                <FileCheck2 class="h-5 w-5 text-emerald-500" />
+                <p class="text-sm font-black text-slate-900">Hasil Import Jet Track</p>
+            </div>
+            <div class="space-y-1 text-xs font-semibold text-slate-600">
+                <p v-if="importResult.created" class="text-emerald-600">✓ {{ importResult.created }} AWB baru ditambahkan</p>
+                <p v-if="importResult.updated" class="text-blue-600">↻ {{ importResult.updated }} AWB diperbarui</p>
+                <p v-if="importResult.failed" class="text-rose-600">✗ {{ importResult.failed }} baris gagal</p>
+            </div>
+            <ul v-if="importResult.errors?.length" class="mt-2 max-h-28 overflow-y-auto space-y-0.5">
+                <li v-for="err in importResult.errors" :key="err" class="text-[10px] text-rose-500">{{ err }}</li>
+            </ul>
+        </div>
+
+        <!-- Import Modal -->
+        <Dialog v-model:open="isImportOpen">
+            <DialogContent class="max-w-md overflow-hidden rounded-[28px] border-0 p-0 shadow-2xl">
+                <div class="bg-gradient-to-br from-blue-50 to-white px-7 py-8">
+                    <DialogHeader>
+                        <DialogTitle class="text-2xl font-black text-slate-900">Import Jet Track</DialogTitle>
+                        <DialogDescription class="mt-1 text-sm font-medium text-slate-500">
+                            Upload file <strong>Excel (.xlsx)</strong> atau CSV berisi kolom <strong>no, awb, order_id, kondisi_barang, video_url, warehouse_doc_link, notes, is_active</strong>. Duplikat AWB akan diperbarui & automation Order Tracking di-recompute.
+                        </DialogDescription>
+                    </DialogHeader>
+                </div>
+
+                <div class="space-y-5 bg-white px-7 py-6">
+                    <div class="flex items-center justify-between rounded-xl border border-dashed border-blue-200 bg-blue-50/40 px-4 py-3">
+                        <div class="flex items-center gap-2 text-xs font-semibold text-slate-600">
+                            <AlertTriangle class="h-4 w-4 text-amber-500" />
+                            Download template sebelum mengisi data
+                        </div>
+                        <a
+                            :href="route('jet-track-entries.template')"
+                            class="rounded-lg bg-[var(--app-primary)] px-3 py-1.5 text-xs font-bold text-white hover:bg-[var(--app-primary-dark)]"
+                        >
+                            Download
+                        </a>
+                    </div>
+
+                    <div class="space-y-2">
+                        <Label class="text-xs font-black uppercase tracking-wide text-slate-700">File Excel / CSV *</Label>
+                        <input
+                            ref="importFileInput"
+                            type="file"
+                            accept=".xlsx,.xls,.csv,.txt"
+                            class="block w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs text-slate-700 file:mr-3 file:rounded-lg file:border-0 file:bg-[var(--app-primary)] file:px-3 file:py-1 file:text-xs file:font-bold file:text-white"
+                            @change="onFileChange"
+                        />
+                        <InputError :message="importForm.errors.file" />
+                    </div>
+
+                    <div class="flex items-center justify-end gap-3 border-t border-slate-100 pt-4">
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            class="h-10 rounded-xl px-5 text-sm font-bold text-slate-500"
+                            @click="isImportOpen = false"
+                        >
+                            Batal
+                        </Button>
+                        <Button
+                            type="button"
+                            :disabled="!importFile || importForm.processing"
+                            class="h-10 rounded-xl bg-[var(--app-primary)] px-5 text-sm font-bold text-white shadow-md disabled:opacity-40"
+                            @click="submitImport"
+                        >
+                            <Upload class="mr-1.5 h-4 w-4" />
+                            {{ importForm.processing ? 'Uploading...' : 'Import Sekarang' }}
+                        </Button>
+                    </div>
+                </div>
+            </DialogContent>
+        </Dialog>
+
         <Dialog v-model:open="isCreateOpen">
             <DialogContent class="max-w-xl overflow-hidden rounded-[28px] border-0 p-0 shadow-[0_30px_80px_rgba(15,23,42,0.25)]">
                 <div class="bg-[#EEF2FF] px-7 py-8">
@@ -293,15 +474,40 @@ const statusBadgeClass = (active: boolean) =>
                 <form class="space-y-6 bg-white px-7 py-7" @submit.prevent="submitCreate">
                     <div class="space-y-4">
                         <div class="grid gap-2">
-                            <Label for="create-awb" class="text-[13px] font-bold uppercase tracking-wide text-slate-700">AWB</Label>
+                            <Label for="create-awb" class="text-[13px] font-bold uppercase tracking-wide text-slate-700">AWB / No. Resi</Label>
                             <Input id="create-awb" v-model="createForm.awb" placeholder="Contoh: JT000123456" class="h-12 rounded-xl border-slate-200 bg-slate-50/50 px-4 text-sm transition focus:bg-white" />
                             <InputError :message="createForm.errors.awb" />
+                        </div>
+
+                        <div class="grid gap-2">
+                            <Label for="create-source-url" class="text-[13px] font-bold uppercase tracking-wide text-slate-700">Link Order Marketplace</Label>
+                            <Input id="create-source-url" v-model="createForm.source_url" placeholder="Paste URL order Lazada / Shopee / Tokopedia..." class="h-12 rounded-xl border-slate-200 bg-slate-50/50 px-4 text-sm transition focus:bg-white" />
+                            <p class="text-[11px] text-slate-400">Order ID akan otomatis terisi dari URL</p>
+                            <InputError :message="createForm.errors.source_url" />
+                        </div>
+
+                        <div class="grid gap-2">
+                            <Label for="create-order-id" class="text-[13px] font-bold uppercase tracking-wide text-slate-700">Order ID</Label>
+                            <Input id="create-order-id" v-model="createForm.order_id" placeholder="Auto-terisi dari link, atau isi manual" class="h-12 rounded-xl border-slate-200 bg-slate-50/50 px-4 text-sm transition focus:bg-white" />
+                            <InputError :message="createForm.errors.order_id" />
                         </div>
 
                         <div class="grid gap-2">
                             <Label for="create-kondisi" class="text-[13px] font-bold uppercase tracking-wide text-slate-700">Kondisi Barang</Label>
                             <Input id="create-kondisi" v-model="createForm.kondisi_barang" placeholder="Contoh: Box penyok" class="h-12 rounded-xl border-slate-200 bg-slate-50/50 px-4 text-sm transition focus:bg-white" />
                             <InputError :message="createForm.errors.kondisi_barang" />
+                        </div>
+
+                        <div class="grid gap-2">
+                            <Label for="create-video-url" class="text-[13px] font-bold uppercase tracking-wide text-slate-700">Link Video <span class="font-normal normal-case text-slate-400">(Google Drive)</span></Label>
+                            <Input id="create-video-url" v-model="createForm.video_url" placeholder="https://drive.google.com/file/d/..." class="h-12 rounded-xl border-slate-200 bg-slate-50/50 px-4 text-sm transition focus:bg-white" />
+                            <InputError :message="createForm.errors.video_url" />
+                        </div>
+
+                        <div class="grid gap-2">
+                            <Label for="create-wh-doc" class="text-[13px] font-bold uppercase tracking-wide text-slate-700">Link WH Doc <span class="font-normal normal-case text-slate-400">(Google Docs)</span></Label>
+                            <Input id="create-wh-doc" v-model="createForm.warehouse_doc_link" placeholder="https://docs.google.com/..." class="h-12 rounded-xl border-slate-200 bg-slate-50/50 px-4 text-sm transition focus:bg-white" />
+                            <InputError :message="createForm.errors.warehouse_doc_link" />
                         </div>
 
                         <div class="grid gap-2">
@@ -339,15 +545,40 @@ const statusBadgeClass = (active: boolean) =>
                 <form v-if="activeEntry" class="space-y-6 bg-white px-7 py-7" @submit.prevent="submitEdit">
                     <div class="space-y-4">
                         <div class="grid gap-2">
-                            <Label for="edit-awb" class="text-[13px] font-bold uppercase tracking-wide text-slate-700">AWB</Label>
+                            <Label for="edit-awb" class="text-[13px] font-bold uppercase tracking-wide text-slate-700">AWB / No. Resi</Label>
                             <Input id="edit-awb" v-model="editForm.awb" class="h-12 rounded-xl border-slate-200 bg-slate-50/50 px-4 text-sm transition focus:bg-white" />
                             <InputError :message="editForm.errors.awb" />
+                        </div>
+
+                        <div class="grid gap-2">
+                            <Label for="edit-source-url" class="text-[13px] font-bold uppercase tracking-wide text-slate-700">Link Order Marketplace</Label>
+                            <Input id="edit-source-url" v-model="editForm.source_url" placeholder="Paste URL order Lazada / Shopee / Tokopedia..." class="h-12 rounded-xl border-slate-200 bg-slate-50/50 px-4 text-sm transition focus:bg-white" />
+                            <p class="text-[11px] text-slate-400">Order ID akan otomatis terisi dari URL</p>
+                            <InputError :message="editForm.errors.source_url" />
+                        </div>
+
+                        <div class="grid gap-2">
+                            <Label for="edit-order-id" class="text-[13px] font-bold uppercase tracking-wide text-slate-700">Order ID</Label>
+                            <Input id="edit-order-id" v-model="editForm.order_id" placeholder="Auto-terisi dari link, atau isi manual" class="h-12 rounded-xl border-slate-200 bg-slate-50/50 px-4 text-sm transition focus:bg-white" />
+                            <InputError :message="editForm.errors.order_id" />
                         </div>
 
                         <div class="grid gap-2">
                             <Label for="edit-kondisi" class="text-[13px] font-bold uppercase tracking-wide text-slate-700">Kondisi Barang</Label>
                             <Input id="edit-kondisi" v-model="editForm.kondisi_barang" class="h-12 rounded-xl border-slate-200 bg-slate-50/50 px-4 text-sm transition focus:bg-white" />
                             <InputError :message="editForm.errors.kondisi_barang" />
+                        </div>
+
+                        <div class="grid gap-2">
+                            <Label for="edit-video-url" class="text-[13px] font-bold uppercase tracking-wide text-slate-700">Link Video <span class="font-normal normal-case text-slate-400">(Google Drive)</span></Label>
+                            <Input id="edit-video-url" v-model="editForm.video_url" placeholder="https://drive.google.com/file/d/..." class="h-12 rounded-xl border-slate-200 bg-slate-50/50 px-4 text-sm transition focus:bg-white" />
+                            <InputError :message="editForm.errors.video_url" />
+                        </div>
+
+                        <div class="grid gap-2">
+                            <Label for="edit-wh-doc" class="text-[13px] font-bold uppercase tracking-wide text-slate-700">Link WH Doc <span class="font-normal normal-case text-slate-400">(Google Docs)</span></Label>
+                            <Input id="edit-wh-doc" v-model="editForm.warehouse_doc_link" placeholder="https://docs.google.com/..." class="h-12 rounded-xl border-slate-200 bg-slate-50/50 px-4 text-sm transition focus:bg-white" />
+                            <InputError :message="editForm.errors.warehouse_doc_link" />
                         </div>
 
                         <div class="grid gap-2">

@@ -170,6 +170,23 @@ class BadReviewController extends Controller
         }
     }
 
+    public function bulkDestroy(Request $request)
+    {
+        $request->validate([
+            'ids' => ['required', 'array', 'min:1'],
+            'ids.*' => ['integer', 'distinct', 'exists:bad_reviews,id'],
+        ]);
+
+        try {
+            BadReview::whereIn('id', $request->input('ids', []))->delete();
+        } catch (Throwable $exception) {
+            report($exception);
+            return redirect()->back()->with('error', 'Gagal menghapus beberapa data. Silakan coba lagi.');
+        }
+
+        return redirect()->back()->with('success', 'Semua data yang dipilih berhasil dihapus.');
+    }
+
     private function badReviewRules(Request $request): array
     {
         $brandOptions = $this->brandOptions();

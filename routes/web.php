@@ -43,21 +43,29 @@ Route::middleware(['auth', 'active', 'password.reset.required'])->group(function
     });
 
     Route::middleware('permission:access complaints')->group(function () {
-        Route::get('complaints/history/{username}', [ComplaintController::class, 'getCustomerHistory'])->name('complaints.history');
+        Route::get('complaints/history/{username}', [ComplaintController::class, 'getCustomerHistory'])
+            ->middleware('throttle:30,1')
+            ->name('complaints.history');
         Route::post('complaints/bulk-delete', [ComplaintController::class, 'bulkDestroy'])
             ->name('complaints.bulk-delete');
         Route::resource('complaints', ComplaintController::class);
     });
 
     Route::middleware('permission:access bad reviews')->group(function () {
+        Route::post('bad-reviews/bulk-delete', [BadReviewController::class, 'bulkDestroy'])
+            ->name('bad-reviews.bulk-delete');
         Route::resource('bad-reviews', BadReviewController::class);
     });
 
     Route::middleware('permission:access order trackings')->group(function () {
+        Route::post('order-trackings/bulk-delete', [OrderTrackingController::class, 'bulkDestroy'])
+            ->name('order-trackings.bulk-delete');
         Route::resource('order-trackings', OrderTrackingController::class);
     });
 
     Route::middleware('permission:access oos')->group(function () {
+        Route::post('oos/bulk-delete', [OosController::class, 'bulkDestroy'])
+            ->name('oos.bulk-delete');
         Route::resource('oos', OosController::class);
     });
 
@@ -267,6 +275,12 @@ Route::middleware(['auth', 'active', 'password.reset.required'])->group(function
         Route::post('/', [JetTrackEntryController::class, 'store'])
             ->middleware('permission:create jet track entries')
             ->name('store');
+        Route::get('/template', [JetTrackEntryController::class, 'downloadTemplate'])
+            ->middleware('permission:import jet track entries')
+            ->name('template');
+        Route::post('/import', [JetTrackEntryController::class, 'import'])
+            ->middleware('permission:import jet track entries')
+            ->name('import');
         Route::put('/{jetTrackEntry}', [JetTrackEntryController::class, 'update'])
             ->middleware('permission:update jet track entries')
             ->name('update');

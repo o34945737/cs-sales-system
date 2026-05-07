@@ -11,7 +11,11 @@ class JetTrackEntry extends Model
 
     protected $fillable = [
         'awb',
+        'order_id',
+        'source_url',
         'kondisi_barang',
+        'video_url',
+        'warehouse_doc_link',
         'notes',
         'is_active',
     ];

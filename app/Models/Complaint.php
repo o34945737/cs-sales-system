@@ -11,7 +11,18 @@ class Complaint extends Model
 {
     use HasFactory, SoftDeletes;
 
-    protected $guarded = ['id'];
+    protected $fillable = [
+        'source', 'tanggal_complaint', 'tanggal_order', 'jam_customer_complaint',
+        'brand_id', 'brand', 'platform_id', 'platform',
+        'sku_code_id', 'sub_case_id', 'last_step_id', 'cs_user_id',
+        'complaint_source_id', 'complaint_power_id', 'part_of_bad_id',
+        'order_id', 'username', 'resi',
+        'sku', 'product_name', 'value_of_product', 'qty', 'sub_case', 'cause_by', 'proof', 'proof_attachment',
+        'summary_case', 'update_long_text', 'part_of_bad', 'cs_name',
+        'last_step', 'step_cs_selesai', 'tanggal_step_cs_selesai', 'tanggal_update',
+        'reason_whitelist', 'reason_late_respons', 'video_unboxing', 'complaint_power',
+        'cycle', 'status', 'priority', 'history', 'oos', 'report_category', 'auto_sync_sla', 'sla',
+    ];
 
     protected static function boot()
     {

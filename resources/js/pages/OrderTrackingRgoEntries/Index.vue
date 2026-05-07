@@ -459,7 +459,7 @@ const statusBadgeClass = (active: boolean) =>
                     <DialogHeader>
                         <DialogTitle class="text-2xl font-black text-slate-900">Import RGO</DialogTitle>
                         <DialogDescription class="mt-1 text-sm font-medium text-slate-500">
-                            Upload file CSV berisi <strong>no, order_id, notes, is_active</strong>. Duplikat order_id akan diperbarui.
+                            Upload file <strong>Excel (.xlsx)</strong> atau CSV berisi kolom <strong>no, order_id, notes, is_active</strong>. Duplikat order_id akan diperbarui & automation tracking di-recompute.
                         </DialogDescription>
                     </DialogHeader>
                 </div>
@@ -479,11 +479,11 @@ const statusBadgeClass = (active: boolean) =>
                     </div>
 
                     <div class="space-y-2">
-                        <Label class="text-xs font-black uppercase tracking-wide text-slate-700">File CSV *</Label>
+                        <Label class="text-xs font-black uppercase tracking-wide text-slate-700">File Excel / CSV *</Label>
                         <input
                             ref="importFileInput"
                             type="file"
-                            accept=".csv,.txt"
+                            accept=".xlsx,.xls,.csv,.txt"
                             class="block w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs text-slate-700 file:mr-3 file:rounded-lg file:border-0 file:bg-[var(--app-primary)] file:px-3 file:py-1 file:text-xs file:font-bold file:text-white"
                             @change="onFileChange"
                         />

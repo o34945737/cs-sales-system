@@ -11,7 +11,11 @@ class Oos extends Model
     use HasFactory;
 
     protected $table = 'oos';
-    protected $guarded = ['id'];
+    protected $fillable = [
+        'tanggal_input', 'brand', 'platform', 'cs_name', 'order_id',
+        'product_name', 'sku', 'reason', 'solusi', 'note_detail_varian',
+        'update_cs', 'tanggal_blast', 'feedback_customers', 'month',
+    ];
 
     protected static function boot()
     {

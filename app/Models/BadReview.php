@@ -10,7 +10,11 @@ class BadReview extends Model
 {
     use HasFactory;
 
-    protected $guarded = ['id'];
+    protected $fillable = [
+        'tanggal_review', 'brand', 'platform', 'order_id', 'username', 'star',
+        'product_name', 'sku', 'category_review', 'cause_by', 'review_notes',
+        'progress', 'tanggal_update', 'cs_name', 'month', 'status', 'priority',
+    ];
 
     private const PROGRESS_PENDING = 'Follow Up Customer';
     private const PROGRESS_SOLVED = 'Auto Reply';

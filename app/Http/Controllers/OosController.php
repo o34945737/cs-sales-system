@@ -123,6 +123,23 @@ class OosController extends Controller
         return redirect()->back()->with('success', 'Data OOS terhapus.');
     }
 
+    public function bulkDestroy(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'ids' => ['required', 'array', 'min:1'],
+            'ids.*' => ['integer', 'distinct', 'exists:oos,id'],
+        ]);
+
+        try {
+            Oos::whereIn('id', $request->input('ids', []))->delete();
+        } catch (\Throwable $exception) {
+            report($exception);
+            return redirect()->back()->with('error', 'Gagal menghapus beberapa data. Silakan coba lagi.');
+        }
+
+        return redirect()->back()->with('success', 'Semua data yang dipilih berhasil dihapus.');
+    }
+
     private function transform(Oos $oos): array
     {
         return [

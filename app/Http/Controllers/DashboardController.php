@@ -86,15 +86,28 @@ class DashboardController extends Controller
 
     public function complaintAnalytics(): Response
     {
+        $weekStart = Carbon::today()->subDays(6)->startOfDay();
+        $weekEnd   = Carbon::today()->endOfDay();
+
+        $newByDate = Complaint::query()
+            ->whereBetween('created_at', [$weekStart, $weekEnd])
+            ->selectRaw('DATE(created_at) as date, COUNT(*) as total')
+            ->groupBy(DB::raw('DATE(created_at)'))
+            ->pluck('total', 'date');
+
+        $solvedByDate = Complaint::query()
+            ->where('status', 'Solved')
+            ->whereBetween('updated_at', [$weekStart, $weekEnd])
+            ->selectRaw('DATE(updated_at) as date, COUNT(*) as total')
+            ->groupBy(DB::raw('DATE(updated_at)'))
+            ->pluck('total', 'date');
+
         $weeklyComplaint = collect(range(6, 0))
             ->map(fn(int $i) => Carbon::today()->subDays($i)->toDateString())
             ->map(fn(string $date) => [
-                'date' => $date,
-                'new' => Complaint::query()->whereDate('created_at', $date)->count(),
-                'solved' => Complaint::query()
-                    ->where('status', 'Solved')
-                    ->whereDate('updated_at', $date)
-                    ->count(),
+                'date'   => $date,
+                'new'    => $newByDate[$date] ?? 0,
+                'solved' => $solvedByDate[$date] ?? 0,
             ])
             ->all();
 
@@ -363,11 +376,20 @@ class DashboardController extends Controller
 
     private function weeklySimple($baseQuery, string $dateColumn): array
     {
+        $startDate = Carbon::today()->subDays(6)->startOfDay();
+        $endDate   = Carbon::today()->endOfDay();
+
+        $counts = (clone $baseQuery)
+            ->whereBetween($dateColumn, [$startDate, $endDate])
+            ->selectRaw("DATE({$dateColumn}) as date, COUNT(*) as total")
+            ->groupBy(DB::raw("DATE({$dateColumn})"))
+            ->pluck('total', 'date');
+
         return collect(range(6, 0))
             ->map(fn(int $i) => Carbon::today()->subDays($i)->toDateString())
             ->map(fn(string $date) => [
-                'date' => $date,
-                'total' => (clone $baseQuery)->whereDate($dateColumn, $date)->count(),
+                'date'  => $date,
+                'total' => $counts[$date] ?? 0,
             ])
             ->values()
             ->all();

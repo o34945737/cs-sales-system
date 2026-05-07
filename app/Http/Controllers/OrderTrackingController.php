@@ -17,6 +17,7 @@ use App\Models\SubCase;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
@@ -157,10 +158,12 @@ class OrderTrackingController extends Controller
                 ->all(),
             'jetTrackMap' => JetTrackEntry::query()
                 ->where('is_active', true)
-                ->get(['awb', 'kondisi_barang'])
+                ->get(['awb', 'kondisi_barang', 'video_url', 'warehouse_doc_link'])
                 ->mapWithKeys(fn(JetTrackEntry $entry) => [
                     $entry->awb => [
                         'kondisi_barang' => $entry->kondisi_barang,
+                        'video_url' => $entry->video_url,
+                        'warehouse_doc_link' => $entry->warehouse_doc_link,
                     ],
                 ])
                 ->all(),
@@ -371,104 +374,98 @@ class OrderTrackingController extends Controller
 
     private function sourceOptions(): array
     {
-        $masterOptions = OrderTrackingDataSource::query()
-            ->where('is_active', true)
-            ->orderBy('name')
-            ->pluck('name')
-            ->all();
+        $master = Cache::remember('options.ot_data_sources', 300, fn() =>
+            OrderTrackingDataSource::query()->where('is_active', true)->orderBy('name')->pluck('name')->all()
+        );
 
-        if (!empty($masterOptions)) {
-            return $masterOptions;
-        }
-
-        return ['WH', 'Finance', 'Reject Return'];
+        return !empty($master) ? $master : ['WH', 'Finance', 'Reject Return'];
     }
 
     private function brandOptions(): array
     {
-        return Brand::query()
-            ->where('is_active', true)
-            ->orderBy('name')
-            ->pluck('name')
-            ->all();
+        return Cache::remember('options.brands', 300, fn() =>
+            Brand::query()->where('is_active', true)->orderBy('name')->pluck('name')->all()
+        );
     }
 
     private function platformOptions(): array
     {
-        return Platform::query()
-            ->where('is_active', true)
-            ->orderBy('name')
-            ->pluck('name')
-            ->all();
+        return Cache::remember('options.platforms', 300, fn() =>
+            Platform::query()->where('is_active', true)->orderBy('name')->pluck('name')->all()
+        );
     }
 
     private function csNameOptions(): array
     {
-        return User::query()
-            ->whereHas('roles', fn($query) => $query->where('name', 'CS'))
-            ->where('is_active', true)
-            ->orderBy('name')
-            ->pluck('name')
-            ->all();
+        return Cache::remember('options.cs_names', 300, fn() =>
+            User::query()->whereHas('roles', fn($q) => $q->where('name', 'CS'))
+                ->where('is_active', true)->orderBy('name')->pluck('name')->all()
+        );
     }
 
     private function categoryOptions(): array
     {
-        return SubCase::query()
-            ->where('is_active', true)
-            ->orderBy('name')
-            ->pluck('name')
-            ->all();
+        return Cache::remember('options.sub_cases', 300, fn() =>
+            SubCase::query()->where('is_active', true)->orderBy('name')->pluck('name')->all()
+        );
     }
 
     private function causeByOptions(): array
     {
-        return \App\Models\CauseBy::query()
-            ->where('is_active', true)
-            ->orderBy('name')
-            ->pluck('name')
-            ->all();
+        return Cache::remember('options.cause_bys', 300, fn() =>
+            \App\Models\CauseBy::query()->where('is_active', true)->orderBy('name')->pluck('name')->all()
+        );
     }
 
     private function lastStepOptions(): array
     {
-        return LastStep::query()
-            ->where('is_active', true)
-            ->orderBy('name')
-            ->get(['name', 'status_result'])
-            ->map(fn(LastStep $lastStep) => [
-                'label' => $lastStep->name,
-                'value' => $lastStep->name,
-                'status_result' => $lastStep->status_result,
-            ])
-            ->all();
+        return Cache::remember('options.last_steps_ot', 300, fn() =>
+            LastStep::query()->where('is_active', true)->orderBy('name')
+                ->get(['name', 'status_result'])
+                ->map(fn(LastStep $ls) => [
+                    'label' => $ls->name,
+                    'value' => $ls->name,
+                    'status_result' => $ls->status_result,
+                ])->all()
+        );
     }
 
     private function erpStatusOptions(): array
     {
-        return OrderTrackingErpStatus::query()
-            ->where('is_active', true)
-            ->orderBy('sort_order')
-            ->orderBy('name')
-            ->pluck('name')
-            ->all();
+        return Cache::remember('options.erp_statuses', 300, fn() =>
+            OrderTrackingErpStatus::query()->where('is_active', true)
+                ->orderBy('sort_order')->orderBy('name')->pluck('name')->all()
+        );
     }
 
     private function reasonWhitelistOptions(): array
     {
-        return ReasonWhitelist::query()
-            ->where('is_active', true)
-            ->orderBy('name')
-            ->pluck('name')
-            ->all();
+        return Cache::remember('options.reason_whitelists', 300, fn() =>
+            ReasonWhitelist::query()->where('is_active', true)->orderBy('name')->pluck('name')->all()
+        );
+    }
+
+    public function bulkDestroy(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'ids' => ['required', 'array', 'min:1'],
+            'ids.*' => ['integer', 'distinct', 'exists:order_trackings,id'],
+        ]);
+
+        try {
+            OrderTracking::whereIn('id', $request->input('ids', []))->delete();
+        } catch (\Throwable $exception) {
+            report($exception);
+            return redirect()->back()->with('error', 'Gagal menghapus beberapa data. Silakan coba lagi.');
+        }
+
+        return redirect()->back()->with('success', 'Semua data yang dipilih berhasil dihapus.');
     }
 
     private function reasonLateResponseOptions(): array
     {
-        return ReasonLateResponse::query()
-            ->where('is_active', true)
-            ->orderBy('name')
-            ->pluck('name')
-            ->all();
+        return Cache::remember('options.reason_late_responses', 300, fn() =>
+            ReasonLateResponse::query()->where('is_active', true)->orderBy('name')->pluck('name')->all()
+        );
     }
 }

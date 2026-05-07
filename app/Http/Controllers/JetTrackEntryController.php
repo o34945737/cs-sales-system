@@ -2,12 +2,16 @@
 
 namespace App\Http\Controllers;
 
+use App\Exports\JetTrackEntryTemplateExport;
+use App\Imports\JetTrackEntryImport;
 use App\Models\JetTrackEntry;
+use App\Services\OrderTrackingAutomationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
+use Maatwebsite\Excel\Facades\Excel;
 
 class JetTrackEntryController extends Controller
 {
@@ -52,7 +56,11 @@ class JetTrackEntryController extends Controller
     {
         $data = $request->validate([
             'awb' => ['required', 'string', 'max:255', 'unique:jet_track_entries,awb'],
+            'order_id' => ['nullable', 'string', 'max:255'],
+            'source_url' => ['nullable', 'string', 'max:2000'],
             'kondisi_barang' => ['required', 'string', 'max:255'],
+            'video_url' => ['nullable', 'string', 'max:2000'],
+            'warehouse_doc_link' => ['nullable', 'string', 'max:2000'],
             'notes' => ['nullable', 'string', 'max:255'],
             'is_active' => ['required', 'boolean'],
         ]);
@@ -66,7 +74,11 @@ class JetTrackEntryController extends Controller
     {
         $data = $request->validate([
             'awb' => ['required', 'string', 'max:255', Rule::unique('jet_track_entries', 'awb')->ignore($jetTrackEntry->id)],
+            'order_id' => ['nullable', 'string', 'max:255'],
+            'source_url' => ['nullable', 'string', 'max:2000'],
             'kondisi_barang' => ['required', 'string', 'max:255'],
+            'video_url' => ['nullable', 'string', 'max:2000'],
+            'warehouse_doc_link' => ['nullable', 'string', 'max:2000'],
             'notes' => ['nullable', 'string', 'max:255'],
             'is_active' => ['required', 'boolean'],
         ]);
@@ -83,12 +95,38 @@ class JetTrackEntryController extends Controller
         return redirect()->route('jet-track-entries.index')->with('success', 'Data Jet Track berhasil dihapus.');
     }
 
+    public function downloadTemplate()
+    {
+        return Excel::download(new JetTrackEntryTemplateExport(), 'jet-track-import-template.xlsx');
+    }
+
+    public function import(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'file' => ['required', 'file', 'mimes:xlsx,xls,csv,txt', 'max:10240'],
+        ]);
+
+        $importer = new JetTrackEntryImport();
+
+        Excel::import($importer, $request->file('file'));
+
+        if (!empty($importer->importedAwbs)) {
+            app(OrderTrackingAutomationService::class)->recomputeByAwbs($importer->importedAwbs);
+        }
+
+        return back()->with('import_result', $importer->results);
+    }
+
     private function transformEntry(JetTrackEntry $entry): array
     {
         return [
             'id' => $entry->id,
             'awb' => $entry->awb,
+            'order_id' => $entry->order_id,
+            'source_url' => $entry->source_url,
             'kondisi_barang' => $entry->kondisi_barang,
+            'video_url' => $entry->video_url,
+            'warehouse_doc_link' => $entry->warehouse_doc_link,
             'notes' => $entry->notes,
             'is_active' => (bool) $entry->is_active,
             'created_at' => optional($entry->created_at)?->toDateTimeString(),
