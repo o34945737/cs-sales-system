@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Exports\BadReviewExport;
+use App\Exports\BadReviewTemplateExport;
+use App\Imports\BadReviewImport;
 use App\Models\BadReview;
 use App\Models\Brand;
 use App\Models\CauseBy;
@@ -9,9 +12,12 @@ use App\Models\Platform;
 use App\Models\SkuCode;
 use App\Models\SubCase;
 use App\Models\User;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
+use Maatwebsite\Excel\Facades\Excel;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Throwable;
 
 class BadReviewController extends Controller
@@ -185,6 +191,96 @@ class BadReviewController extends Controller
         }
 
         return redirect()->back()->with('success', 'Semua data yang dipilih berhasil dihapus.');
+    }
+
+    public function downloadTemplate(): BinaryFileResponse
+    {
+        return Excel::download(new BadReviewTemplateExport(), 'bad-review-import-template.xlsx');
+    }
+
+    public function import(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'file' => ['required', 'file', 'mimes:xlsx,xls,csv,txt', 'max:10240'],
+        ]);
+
+        $importer = new BadReviewImport();
+
+        try {
+            Excel::import($importer, $request->file('file'));
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return back()->with('error', 'Import bad review gagal diproses. Pastikan file sesuai template dan coba lagi.');
+        }
+
+        return back()->with('import_result', $importer->results);
+    }
+
+    public function export(Request $request): BinaryFileResponse
+    {
+        $query = BadReview::query();
+        $this->applyBadReviewFilters($query, $request);
+        $this->applyBadReviewSort($query, $request);
+
+        return Excel::download(new BadReviewExport($query), 'bad-reviews-export.xlsx');
+    }
+
+    private function applyBadReviewFilters($query, Request $request): void
+    {
+        if ($request->filled('search')) {
+            $search = trim((string) $request->search);
+            $query->where(function ($q) use ($search) {
+                $q->where('order_id', 'like', "%{$search}%")
+                    ->orWhere('username', 'like', "%{$search}%")
+                    ->orWhere('brand', 'like', "%{$search}%")
+                    ->orWhere('platform', 'like', "%{$search}%")
+                    ->orWhere('product_name', 'like', "%{$search}%")
+                    ->orWhere('cs_name', 'like', "%{$search}%");
+            });
+        }
+
+        if ($request->filled('brand') && $request->brand !== 'All') {
+            $query->where('brand', $request->brand);
+        }
+
+        if ($request->filled('platform') && $request->platform !== 'All') {
+            $query->where('platform', $request->platform);
+        }
+
+        if ($request->filled('star') && $request->star !== 'All') {
+            $query->where('star', (int) $request->star);
+        }
+
+        if ($request->filled('status') && $request->status !== 'All') {
+            $query->where('status', $request->status);
+        }
+
+        if ($request->filled('cs_name')) {
+            $query->where('cs_name', $request->cs_name);
+        }
+    }
+
+    private function applyBadReviewSort($query, Request $request): void
+    {
+        $allowedSortFields = [
+            'tanggal_review',
+            'tanggal_update',
+            'order_id',
+            'username',
+            'brand',
+            'platform',
+            'star',
+            'status',
+            'cs_name',
+            'created_at',
+        ];
+
+        $sortField = $request->get('sort', 'tanggal_review');
+        $sortField = in_array($sortField, $allowedSortFields, true) ? $sortField : 'tanggal_review';
+        $sortOrder = $request->get('order', 'desc') === 'asc' ? 'asc' : 'desc';
+
+        $query->orderBy($sortField, $sortOrder);
     }
 
     private function badReviewRules(Request $request): array

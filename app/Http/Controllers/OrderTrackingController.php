@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Exports\OrderTrackingExport;
+use App\Exports\OrderTrackingTemplateExport;
+use App\Imports\OrderTrackingImport;
 use App\Models\Brand;
 use App\Models\Complaint;
 use App\Models\JetTrackEntry;
@@ -19,9 +22,11 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
+use Maatwebsite\Excel\Facades\Excel;
 
 class OrderTrackingController extends Controller
 {
@@ -358,9 +363,16 @@ class OrderTrackingController extends Controller
     private function coerceNullableFields(array $data): array
     {
         $nullable = [
-            'erp_status', 'payment_method', 'insurance_info',
-            'reason_whitelist', 'reason_late_respons',
-            'awb', 'wh_note', 'update', 'update_wh', 'update_finance',
+            'erp_status',
+            'payment_method',
+            'insurance_info',
+            'reason_whitelist',
+            'reason_late_respons',
+            'awb',
+            'wh_note',
+            'update',
+            'update_wh',
+            'update_finance',
         ];
 
         foreach ($nullable as $field) {
@@ -374,7 +386,10 @@ class OrderTrackingController extends Controller
 
     private function sourceOptions(): array
     {
-        $master = Cache::remember('options.ot_data_sources', 300, fn() =>
+        $master = Cache::remember(
+            'options.ot_data_sources',
+            300,
+            fn() =>
             OrderTrackingDataSource::query()->where('is_active', true)->orderBy('name')->pluck('name')->all()
         );
 
@@ -383,21 +398,30 @@ class OrderTrackingController extends Controller
 
     private function brandOptions(): array
     {
-        return Cache::remember('options.brands', 300, fn() =>
+        return Cache::remember(
+            'options.brands',
+            300,
+            fn() =>
             Brand::query()->where('is_active', true)->orderBy('name')->pluck('name')->all()
         );
     }
 
     private function platformOptions(): array
     {
-        return Cache::remember('options.platforms', 300, fn() =>
+        return Cache::remember(
+            'options.platforms',
+            300,
+            fn() =>
             Platform::query()->where('is_active', true)->orderBy('name')->pluck('name')->all()
         );
     }
 
     private function csNameOptions(): array
     {
-        return Cache::remember('options.cs_names', 300, fn() =>
+        return Cache::remember(
+            'options.cs_names',
+            300,
+            fn() =>
             User::query()->whereHas('roles', fn($q) => $q->where('name', 'CS'))
                 ->where('is_active', true)->orderBy('name')->pluck('name')->all()
         );
@@ -405,21 +429,30 @@ class OrderTrackingController extends Controller
 
     private function categoryOptions(): array
     {
-        return Cache::remember('options.sub_cases', 300, fn() =>
+        return Cache::remember(
+            'options.sub_cases',
+            300,
+            fn() =>
             SubCase::query()->where('is_active', true)->orderBy('name')->pluck('name')->all()
         );
     }
 
     private function causeByOptions(): array
     {
-        return Cache::remember('options.cause_bys', 300, fn() =>
+        return Cache::remember(
+            'options.cause_bys',
+            300,
+            fn() =>
             \App\Models\CauseBy::query()->where('is_active', true)->orderBy('name')->pluck('name')->all()
         );
     }
 
     private function lastStepOptions(): array
     {
-        return Cache::remember('options.last_steps_ot', 300, fn() =>
+        return Cache::remember(
+            'options.last_steps_ot',
+            300,
+            fn() =>
             LastStep::query()->where('is_active', true)->orderBy('name')
                 ->get(['name', 'status_result'])
                 ->map(fn(LastStep $ls) => [
@@ -432,7 +465,10 @@ class OrderTrackingController extends Controller
 
     private function erpStatusOptions(): array
     {
-        return Cache::remember('options.erp_statuses', 300, fn() =>
+        return Cache::remember(
+            'options.erp_statuses',
+            300,
+            fn() =>
             OrderTrackingErpStatus::query()->where('is_active', true)
                 ->orderBy('sort_order')->orderBy('name')->pluck('name')->all()
         );
@@ -440,9 +476,37 @@ class OrderTrackingController extends Controller
 
     private function reasonWhitelistOptions(): array
     {
-        return Cache::remember('options.reason_whitelists', 300, fn() =>
+        return Cache::remember(
+            'options.reason_whitelists',
+            300,
+            fn() =>
             ReasonWhitelist::query()->where('is_active', true)->orderBy('name')->pluck('name')->all()
         );
+    }
+
+    public function downloadTemplate()
+    {
+        return Excel::download(new OrderTrackingTemplateExport(), 'order-tracking-import-template.xlsx');
+    }
+
+    public function import(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'file' => ['required', 'file', 'mimes:xlsx,xls,csv,txt', 'max:10240'],
+        ]);
+
+        $batchId  = 'OT-' . now()->format('YmdHis') . '-' . Str::upper(Str::random(4));
+        $importer = new OrderTrackingImport($batchId, auth()->id());
+
+        try {
+            Excel::import($importer, $request->file('file'));
+        } catch (\Throwable $exception) {
+            report($exception);
+
+            return back()->with('error', 'Import gagal diproses. Pastikan file sesuai template dan coba lagi.');
+        }
+
+        return back()->with('import_result', $importer->results);
     }
 
     public function bulkDestroy(Request $request): RedirectResponse
@@ -462,9 +526,58 @@ class OrderTrackingController extends Controller
         return redirect()->back()->with('success', 'Semua data yang dipilih berhasil dihapus.');
     }
 
+    public function export(Request $request): \Symfony\Component\HttpFoundation\BinaryFileResponse
+    {
+        $query = (clone OrderTracking::query())
+            ->when($request->filled('search'), function ($query) use ($request) {
+                $search = trim((string) $request->input('search'));
+
+                $query->where(function ($trackingQuery) use ($search) {
+                    $trackingQuery
+                        ->where('data_source', 'like', "%{$search}%")
+                        ->orWhere('order_id', 'like', "%{$search}%")
+                        ->orWhere('brand', 'like', "%{$search}%")
+                        ->orWhere('platform', 'like', "%{$search}%")
+                        ->orWhere('cause_by', 'like', "%{$search}%")
+                        ->orWhere('awb', 'like', "%{$search}%")
+                        ->orWhere('erp_status', 'like', "%{$search}%")
+                        ->orWhere('cs_name', 'like', "%{$search}%")
+                        ->orWhere('category', 'like', "%{$search}%")
+                        ->orWhere('last_step', 'like', "%{$search}%")
+                        ->orWhere('status', 'like', "%{$search}%")
+                        ->orWhere('automation_track', 'like', "%{$search}%");
+                });
+            })
+            ->when($request->filled('status') && $request->input('status') !== 'All', function ($query) use ($request) {
+                $query->where('status', $request->input('status'));
+            })
+            ->when($request->filled('cs_name'), function ($query) use ($request) {
+                $query->where('cs_name', $request->input('cs_name'));
+            })
+            ->when($request->filled('brand') && $request->input('brand') !== 'All', function ($query) use ($request) {
+                $query->where('brand', $request->input('brand'));
+            })
+            ->when($request->filled('source') && $request->input('source') !== 'All', function ($query) use ($request) {
+                $query->where('data_source', $request->input('source'));
+            })
+            ->when($request->filled('platform') && $request->input('platform') !== 'All', function ($query) use ($request) {
+                $query->where('platform', $request->input('platform'));
+            })
+            ->when($request->filled('category') && $request->input('category') !== 'All', function ($query) use ($request) {
+                $query->where('category', $request->input('category'));
+            })
+            ->latest('tanggal_input')
+            ->latest('id');
+
+        return Excel::download(new OrderTrackingExport($query), 'order-tracking-export.xlsx');
+    }
+
     private function reasonLateResponseOptions(): array
     {
-        return Cache::remember('options.reason_late_responses', 300, fn() =>
+        return Cache::remember(
+            'options.reason_late_responses',
+            300,
+            fn() =>
             ReasonLateResponse::query()->where('is_active', true)->orderBy('name')->pluck('name')->all()
         );
     }

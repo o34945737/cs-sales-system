@@ -48,18 +48,49 @@ Route::middleware(['auth', 'active', 'password.reset.required'])->group(function
             ->name('complaints.history');
         Route::post('complaints/bulk-delete', [ComplaintController::class, 'bulkDestroy'])
             ->name('complaints.bulk-delete');
+        Route::get('complaints/template', [ComplaintController::class, 'downloadTemplate'])
+            ->middleware('permission:import complaints')
+            ->name('complaints.template');
+        Route::post('complaints/import', [ComplaintController::class, 'import'])
+            ->middleware('permission:import complaints')
+            ->name('complaints.import');
+        Route::get('complaints/export', [ComplaintController::class, 'export'])
+            ->middleware('permission:export complaints')
+            ->name('complaints.export');
         Route::resource('complaints', ComplaintController::class);
     });
 
     Route::middleware('permission:access bad reviews')->group(function () {
         Route::post('bad-reviews/bulk-delete', [BadReviewController::class, 'bulkDestroy'])
             ->name('bad-reviews.bulk-delete');
+        Route::get('bad-reviews/template', [BadReviewController::class, 'downloadTemplate'])
+            ->middleware('permission:import bad reviews')
+            ->name('bad-reviews.template');
+        Route::post('bad-reviews/import', [BadReviewController::class, 'import'])
+            ->middleware('permission:import bad reviews')
+            ->name('bad-reviews.import');
+        Route::get('bad-reviews/export', [BadReviewController::class, 'export'])
+            ->middleware('permission:export bad reviews')
+            ->name('bad-reviews.export');
         Route::resource('bad-reviews', BadReviewController::class);
     });
 
     Route::middleware('permission:access order trackings')->group(function () {
         Route::post('order-trackings/bulk-delete', [OrderTrackingController::class, 'bulkDestroy'])
             ->name('order-trackings.bulk-delete');
+
+        Route::get('order-trackings/template', [OrderTrackingController::class, 'downloadTemplate'])
+            ->middleware('permission:import order trackings')
+            ->name('order-trackings.template');
+
+        Route::post('order-trackings/import', [OrderTrackingController::class, 'import'])
+            ->middleware('permission:import order trackings')
+            ->name('order-trackings.import');
+
+        Route::get('order-trackings/export', [OrderTrackingController::class, 'export'])
+            ->middleware('permission:export order trackings')
+            ->name('order-trackings.export');
+
         Route::resource('order-trackings', OrderTrackingController::class);
     });
 

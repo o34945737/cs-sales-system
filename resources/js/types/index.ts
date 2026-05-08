@@ -51,6 +51,8 @@ export interface Auth {
         create_order_tracking_data_sources: boolean;
         update_order_tracking_data_sources: boolean;
         delete_order_tracking_data_sources: boolean;
+        import_order_trackings: boolean;
+        export_order_trackings: boolean;
         view_order_tracking_erp_statuses: boolean;
         create_order_tracking_erp_statuses: boolean;
         update_order_tracking_erp_statuses: boolean;
@@ -84,7 +86,11 @@ export interface Auth {
         delete_users: boolean;
         view_dashboard: boolean;
         access_complaints: boolean;
+        import_complaints: boolean;
+        export_complaints: boolean;
         access_bad_reviews: boolean;
+        import_bad_reviews: boolean;
+        export_bad_reviews: boolean;
         access_order_trackings: boolean;
         access_oos: boolean;
     };

@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Exports\ComplaintExport;
+use App\Exports\ComplaintTemplateExport;
+use App\Imports\ComplaintImport;
 use App\Models\Brand;
 use App\Models\CauseBy;
 use App\Models\Complaint;
@@ -16,12 +19,15 @@ use App\Models\SkuCode;
 use App\Models\SubCase;
 use App\Models\User;
 use Carbon\Carbon;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
+use Maatwebsite\Excel\Facades\Excel;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Throwable;
 
 class ComplaintController extends Controller
@@ -449,6 +455,123 @@ class ComplaintController extends Controller
         }
 
         return redirect()->back()->with('success', 'Semua data yang dipilih berhasil diarsipkan.');
+    }
+
+    public function downloadTemplate(): BinaryFileResponse
+    {
+        return Excel::download(new ComplaintTemplateExport(), 'complaint-import-template.xlsx');
+    }
+
+    public function import(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'file' => ['required', 'file', 'mimes:xlsx,xls,csv,txt', 'max:10240'],
+        ]);
+
+        $importer = new ComplaintImport();
+
+        try {
+            Excel::import($importer, $request->file('file'));
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return back()->with('error', 'Import complaint gagal diproses. Pastikan file sesuai template dan coba lagi.');
+        }
+
+        return back()->with('import_result', $importer->results);
+    }
+
+    public function export(Request $request): BinaryFileResponse
+    {
+        $query = Complaint::query();
+        $this->applyComplaintFilters($query, $request);
+
+        $sortField = $request->get('sort', 'tanggal_complaint');
+        $allowedSortFields = [
+            'created_at',
+            'tanggal_complaint',
+            'tanggal_order',
+            'order_id',
+            'username',
+            'brand',
+            'status',
+            'priority',
+            'sla',
+            'cs_name',
+            'history',
+        ];
+        $sortField = in_array($sortField, $allowedSortFields, true) ? $sortField : 'tanggal_complaint';
+        $sortOrder = $request->get('order', 'desc') === 'asc' ? 'asc' : 'desc';
+
+        if ($sortField === 'sla') {
+            $query->orderByRaw(
+                "COALESCE(CASE
+                    WHEN status = 'Solved' AND tanggal_update IS NOT NULL THEN DATEDIFF(tanggal_update, tanggal_complaint)
+                    ELSE DATEDIFF(CURRENT_DATE, tanggal_complaint)
+                END, 0) {$sortOrder}"
+            );
+        } else {
+            $query->orderBy($sortField, $sortOrder);
+        }
+
+        return Excel::download(new ComplaintExport($query), 'complaints-export.xlsx');
+    }
+
+    private function applyComplaintFilters($query, Request $request): void
+    {
+        if ($request->filled('search')) {
+            $search = trim((string) $request->search);
+
+            $query->where(function ($q) use ($search) {
+                $q->where('order_id', 'like', "%{$search}%")
+                    ->orWhere('resi', 'like', "%{$search}%")
+                    ->orWhere('username', 'like', "%{$search}%")
+                    ->orWhere('brand', 'like', "%{$search}%")
+                    ->orWhere('platform', 'like', "%{$search}%")
+                    ->orWhere('source', 'like', "%{$search}%")
+                    ->orWhere('product_name', 'like', "%{$search}%")
+                    ->orWhere('sku', 'like', "%{$search}%")
+                    ->orWhere('sub_case', 'like', "%{$search}%")
+                    ->orWhere('cause_by', 'like', "%{$search}%")
+                    ->orWhere('part_of_bad', 'like', "%{$search}%")
+                    ->orWhere('summary_case', 'like', "%{$search}%")
+                    ->orWhere('cs_name', 'like', "%{$search}%")
+                    ->orWhere('status', 'like', "%{$search}%")
+                    ->orWhere('priority', 'like', "%{$search}%");
+            });
+        }
+
+        if ($request->filled('status') && $request->status !== 'All') {
+            $query->where('status', $request->status);
+        }
+
+        if ($request->filled('cs_name')) {
+            $query->where('cs_name', $request->cs_name);
+        }
+
+        if ($request->filled('brand') && $request->brand !== 'All') {
+            $query->where('brand', $request->brand);
+        }
+
+        if ($request->filled('priority') && $request->priority !== 'All') {
+            $query->where('priority', $request->priority);
+        }
+
+        if ($request->filled('source') && $request->source !== 'All') {
+            $query->where('source', $request->source);
+        }
+
+        if ($request->filled('platform') && $request->platform !== 'All') {
+            $query->where('platform', $request->platform);
+        }
+
+        if ($request->filled('history') && $request->history === 'Repeat') {
+            $query->whereNotNull('history')->where('history', '!=', '');
+        }
+
+        if ($request->filled('sub_case') && $request->sub_case !== 'All') {
+            $query->where('sub_case', $request->sub_case);
+        }
     }
 
     private function complaintRules(Request $request, bool $forUpdate = false): array

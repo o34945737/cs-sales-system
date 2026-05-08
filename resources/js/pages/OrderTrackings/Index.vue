@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue';
-import { Head, router, useForm } from '@inertiajs/vue3';
+import { type SharedData } from '@/types';
+import { Head, router, useForm, usePage } from '@inertiajs/vue3';
 import debounce from 'lodash/debounce';
 import {
+    Activity,
     AlertCircle,
     CheckCircle2,
     ChevronDown,
@@ -12,13 +14,12 @@ import {
     Pencil,
     PlayCircle,
     Plus,
-    RotateCcw, 
+    RotateCcw,
     Search,
     Trash2,
     Upload,
     Users,
     X,
-    Activity,
 } from 'lucide-vue-next';
 import { computed, nextTick, ref, watch } from 'vue';
 
@@ -176,6 +177,55 @@ const activeFilterCount = computed(() =>
         currentCategory.value !== 'All',
     ].filter(Boolean).length
 );
+
+const page = usePage<SharedData>();
+const canImportOrderTrackings = computed(() => page.props.auth?.can?.import_order_trackings ?? false);
+const canExportOrderTrackings = computed(() => page.props.auth?.can?.export_order_trackings ?? false);
+
+const exportUrl = computed(() => {
+    const params: Record<string, string | undefined> = {
+        search: search.value || undefined,
+        status: currentStatus.value !== 'All' ? currentStatus.value : undefined,
+        cs_name: currentCs.value || undefined,
+        brand: currentBrand.value !== 'All' ? currentBrand.value : undefined,
+        source: currentSource.value !== 'All' ? currentSource.value : undefined,
+        platform: currentPlatform.value !== 'All' ? currentPlatform.value : undefined,
+        category: currentCategory.value !== 'All' ? currentCategory.value : undefined,
+    };
+
+    return route('order-trackings.export', params);
+});
+
+// ============ Import ============
+const isImportOpen = ref(false);
+const importFile = ref<File | null>(null);
+const importFileInput = ref<HTMLInputElement | null>(null);
+const importResult = computed(() => (page.props.flash as any)?.import_result ?? null);
+const importForm = useForm({ file: null as File | null });
+
+const openImportModal = () => {
+    importFile.value = null;
+    importForm.clearErrors();
+    isImportOpen.value = true;
+};
+
+const onImportFileChange = (e: Event) => {
+    const target = e.target as HTMLInputElement;
+    importFile.value = target.files?.[0] ?? null;
+};
+
+const submitImport = () => {
+    if (!importFile.value) return;
+    importForm.file = importFile.value;
+    importForm.post(route('order-trackings.import'), {
+        forceFormData: true,
+        preserveScroll: true,
+        onSuccess: () => {
+            importFile.value = null;
+            if (importFileInput.value) importFileInput.value.value = '';
+        },
+    });
+};
 
 // ============ Bulk Delete ============
 const selectedIds = ref<number[]>([]);
@@ -809,7 +859,7 @@ const selectButtonClass = (currentValue: string, expectedValue: string) =>
 
                         <div class="min-w-0 space-y-8">
                             <section class="overflow-hidden rounded-[24px] border border-slate-100 bg-white shadow-sm">
-                                <div class="flex flex-col gap-6 border-b border-slate-100 px-6 py-7 lg:flex-row lg:items-center lg:justify-between">
+                                <div class="flex flex-col gap-6 border-b border-slate-100 px-6 py-7 xl:flex-row xl:items-center xl:justify-between">
                                     <div class="min-w-0">
                                         <div class="inline-flex items-center gap-2 rounded-full bg-blue-50 px-2 py-0.5 text-[9px] font-black uppercase tracking-widest text-[var(--app-primary)]">
                                             Operational Database
@@ -828,15 +878,15 @@ const selectButtonClass = (currentValue: string, expectedValue: string) =>
                                         </div>
                                     </div>
 
-                                    <div class="flex flex-1 flex-col gap-4 lg:max-w-xl lg:flex-row lg:items-center lg:justify-end">
-                                        <div class="group relative flex-1">
+                                    <div class="flex flex-1 flex-wrap gap-3 xl:max-w-3xl xl:items-center xl:justify-end">
+                                        <div class="group relative min-w-[220px] flex-1 xl:max-w-[300px]">
                                             <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
                                                 <Search class="h-4.5 w-4.5 text-slate-400 transition-colors group-focus-within:text-[var(--app-primary)]" />
                                             </div>
                                             <input
                                                 v-model="search"
                                                 type="text"
-                                                class="h-11 w-full rounded-2xl border border-slate-200 bg-slate-50/50 pl-11 pr-4 text-[13px] font-medium text-slate-900 outline-none transition-all focus:border-[var(--app-primary)] focus:bg-white focus:ring-4 focus:ring-[var(--app-primary)]/10"
+                                                class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50/50 pl-11 pr-4 text-[13px] font-medium text-slate-900 outline-none transition-all focus:border-[var(--app-primary)] focus:bg-white focus:ring-4 focus:ring-[var(--app-primary)]/10"
                                                 placeholder="Search order ID, AWB, cause by, brand..."
                                             />
                                         </div>
@@ -844,28 +894,47 @@ const selectButtonClass = (currentValue: string, expectedValue: string) =>
                                         <button
                                             v-if="selectedIds.length > 0"
                                             type="button"
-                                            class="flex h-12 items-center justify-center gap-2 rounded-2xl bg-rose-600 px-6 text-[14px] font-black text-white shadow-[0_15px_30px_rgba(220,38,38,0.25)] transition-all hover:bg-rose-700 hover:-translate-y-1 active:scale-[0.98]"
+                                            class="flex h-11 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-rose-600 px-4 text-[13px] font-black text-white shadow-[0_15px_30px_rgba(220,38,38,0.25)] transition-all hover:-translate-y-0.5 hover:bg-rose-700 active:scale-[0.98]"
                                             @click="confirmBulkDelete"
                                         >
-                                            <Trash2 class="h-5 w-5" />
+                                            <Trash2 class="h-4 w-4" />
                                             <span>Delete ({{ selectedIds.length }})</span>
                                         </button>
                                         <button
+                                            v-if="canImportOrderTrackings"
                                             type="button"
-                                            class="group flex h-12 items-center justify-center gap-2 rounded-2xl bg-[var(--app-primary)] px-6 text-[14px] font-black text-white shadow-[0_15px_30px_rgba(53,103,232,0.25)] transition-all hover:-translate-y-1 hover:bg-[var(--app-primary-dark)] hover:shadow-[0_20px_40px_rgba(53,103,232,0.35)] active:scale-[0.98]"
+                                            class="flex h-11 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-slate-200 bg-white px-4 text-[13px] font-black text-slate-700 shadow-sm transition-all hover:-translate-y-0.5 hover:border-slate-300 hover:bg-slate-50 active:scale-[0.98]"
+                                            @click="openImportModal"
+                                        >
+                                            <Upload class="h-4 w-4" />
+                                            <span>Import</span>
+                                        </button>
+
+                                        <a
+                                            v-if="canExportOrderTrackings"
+                                            :href="exportUrl"
+                                            class="flex h-11 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-slate-200 bg-white px-4 text-[13px] font-black text-slate-700 shadow-sm transition-all hover:-translate-y-0.5 hover:border-slate-300 hover:bg-slate-50 active:scale-[0.98]"
+                                        >
+                                            <FileText class="h-4 w-4" />
+                                            <span>Export Excel</span>
+                                        </a>
+
+                                        <button
+                                            type="button"
+                                            class="group flex h-11 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-[var(--app-primary)] px-5 text-[13px] font-black text-white shadow-[0_15px_30px_rgba(53,103,232,0.25)] transition-all hover:-translate-y-0.5 hover:bg-[var(--app-primary-dark)] hover:shadow-[0_20px_40px_rgba(53,103,232,0.35)] active:scale-[0.98]"
                                             @click="openCreateModal"
                                         >
-                                            <Plus class="h-5 w-5 stroke-[3px]" />
+                                            <Plus class="h-4 w-4 stroke-[3px]" />
                                             <span>Create Tracking</span>
                                         </button>
                                     </div>
                                 </div>
 
                                 <div class="overflow-x-auto custom-scrollbar">
-                                    <table class="w-full min-w-[1180px] border-collapse text-left">
+                                    <table class="w-full min-w-[1040px] border-collapse text-left">
                                         <thead>
-                                            <tr class="border-b border-slate-100 bg-slate-50/30 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
-                                                <th class="py-4 pl-4 pr-2 w-10">
+                                            <tr class="border-b border-slate-100 bg-slate-50/30 text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">
+                                                <th class="w-10 py-4 pl-4 pr-2">
                                                     <input
                                                         type="checkbox"
                                                         class="h-4 w-4 cursor-pointer rounded border-slate-300 text-[var(--app-primary)] focus:ring-[var(--app-primary)]"
@@ -873,17 +942,17 @@ const selectButtonClass = (currentValue: string, expectedValue: string) =>
                                                         @change="toggleSelectAll"
                                                     />
                                                 </th>
-                                                <th class="py-4 pl-6 pr-4">No</th>
-                                                <th class="px-4 py-4">Source</th>
-                                                <th class="px-4 py-4">Input Date</th>
-                                                <th class="px-4 py-4">Order Date</th>
-                                                <th class="px-4 py-4">Order</th>
-                                                <th class="px-4 py-4">Brand / Platform</th>
-                                                <th class="px-4 py-4">Sub Case / By</th>
-                                                <th class="px-4 py-4">Agent / AWB</th>
-                                                <th class="px-4 py-4 text-center">Status</th>
-                                                <th class="px-4 py-4">Track</th>
-                                                <th class="py-4 pl-4 pr-6 text-right">Action</th>
+                                                <th class="w-12 py-4 pl-4 pr-3">No</th>
+                                                <th class="w-[110px] px-3 py-4">Source</th>
+                                                <th class="w-[105px] px-3 py-4">Input Date</th>
+                                                <th class="w-[110px] px-3 py-4">Order Date</th>
+                                                <th class="w-[110px] px-3 py-4">Order</th>
+                                                <th class="w-[130px] px-3 py-4">Brand / Platform</th>
+                                                <th class="w-[140px] px-3 py-4">Sub Case / By</th>
+                                                <th class="w-[150px] px-3 py-4">Agent / AWB</th>
+                                                <th class="w-[95px] px-3 py-4 text-center">Status</th>
+                                                <th class="w-[110px] px-3 py-4">Track</th>
+                                                <th class="w-[110px] py-4 pl-3 pr-4 text-right">Action</th>
                                             </tr>
                                         </thead>
                                         <tbody class="divide-y divide-slate-100 bg-white">
@@ -901,58 +970,58 @@ const selectButtonClass = (currentValue: string, expectedValue: string) =>
                                                         @change="toggleSelect(item.id)"
                                                     />
                                                 </td>
-                                                <td class="py-4 pl-6 pr-4">
+                                                <td class="py-4 pl-4 pr-3">
                                                     <span class="text-[10px] font-black text-slate-400">
                                                         {{ ((orderTrackingPage.current_page || 1) - 1) * (orderTrackingPage.per_page || 10) + index + 1 }}
                                                     </span>
                                                 </td>
 
-                                                <td class="px-4 py-4">
+                                                <td class="px-3 py-4">
                                                     <div class="space-y-0.5">
-                                                        <p class="text-[12px] font-black text-slate-900">{{ item.data_source || '-' }}</p>
+                                                        <p class="break-words text-[12px] font-black text-slate-900">{{ item.data_source || '-' }}</p>
                                                         <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400">{{ item.erp_status || '-' }}</p>
                                                     </div>
                                                 </td>
 
-                                                <td class="px-4 py-4">
+                                                <td class="px-3 py-4">
                                                     <p class="text-[12px] font-bold text-slate-700">{{ formatDate(item.tanggal_input) }}</p>
                                                     <p class="mt-0.5 text-[10px] font-medium text-slate-400">{{ item.month || '-' }}</p>
                                                 </td>
 
-                                                <td class="px-4 py-4">
+                                                <td class="px-3 py-4">
                                                     <p class="text-[12px] font-bold text-slate-700">{{ formatDate(item.tanggal_order) }}</p>
                                                     <p class="mt-0.5 text-[10px] font-medium text-slate-400">{{ item.tanggal_tts ? `TTS ${formatDate(item.tanggal_tts)}` : '-' }}</p>
                                                 </td>
 
-                                                <td class="px-4 py-4">
+                                                <td class="px-3 py-4">
                                                     <div class="space-y-1">
-                                                        <p class="text-[12px] font-black text-slate-900">#{{ item.order_id || '-' }}</p>
+                                                        <p class="break-words text-[12px] font-black text-slate-900">#{{ item.order_id || '-' }}</p>
                                                         <p class="text-[10px] font-bold text-slate-400">{{ formatCurrency(item.value) }}</p>
                                                     </div>
                                                 </td>
 
-                                                <td class="px-4 py-4">
+                                                <td class="px-3 py-4">
                                                     <div class="space-y-0.5">
-                                                        <p class="text-[12px] font-black text-slate-900">{{ item.brand || '-' }}</p>
+                                                        <p class="break-words text-[12px] font-black text-slate-900">{{ item.brand || '-' }}</p>
                                                         <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400">{{ item.platform || '-' }}</p>
                                                     </div>
                                                 </td>
 
-                                                <td class="px-4 py-4">
+                                                <td class="px-3 py-4">
                                                     <div class="space-y-0.5">
-                                                        <p class="text-[12px] font-black text-slate-900">{{ item.category || '-' }}</p>
+                                                        <p class="break-words text-[12px] font-black text-slate-900">{{ item.category || '-' }}</p>
                                                         <p class="text-[10px] font-bold text-slate-400">{{ item.cause_by || '-' }}</p>
                                                     </div>
                                                 </td>
 
-                                                <td class="px-4 py-4">
+                                                <td class="px-3 py-4">
                                                     <div class="flex items-center gap-2">
-                                                        <div class="flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 text-[10px] font-black text-slate-500">
+                                                        <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-100 text-[10px] font-black text-slate-500">
                                                             {{ (item.cs_name || '?').substring(0, 2).toUpperCase() }}
                                                         </div>
-                                                        <div class="space-y-0.5">
-                                                            <p class="text-[12px] font-bold text-slate-700">{{ item.cs_name || 'Unassigned' }}</p>
-                                                            <p class="text-[10px] font-medium text-slate-400">{{ item.awb || '-' }}</p>
+                                                        <div class="min-w-0 space-y-0.5">
+                                                            <p class="truncate text-[12px] font-bold text-slate-700">{{ item.cs_name || 'Unassigned' }}</p>
+                                                            <p class="truncate text-[10px] font-medium text-slate-400">{{ item.awb || '-' }}</p>
                                                             <div v-if="item.awb && jetTrackMap[item.awb]" class="flex items-center gap-1.5 pt-0.5">
                                                                 <a v-if="jetTrackMap[item.awb].video_url" :href="jetTrackMap[item.awb].video_url" target="_blank" class="inline-flex items-center gap-0.5 text-[9px] font-black uppercase tracking-wide text-blue-600 hover:text-blue-800">
                                                                     <PlayCircle class="h-2.5 w-2.5" /> Video
@@ -965,19 +1034,19 @@ const selectButtonClass = (currentValue: string, expectedValue: string) =>
                                                     </div>
                                                 </td>
 
-                                                <td class="px-4 py-4 text-center">
+                                                <td class="px-3 py-4 text-center">
                                                     <span class="inline-flex rounded-full px-2.5 py-1 text-[9px] font-black uppercase tracking-wider" :class="statusClass(item.status)">
                                                         {{ item.status || 'Pending' }}
                                                     </span>
                                                 </td>
 
-                                                <td class="px-4 py-4">
+                                                <td class="px-3 py-4">
                                                     <p class="line-clamp-2 text-[11px] font-bold text-slate-600">
                                                         {{ item.automation_track || '-' }}
                                                     </p>
                                                 </td>
 
-                                                <td class="py-4 pl-4 pr-6">
+                                                <td class="py-4 pl-3 pr-4">
                                                     <div class="flex items-center justify-end gap-1.5">
                                                         <button
                                                             @click="openDetail(item)"
@@ -1644,6 +1713,64 @@ const selectButtonClass = (currentValue: string, expectedValue: string) =>
                         </button>
                         <button @click="submitDelete" class="h-12 flex-[2] rounded-2xl bg-rose-600 text-[14px] font-black text-white shadow-lg shadow-rose-500/20">
                             Delete Forever
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </transition>
+
+        <!-- Import modal -->
+        <transition name="fade">
+            <div v-if="isImportOpen" class="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/40 px-4 backdrop-blur-sm" @click.self="isImportOpen = false">
+                <div class="w-full max-w-md overflow-hidden rounded-[32px] bg-white shadow-2xl">
+                    <div class="border-b border-slate-100 px-8 py-7">
+                        <div class="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-[var(--app-primary)]">
+                            <Upload class="h-6 w-6" />
+                        </div>
+                        <h3 class="text-2xl font-black tracking-tight text-slate-900">Import Order Trackings</h3>
+                        <p class="mt-1 text-[13px] font-medium text-slate-500">Upload file Excel/CSV dengan format template. Upsert berdasarkan order_id.</p>
+                    </div>
+
+                    <!-- Import result -->
+                    <div v-if="importResult" class="mx-8 mt-6 rounded-2xl border p-4" :class="importResult.failed > 0 ? 'border-amber-200 bg-amber-50' : 'border-emerald-200 bg-emerald-50'">
+                        <p class="text-[12px] font-black uppercase tracking-wider" :class="importResult.failed > 0 ? 'text-amber-700' : 'text-emerald-700'">Hasil Import</p>
+                        <div class="mt-2 flex gap-4 text-[13px] font-bold text-slate-700">
+                            <span class="text-emerald-600">+{{ importResult.created ?? 0 }} dibuat</span>
+                            <span class="text-blue-600">↻ {{ importResult.updated ?? 0 }} diperbarui</span>
+                            <span v-if="importResult.failed > 0" class="text-rose-600">✕ {{ importResult.failed }} gagal</span>
+                        </div>
+                        <ul v-if="importResult.errors?.length" class="mt-2 max-h-24 space-y-0.5 overflow-y-auto text-[11px] text-rose-600">
+                            <li v-for="(err, i) in importResult.errors" :key="i">{{ err }}</li>
+                        </ul>
+                    </div>
+
+                    <div class="space-y-4 px-8 py-6">
+                        <div>
+                            <label class="mb-1.5 block text-[12px] font-black uppercase tracking-wider text-slate-500">File Excel / CSV</label>
+                            <input
+                                ref="importFileInput"
+                                type="file"
+                                accept=".xlsx,.xls,.csv,.txt"
+                                class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-[13px] text-slate-700 file:mr-3 file:rounded-lg file:border-0 file:bg-[var(--app-primary)] file:px-3 file:py-1.5 file:text-[11px] file:font-black file:text-white"
+                                @change="onImportFileChange"
+                            />
+                            <p v-if="importForm.errors.file" class="mt-1 text-[11px] text-rose-600">{{ importForm.errors.file }}</p>
+                        </div>
+                        <a :href="route('order-trackings.template')" class="inline-flex items-center gap-1.5 text-[12px] font-bold text-[var(--app-primary)] hover:underline"
+                        > <FileText class="h-3.5 w-3.5" />
+                            Download template
+                        </a>
+                    </div>
+
+                    <div class="flex gap-3 border-t border-slate-100 px-8 py-6">
+                        <button type="button" @click="isImportOpen = false" class="h-11 flex-1 rounded-2xl bg-slate-50 text-[13px] font-black text-slate-500 hover:bg-slate-100">Batal</button>
+                        <button
+                            type="button"
+                            :disabled="!importFile || importForm.processing"
+                            class="h-11 flex-[2] rounded-2xl bg-[var(--app-primary)] text-[13px] font-black text-white shadow-lg shadow-blue-500/20 transition-all hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50"
+                            @click="submitImport"
+                        >
+                            {{ importForm.processing ? 'Mengimpor...' : 'Import Data' }}
                         </button>
                     </div>
                 </div>

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue';
-import { Head, router, useForm } from '@inertiajs/vue3';
+import { type SharedData } from '@/types';
+import { Head, router, useForm, usePage } from '@inertiajs/vue3';
 import axios from 'axios';
 import debounce from 'lodash/debounce';
 import {
@@ -9,6 +10,7 @@ import {
     ChevronDown,
     ClipboardList,
     Eye,
+    FileText,
     Pencil,
     Plus,
     RotateCcw,
@@ -105,6 +107,9 @@ const props = defineProps({
     autoCauseByMap: Object,
 });
 const currentEditItem = ref(null);
+const page = usePage<SharedData>();
+const canImportComplaints = computed(() => page.props.auth?.can?.import_complaints ?? false);
+const canExportComplaints = computed(() => page.props.auth?.can?.export_complaints ?? false);
 
 const complaintPage = computed(() => ({
     ...createEmptyPaginator(),
@@ -554,6 +559,55 @@ const activeFilterCount = computed(
             currentSubCase.value !== 'All',
         ].filter(Boolean).length,
 );
+
+const exportUrl = computed(() => {
+    const params: Record<string, string | undefined> = {
+        search: search.value || undefined,
+        status: currentStatus.value !== 'All' ? currentStatus.value : undefined,
+        cs_name: currentCs.value || undefined,
+        brand: currentBrand.value !== 'All' ? currentBrand.value : undefined,
+        priority: currentPriority.value !== 'All' ? currentPriority.value : undefined,
+        source: currentSource.value !== 'All' ? currentSource.value : undefined,
+        platform: currentPlatform.value !== 'All' ? currentPlatform.value : undefined,
+        history: currentHistory.value !== 'All' ? currentHistory.value : undefined,
+        sub_case: currentSubCase.value !== 'All' ? currentSubCase.value : undefined,
+        sort: filterState.value.sort || undefined,
+        order: filterState.value.order || undefined,
+    };
+
+    return route('complaints.export', params);
+});
+
+const isImportOpen = ref(false);
+const importFile = ref<File | null>(null);
+const importFileInput = ref<HTMLInputElement | null>(null);
+const importResult = computed(() => (page.props.flash as any)?.import_result ?? null);
+const importForm = useForm({ file: null as File | null });
+
+const openImportModal = () => {
+    importFile.value = null;
+    importForm.clearErrors();
+    isImportOpen.value = true;
+};
+
+const onImportFileChange = (event: Event) => {
+    const target = event.target as HTMLInputElement;
+    importFile.value = target.files?.[0] ?? null;
+};
+
+const submitImport = () => {
+    if (!importFile.value) return;
+
+    importForm.file = importFile.value;
+    importForm.post(route('complaints.import'), {
+        forceFormData: true,
+        preserveScroll: true,
+        onSuccess: () => {
+            importFile.value = null;
+            if (importFileInput.value) importFileInput.value.value = '';
+        },
+    });
+};
 
 const resetFilters = () => {
     search.value = '';
@@ -1028,7 +1082,7 @@ const submitForm = () => {
             oos: oosValue,
             reason_whitelist: showReasonWhitelist.value ? data.reason_whitelist : null,
             reason_late_respons: showReasonLateRespons.value ? data.reason_late_respons : null,
-            tanggal_step_cs_selesai: showStepCompletedDate.value ? data.tanggal_step_cs_selesai || data.tanggal_update : null,
+            tanggal_step_cs_selesai: showStepCompletedDate.value ? data.tanggal_step_cs_selesai : null,
             proof: data.proof || null,
             proof_attachment: data.proof_attachment || null,
             _method: modalMode.value === 'edit' ? 'PUT' : 'POST',
@@ -1539,6 +1593,25 @@ const sectionChecks = computed(() => [
                                             <Trash2 class="h-4 w-4" />
                                             <span>Delete Selected ({{ selectedIds.length }})</span>
                                         </button>
+
+                                        <button
+                                            v-if="canImportComplaints"
+                                            type="button"
+                                            class="flex h-12 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 text-[13px] font-black text-slate-700 shadow-sm transition-all hover:-translate-y-0.5 hover:border-slate-300 hover:bg-slate-50 active:scale-[0.98]"
+                                            @click="openImportModal"
+                                        >
+                                            <Upload class="h-4 w-4" />
+                                            <span>Import</span>
+                                        </button>
+
+                                        <a
+                                            v-if="canExportComplaints"
+                                            :href="exportUrl"
+                                            class="flex h-12 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 text-[13px] font-black text-slate-700 shadow-sm transition-all hover:-translate-y-0.5 hover:border-slate-300 hover:bg-slate-50 active:scale-[0.98]"
+                                        >
+                                            <FileText class="h-4 w-4" />
+                                            <span>Export Excel</span>
+                                        </a>
 
                                         <button
                                             type="button"
@@ -2173,6 +2246,28 @@ const sectionChecks = computed(() => [
                                                 </p>
                                             </div>
 
+                                            <div class="space-y-1.5">
+                                                <label class="block text-[13px] font-bold uppercase tracking-wide text-slate-700">Username*</label>
+                                                <input
+                                                    v-model="form.username"
+                                                    type="text"
+                                                    :class="controlClass('username')"
+                                                    placeholder="Gunakan username marketplace..."
+                                                />
+                                                <div
+                                                    v-if="form.history"
+                                                    class="mt-2 flex items-center gap-2 rounded-xl bg-blue-50/50 px-3 py-2 ring-1 ring-blue-100"
+                                                >
+                                                    <Users class="h-3.5 w-3.5 text-blue-500" />
+                                                    <span class="text-[11px] font-black uppercase tracking-wider text-blue-600">{{
+                                                        form.history
+                                                    }}</span>
+                                                </div>
+                                                <p v-if="fieldError('username')" class="mt-2 text-xs font-medium text-rose-600">
+                                                    {{ fieldError('username') }}
+                                                </p>
+                                            </div>
+
                                             <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                                                 <div class="space-y-1.5">
                                                     <label class="block text-[13px] font-bold uppercase tracking-wide text-slate-700"
@@ -2253,7 +2348,7 @@ const sectionChecks = computed(() => [
                                             <div class="grid gap-5 sm:grid-cols-2">
                                                 <div class="space-y-2">
                                                     <label class="block text-[13px] font-bold uppercase tracking-wide text-slate-700"
-                                                        >Nomor Pesanan*</label
+                                                        >Order ID*</label
                                                     >
                                                     <input v-model="form.order_id" type="text" :class="controlClass('order_id')" />
                                                     <p v-if="fieldError('order_id')" class="text-xs font-medium text-rose-600">
@@ -2666,27 +2761,7 @@ const sectionChecks = computed(() => [
                                                 </div>
                                             </div>
 
-                                            <div class="space-y-1.5">
-                                                <label class="block text-[13px] font-bold uppercase tracking-wide text-slate-700">Username*</label>
-                                                <input
-                                                    v-model="form.username"
-                                                    type="text"
-                                                    :class="controlClass('username')"
-                                                    placeholder="Gunakan username marketplace..."
-                                                />
-                                                <div
-                                                    v-if="form.history"
-                                                    class="mt-2 flex items-center gap-2 rounded-xl bg-blue-50/50 px-3 py-2 ring-1 ring-blue-100"
-                                                >
-                                                    <Users class="h-3.5 w-3.5 text-blue-500" />
-                                                    <span class="text-[11px] font-black uppercase tracking-wider text-blue-600">{{
-                                                        form.history
-                                                    }}</span>
-                                                </div>
-                                                <p v-if="fieldError('username')" class="mt-2 text-xs font-medium text-rose-600">
-                                                    {{ fieldError('username') }}
-                                                </p>
-                                            </div>
+
                                         </div>
                                     </section>
                                 </div>
@@ -2918,6 +2993,87 @@ const sectionChecks = computed(() => [
                                     {{ bulkDeleteForm.processing ? 'Sedang Mengarsipkan...' : 'Ya, Arsipkan Semua' }}
                                 </button>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            </transition>
+
+            <!-- Import modal -->
+            <transition name="fade">
+                <div
+                    v-if="isImportOpen"
+                    class="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/40 px-4 backdrop-blur-sm"
+                    @click.self="isImportOpen = false"
+                >
+                    <div class="w-full max-w-md overflow-hidden rounded-[32px] bg-white shadow-2xl">
+                        <div class="border-b border-slate-100 px-8 py-7">
+                            <div class="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-[var(--app-primary)]">
+                                <Upload class="h-6 w-6" />
+                            </div>
+                            <h3 class="text-2xl font-black tracking-tight text-slate-900">Import Complaints</h3>
+                            <p class="mt-1 text-[13px] font-medium text-slate-500">
+                                Upload file Excel/CSV sesuai template. Upsert berdasarkan order_id.
+                            </p>
+                        </div>
+
+                        <div
+                            v-if="importResult"
+                            class="mx-8 mt-6 rounded-2xl border p-4"
+                            :class="importResult.failed > 0 ? 'border-amber-200 bg-amber-50' : 'border-emerald-200 bg-emerald-50'"
+                        >
+                            <p
+                                class="text-[12px] font-black uppercase tracking-wider"
+                                :class="importResult.failed > 0 ? 'text-amber-700' : 'text-emerald-700'"
+                            >
+                                Hasil Import
+                            </p>
+                            <div class="mt-2 flex gap-4 text-[13px] font-bold text-slate-700">
+                                <span class="text-emerald-600">+{{ importResult.created ?? 0 }} dibuat</span>
+                                <span class="text-blue-600">↻ {{ importResult.updated ?? 0 }} diperbarui</span>
+                                <span v-if="importResult.failed > 0" class="text-rose-600">✕ {{ importResult.failed }} gagal</span>
+                            </div>
+                            <ul v-if="importResult.errors?.length" class="mt-2 max-h-24 space-y-0.5 overflow-y-auto text-[11px] text-rose-600">
+                                <li v-for="(err, i) in importResult.errors" :key="i">{{ err }}</li>
+                            </ul>
+                        </div>
+
+                        <div class="space-y-4 px-8 py-6">
+                            <div>
+                                <label class="mb-1.5 block text-[12px] font-black uppercase tracking-wider text-slate-500">File Excel / CSV</label>
+                                <input
+                                    ref="importFileInput"
+                                    type="file"
+                                    accept=".xlsx,.xls,.csv,.txt"
+                                    class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-[13px] text-slate-700 file:mr-3 file:rounded-lg file:border-0 file:bg-[var(--app-primary)] file:px-3 file:py-1.5 file:text-[11px] file:font-black file:text-white"
+                                    @change="onImportFileChange"
+                                />
+                                <p v-if="importForm.errors.file" class="mt-1 text-[11px] text-rose-600">{{ importForm.errors.file }}</p>
+                            </div>
+                            <a
+                                :href="route('complaints.template')"
+                                class="inline-flex items-center gap-1.5 text-[12px] font-bold text-[var(--app-primary)] hover:underline"
+                            >
+                                <FileText class="h-3.5 w-3.5" />
+                                Download template
+                            </a>
+                        </div>
+
+                        <div class="flex gap-3 border-t border-slate-100 px-8 py-6">
+                            <button
+                                type="button"
+                                @click="isImportOpen = false"
+                                class="h-11 flex-1 rounded-2xl bg-slate-50 text-[13px] font-black text-slate-500 hover:bg-slate-100"
+                            >
+                                Batal
+                            </button>
+                            <button
+                                type="button"
+                                :disabled="!importFile || importForm.processing"
+                                class="h-11 flex-[2] rounded-2xl bg-[var(--app-primary)] text-[13px] font-black text-white shadow-lg shadow-blue-500/20 transition-all hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50"
+                                @click="submitImport"
+                            >
+                                {{ importForm.processing ? 'Mengimpor...' : 'Import Data' }}
+                            </button>
                         </div>
                     </div>
                 </div>
