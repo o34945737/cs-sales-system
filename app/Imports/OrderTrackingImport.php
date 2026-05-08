@@ -92,7 +92,7 @@ class OrderTrackingImport implements OnEachRow, WithHeadingRow
         $brand        = trim((string) ($rowArr['brand'] ?? ''));
         $platform     = trim((string) ($rowArr['platform'] ?? ''));
         $csName       = trim((string) ($rowArr['cs_name'] ?? ''));
-        $category     = trim((string) ($rowArr['category'] ?? ''));
+        $category     = trim((string) ($rowArr['sub_case'] ?? $rowArr['category'] ?? ''));
         $lastStep     = trim((string) ($rowArr['last_step'] ?? ''));
         $complaintSync = $this->complaintSyncByOrderId[$orderId] ?? null;
 

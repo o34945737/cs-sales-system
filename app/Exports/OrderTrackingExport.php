@@ -46,8 +46,14 @@ class OrderTrackingExport implements FromQuery, WithHeadings, WithMapping, WithC
             $this->formatDate($orderTracking->tanggal_update),
             $orderTracking->value_receive,
             $orderTracking->insurance_info,
+            $orderTracking->video_unboxing_wh,
+            $orderTracking->bap_wh,
             $orderTracking->update_wh,
             $orderTracking->update_finance,
+            $orderTracking->status,
+            $orderTracking->month,
+            $orderTracking->automation_track,
+            $this->formatDate($orderTracking->tanggal_tts),
             $orderTracking->reason_whitelist,
             $orderTracking->reason_late_respons,
         ];
@@ -69,14 +75,20 @@ class OrderTrackingExport implements FromQuery, WithHeadings, WithMapping, WithC
             'wh_note',
             'cs_name',
             'last_step',
-            'category',
+            'sub_case',
             'cause_by',
             'update',
             'tanggal_update',
             'value_receive',
             'insurance_info',
+            'video_unboxing',
+            'bap',
             'update_wh',
             'update_finance',
+            'status',
+            'month',
+            'automation_track',
+            'tanggal_tts',
             'reason_whitelist',
             'reason_late_respons',
         ];
@@ -101,7 +113,7 @@ class OrderTrackingExport implements FromQuery, WithHeadings, WithMapping, WithC
                 $sheet = $event->sheet->getDelegate();
                 $highestRow = $sheet->getHighestRow();
 
-                $sheet->getStyle("A1:W{$highestRow}")
+                $sheet->getStyle("A1:AC{$highestRow}")
                     ->getAlignment()
                     ->setHorizontal(Alignment::HORIZONTAL_LEFT)
                     ->setVertical(Alignment::VERTICAL_TOP);
@@ -125,16 +137,22 @@ class OrderTrackingExport implements FromQuery, WithHeadings, WithMapping, WithC
             'K' => 22, // wh_note
             'L' => 22, // cs_name
             'M' => 20, // last_step
-            'N' => 20, // category
+            'N' => 20, // sub_case
             'O' => 20, // cause_by
             'P' => 25, // update
             'Q' => 16, // tanggal_update
             'R' => 14, // value_receive
             'S' => 22, // insurance_info
-            'T' => 22, // update_wh
-            'U' => 22, // update_finance
-            'V' => 22, // reason_whitelist
-            'W' => 22, // reason_late_respons
+            'T' => 28, // video_unboxing
+            'U' => 28, // bap
+            'V' => 22, // update_wh
+            'W' => 22, // update_finance
+            'X' => 16, // status
+            'Y' => 16, // month
+            'Z' => 28, // automation_track
+            'AA' => 16, // tanggal_tts
+            'AB' => 22, // reason_whitelist
+            'AC' => 22, // reason_late_respons
         ];
     }
 

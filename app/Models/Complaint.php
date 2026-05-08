@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\OrderTrackingAutomationService;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -121,6 +122,25 @@ class Complaint extends Model
             $model->sla = $sla;
             $model->auto_sync_sla = self::resolveAutoSyncSlaLabel($sla);
         });
+
+        static::saved(function ($model) {
+            self::syncOrderTrackingAutomation($model);
+        });
+
+        static::deleted(function ($model) {
+            self::syncOrderTrackingAutomation($model);
+        });
+
+        static::restored(function ($model) {
+            self::syncOrderTrackingAutomation($model);
+        });
+    }
+
+    private static function syncOrderTrackingAutomation(self $model): void
+    {
+        if (filled($model->order_id)) {
+            app(OrderTrackingAutomationService::class)->recomputeByOrderIds([$model->order_id]);
+        }
     }
 
     protected static function resolveSlaForModel(self $model): int

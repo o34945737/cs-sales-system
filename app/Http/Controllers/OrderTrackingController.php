@@ -145,13 +145,14 @@ class OrderTrackingController extends Controller
                 ->whereNotNull('order_id')
                 ->get(['order_id', 'sub_case', 'last_step', 'status', 'reason_whitelist', 'reason_late_respons'])
                 ->filter(fn($c) => filled($c->order_id))
-                ->keyBy('order_id')
-                ->map(fn($c) => [
-                    'category'           => $c->sub_case,
-                    'last_step'          => $c->last_step,
-                    'status'             => $c->status,
-                    'reason_whitelist'   => $c->reason_whitelist,
-                    'reason_late_respons' => $c->reason_late_respons,
+                ->mapWithKeys(fn($c) => [
+                    Str::lower(trim((string) $c->order_id)) => [
+                        'category'           => $c->sub_case,
+                        'last_step'          => $c->last_step,
+                        'status'             => $c->status,
+                        'reason_whitelist'   => $c->reason_whitelist,
+                        'reason_late_respons' => $c->reason_late_respons,
+                    ],
                 ])
                 ->all(),
             'rgoOrderIds' => OrderTrackingRgoEntry::query()
@@ -178,6 +179,7 @@ class OrderTrackingController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $request->merge($this->coerceNullableFields($request->all()));
+        $request->merge($this->complaintSyncFields($request->input('order_id')));
         $validated = $request->validate($this->rules(), $this->messages());
         $payload = $this->preparePayload($request, $validated);
 
@@ -189,6 +191,7 @@ class OrderTrackingController extends Controller
     public function update(Request $request, OrderTracking $orderTracking): RedirectResponse
     {
         $request->merge($this->coerceNullableFields($request->all()));
+        $request->merge($this->complaintSyncFields($request->input('order_id')));
         $validated = $request->validate($this->rules(), $this->messages());
         $payload = $this->preparePayload($request, $validated, $orderTracking);
 
@@ -358,6 +361,28 @@ class OrderTrackingController extends Controller
         );
 
         return $payload;
+    }
+
+    private function complaintSyncFields(?string $orderId): array
+    {
+        if (!filled($orderId)) {
+            return [];
+        }
+
+        $complaint = Complaint::query()
+            ->where('order_id', trim($orderId))
+            ->first(['sub_case', 'last_step', 'reason_whitelist', 'reason_late_respons']);
+
+        if (!$complaint) {
+            return [];
+        }
+
+        return array_filter([
+            'category' => $complaint->sub_case,
+            'last_step' => $complaint->last_step,
+            'reason_whitelist' => $complaint->reason_whitelist,
+            'reason_late_respons' => $complaint->reason_late_respons,
+        ], fn($value) => filled($value));
     }
 
     private function coerceNullableFields(array $data): array

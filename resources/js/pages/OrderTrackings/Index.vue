@@ -115,9 +115,22 @@ const autoCauseByMap = computed(() => (props.autoCauseByMap && !Array.isArray(pr
 const lastStepOptions = computed(() => (Array.isArray(props.lastStepOptions) ? props.lastStepOptions : []));
 const reasonWhitelistOptions = computed(() => (Array.isArray(props.reasonWhitelistOptions) ? props.reasonWhitelistOptions : []));
 const reasonLateResponseOptions = computed(() => (Array.isArray(props.reasonLateResponseOptions) ? props.reasonLateResponseOptions : []));
-const complaintSyncMap = computed(() => (props.complaintSyncMap && !Array.isArray(props.complaintSyncMap) ? props.complaintSyncMap : {}));
 const rgoOrderIds = computed(() => (Array.isArray(props.rgoOrderIds) ? props.rgoOrderIds : []));
 const jetTrackMap = computed(() => (props.jetTrackMap && !Array.isArray(props.jetTrackMap) ? props.jetTrackMap : {}));
+const normalizeOrderKey = (value: unknown) => String(value || '').trim().toLowerCase();
+const complaintSyncMap = computed(() => {
+    const source = props.complaintSyncMap && !Array.isArray(props.complaintSyncMap) ? props.complaintSyncMap : {};
+
+    return Object.entries(source).reduce((carry: Record<string, any>, [key, value]) => {
+        const normalizedKey = normalizeOrderKey(key);
+
+        if (normalizedKey) {
+            carry[normalizedKey] = value;
+        }
+
+        return carry;
+    }, {});
+});
 
 const search = ref(filterState.value.search || '');
 const agentSearchQuery = ref('');
@@ -365,7 +378,7 @@ const controlClass = (field: string, variant = 'input') => {
 };
 
 const complaintLinkedRecord = computed(() => {
-    const key = String(form.order_id || '').trim();
+    const key = normalizeOrderKey(form.order_id);
     return key ? complaintSyncMap.value[key] || null : null;
 });
 
@@ -409,12 +422,13 @@ const tanggalTtsPreview = computed(() => {
 const automationTrackPreview = computed(() => {
     const orderId = String(form.order_id || '').trim();
     const awb = String(form.awb || '').trim();
+    const normalizedOrderId = normalizeOrderKey(orderId);
 
     if (orderId && complaintLinkedRecord.value) {
         return 'MERGER';
     }
 
-    if (orderId && rgoOrderIds.value.includes(orderId)) {
+    if (orderId && rgoOrderIds.value.some((item) => normalizeOrderKey(item) === normalizedOrderId)) {
         return 'Sudah diRGO';
     }
 
@@ -445,13 +459,16 @@ const statusPreview = computed(() => {
 
 const reasonWhitelistPreview = computed(() => {
     if (complaintLinkedRecord.value?.reason_whitelist) return complaintLinkedRecord.value.reason_whitelist;
-    return '';
+    return form.reason_whitelist || '';
 });
 
 const reasonLateResponsPreview = computed(() => {
     if (complaintLinkedRecord.value?.reason_late_respons) return complaintLinkedRecord.value.reason_late_respons;
-    return '';
+    return form.reason_late_respons || '';
 });
+
+const showReasonWhitelist = computed(() => lastStepPreview.value === 'Claim Reject');
+const showReasonLateRespons = computed(() => showReasonWhitelist.value && reasonWhitelistPreview.value === 'Late Respons');
 
 watch(
     [monthPreview, tanggalTtsPreview, automationTrackPreview, statusPreview, categoryPreview, lastStepPreview, reasonWhitelistPreview, reasonLateResponsPreview],
@@ -461,15 +478,38 @@ watch(
         form.tanggal_tts = tanggalTtsPreview.value;
         form.automation_track = automationTrackPreview.value;
         form.status = statusPreview.value;
-        form.reason_whitelist = reasonWhitelistPreview.value;
-        form.reason_late_respons = reasonLateResponsPreview.value;
 
         if (isComplaintLinked.value) {
             form.category = categoryPreview.value;
             form.last_step = lastStepPreview.value;
+            form.reason_whitelist = reasonWhitelistPreview.value;
+            form.reason_late_respons = reasonLateResponsPreview.value;
         }
     },
     { immediate: true }
+);
+
+watch(
+    () => lastStepPreview.value,
+    () => {
+        if (isHydratingEditForm.value || isComplaintLinked.value) return;
+
+        if (!showReasonWhitelist.value) {
+            form.reason_whitelist = '';
+            form.reason_late_respons = '';
+        }
+    }
+);
+
+watch(
+    () => form.reason_whitelist,
+    () => {
+        if (isHydratingEditForm.value || isComplaintLinked.value) return;
+
+        if (!showReasonLateRespons.value) {
+            form.reason_late_respons = '';
+        }
+    }
 );
 
 watch(
@@ -561,8 +601,8 @@ const submitForm = () => {
         status: statusPreview.value || null,
         automation_track: automationTrackPreview.value || null,
         tanggal_tts: tanggalTtsPreview.value || null,
-        reason_whitelist: reasonWhitelistPreview.value || null,
-        reason_late_respons: reasonLateResponsPreview.value || null,
+        reason_whitelist: showReasonWhitelist.value ? reasonWhitelistPreview.value || null : null,
+        reason_late_respons: showReasonLateRespons.value ? reasonLateResponsPreview.value || null : null,
         _method: modalMode.value === 'edit' ? 'PUT' : 'POST',
     })).post(
         modalMode.value === 'edit'
@@ -1449,6 +1489,42 @@ const selectButtonClass = (currentValue: string, expectedValue: string) =>
                                                         <ChevronDown class="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
                                                     </div>
                                                 </template>
+                                            </div>
+                                        </div>
+
+                                        <div v-if="showReasonWhitelist" class="grid gap-4 sm:grid-cols-2">
+                                            <div class="space-y-2">
+                                                <label class="block text-[13px] font-black uppercase tracking-wide text-slate-700">Reason Whitelist*</label>
+                                                <template v-if="isComplaintLinked">
+                                                    <input :value="reasonWhitelistPreview || '-'" type="text" readonly :class="readonlyInputClass" />
+                                                </template>
+                                                <template v-else>
+                                                    <div class="relative">
+                                                        <select v-model="form.reason_whitelist" :class="controlClass('reason_whitelist', 'select')">
+                                                            <option value="" disabled>Pilih Reason Whitelist</option>
+                                                            <option v-for="option in reasonWhitelistOptions" :key="option" :value="option">{{ option }}</option>
+                                                        </select>
+                                                        <ChevronDown class="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                                                    </div>
+                                                </template>
+                                                <p v-if="fieldError('reason_whitelist')" class="text-xs font-medium text-rose-600">{{ fieldError('reason_whitelist') }}</p>
+                                            </div>
+
+                                            <div v-if="showReasonLateRespons" class="space-y-2">
+                                                <label class="block text-[13px] font-black uppercase tracking-wide text-slate-700">Reason Late Respons*</label>
+                                                <template v-if="isComplaintLinked">
+                                                    <input :value="reasonLateResponsPreview || '-'" type="text" readonly :class="readonlyInputClass" />
+                                                </template>
+                                                <template v-else>
+                                                    <div class="relative">
+                                                        <select v-model="form.reason_late_respons" :class="controlClass('reason_late_respons', 'select')">
+                                                            <option value="" disabled>Pilih Reason Late Respons</option>
+                                                            <option v-for="option in reasonLateResponseOptions" :key="option" :value="option">{{ option }}</option>
+                                                        </select>
+                                                        <ChevronDown class="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                                                    </div>
+                                                </template>
+                                                <p v-if="fieldError('reason_late_respons')" class="text-xs font-medium text-rose-600">{{ fieldError('reason_late_respons') }}</p>
                                             </div>
                                         </div>
 

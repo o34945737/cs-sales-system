@@ -36,6 +36,27 @@ class OrderTrackingAutomationService
             ? Carbon::parse($model->tanggal_input)->format('F Y')
             : null;
 
+        $linkedComplaint = null;
+
+        if ($model->order_id) {
+            $linkedComplaint = Complaint::query()
+                ->where('order_id', $model->order_id)
+                ->first(['sub_case', 'last_step', 'reason_whitelist', 'reason_late_respons']);
+
+            if ($linkedComplaint) {
+                if (filled($linkedComplaint->sub_case)) {
+                    $model->category = $linkedComplaint->sub_case;
+                }
+
+                if (filled($linkedComplaint->last_step)) {
+                    $model->last_step = $linkedComplaint->last_step;
+                }
+
+                $model->reason_whitelist = $linkedComplaint->reason_whitelist;
+                $model->reason_late_respons = $linkedComplaint->reason_late_respons;
+            }
+        }
+
         $lastStep = $model->last_step
             ? LastStep::query()
                 ->where('name', $model->last_step)
@@ -65,7 +86,7 @@ class OrderTrackingAutomationService
         }
 
         if ($model->order_id) {
-            $existInComplaint = Complaint::where('order_id', $model->order_id)->exists();
+            $existInComplaint = (bool) $linkedComplaint;
             $existInRgo = OrderTrackingRgoEntry::query()
                 ->where('order_id', $model->order_id)
                 ->where('is_active', true)
