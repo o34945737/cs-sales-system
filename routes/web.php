@@ -87,6 +87,22 @@ Route::middleware(['auth', 'active', 'password.reset.required'])->group(function
             ->middleware('permission:import order trackings')
             ->name('order-trackings.import');
 
+        Route::get('order-trackings/erp-status-template', [OrderTrackingController::class, 'downloadErpStatusTemplate'])
+            ->middleware('permission:import order tracking erp statuses')
+            ->name('order-trackings.erp-status-template');
+
+        Route::post('order-trackings/import-erp-status', [OrderTrackingController::class, 'importErpStatus'])
+            ->middleware('permission:import order tracking erp statuses')
+            ->name('order-trackings.import-erp-status');
+
+        Route::get('order-trackings/rgo-template', [OrderTrackingController::class, 'downloadRgoTemplate'])
+            ->middleware('permission:import order tracking rgo entries')
+            ->name('order-trackings.rgo-template');
+
+        Route::post('order-trackings/import-rgo', [OrderTrackingController::class, 'importRgo'])
+            ->middleware('permission:import order tracking rgo entries')
+            ->name('order-trackings.import-rgo');
+
         Route::get('order-trackings/export', [OrderTrackingController::class, 'export'])
             ->middleware('permission:export order trackings')
             ->name('order-trackings.export');

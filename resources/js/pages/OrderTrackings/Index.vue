@@ -193,6 +193,8 @@ const activeFilterCount = computed(() =>
 
 const page = usePage<SharedData>();
 const canImportOrderTrackings = computed(() => page.props.auth?.can?.import_order_trackings ?? false);
+const canImportErpStatuses = computed(() => page.props.auth?.can?.import_order_tracking_erp_statuses ?? false);
+const canImportRgoEntries = computed(() => page.props.auth?.can?.import_order_tracking_rgo_entries ?? false);
 const canExportOrderTrackings = computed(() => page.props.auth?.can?.export_order_trackings ?? false);
 
 const exportUrl = computed(() => {
@@ -216,6 +218,18 @@ const importFileInput = ref<HTMLInputElement | null>(null);
 const importResult = computed(() => (page.props.flash as any)?.import_result ?? null);
 const importForm = useForm({ file: null as File | null });
 
+const isErpImportOpen = ref(false);
+const erpImportFile = ref<File | null>(null);
+const erpImportFileInput = ref<HTMLInputElement | null>(null);
+const erpImportResult = computed(() => (page.props.flash as any)?.erp_import_result ?? null);
+const erpImportForm = useForm({ file: null as File | null });
+
+const isRgoImportOpen = ref(false);
+const rgoImportFile = ref<File | null>(null);
+const rgoImportFileInput = ref<HTMLInputElement | null>(null);
+const rgoImportResult = computed(() => (page.props.flash as any)?.rgo_import_result ?? null);
+const rgoImportForm = useForm({ file: null as File | null });
+
 const openImportModal = () => {
     importFile.value = null;
     importForm.clearErrors();
@@ -236,6 +250,54 @@ const submitImport = () => {
         onSuccess: () => {
             importFile.value = null;
             if (importFileInput.value) importFileInput.value.value = '';
+        },
+    });
+};
+
+const openErpImportModal = () => {
+    erpImportFile.value = null;
+    erpImportForm.clearErrors();
+    isErpImportOpen.value = true;
+};
+
+const onErpImportFileChange = (e: Event) => {
+    const target = e.target as HTMLInputElement;
+    erpImportFile.value = target.files?.[0] ?? null;
+};
+
+const submitErpImport = () => {
+    if (!erpImportFile.value) return;
+    erpImportForm.file = erpImportFile.value;
+    erpImportForm.post(route('order-trackings.import-erp-status'), {
+        forceFormData: true,
+        preserveScroll: true,
+        onSuccess: () => {
+            erpImportFile.value = null;
+            if (erpImportFileInput.value) erpImportFileInput.value.value = '';
+        },
+    });
+};
+
+const openRgoImportModal = () => {
+    rgoImportFile.value = null;
+    rgoImportForm.clearErrors();
+    isRgoImportOpen.value = true;
+};
+
+const onRgoImportFileChange = (e: Event) => {
+    const target = e.target as HTMLInputElement;
+    rgoImportFile.value = target.files?.[0] ?? null;
+};
+
+const submitRgoImport = () => {
+    if (!rgoImportFile.value) return;
+    rgoImportForm.file = rgoImportFile.value;
+    rgoImportForm.post(route('order-trackings.import-rgo'), {
+        forceFormData: true,
+        preserveScroll: true,
+        onSuccess: () => {
+            rgoImportFile.value = null;
+            if (rgoImportFileInput.value) rgoImportFileInput.value.value = '';
         },
     });
 };
@@ -702,12 +764,11 @@ const selectButtonClass = (currentValue: string, expectedValue: string) =>
 <template>
     <Head title="Order Trackings" />
 
-    <AppLayout
-        :breadcrumbs="[
+    <AppLayout :breadcrumbs="[
             { title: 'Dashboard', href: '/dashboard' },
             { title: 'Order Trackings', href: '/order-trackings' },
         ]"
-    >
+>
         <div class="pb-20">
             <div class="mx-auto flex max-w-[90rem] flex-col gap-10 px-4 font-sans sm:px-6 lg:px-8">
                 <div class="space-y-10">
@@ -948,6 +1009,26 @@ const selectButtonClass = (currentValue: string, expectedValue: string) =>
                                         >
                                             <Upload class="h-4 w-4" />
                                             <span>Import</span>
+                                        </button>
+
+                                        <button
+                                            v-if="canImportErpStatuses"
+                                            type="button"
+                                            class="flex h-11 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-blue-200 bg-blue-50 px-4 text-[13px] font-black text-[var(--app-primary)] shadow-sm transition-all hover:-translate-y-0.5 hover:border-blue-300 hover:bg-blue-100/70 active:scale-[0.98]"
+                                            @click="openErpImportModal"
+                                        >
+                                            <Upload class="h-4 w-4" />
+                                            <span>Import ERP Status</span>
+                                        </button>
+
+                                        <button
+                                            v-if="canImportRgoEntries"
+                                            type="button"
+                                            class="flex h-11 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-emerald-200 bg-emerald-50 px-4 text-[13px] font-black text-emerald-700 shadow-sm transition-all hover:-translate-y-0.5 hover:border-emerald-300 hover:bg-emerald-100/70 active:scale-[0.98]"
+                                            @click="openRgoImportModal"
+                                        >
+                                            <Upload class="h-4 w-4" />
+                                            <span>Import RGO</span>
                                         </button>
 
                                         <a
@@ -1458,6 +1539,22 @@ const selectButtonClass = (currentValue: string, expectedValue: string) =>
                                             </div>
 
                                             <div class="space-y-2">
+                                                <label class="block text-[13px] font-black uppercase tracking-wide text-slate-700">Sub Case*</label>
+                                                <template v-if="isComplaintLinked">
+                                                    <input :value="categoryPreview || '-'" type="text" readonly :class="readonlyInputClass" />
+                                                </template>
+                                                <template v-else>
+                                                    <div class="relative">
+                                                        <select v-model="form.category" :class="controlClass('category', 'select')">
+                                                            <option value="" disabled>Pilih Category</option>
+                                                            <option v-for="item in categoryOptions" :key="item" :value="item">{{ item }}</option>
+                                                        </select>
+                                                        <ChevronDown class="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                                                    </div>
+                                                </template>
+                                            </div>
+
+                                            <div class="space-y-2">
                                                 <label class="block text-[13px] font-black uppercase tracking-wide text-slate-700">Last Step*</label>
                                                 <template v-if="isComplaintLinked">
                                                     <input :value="lastStepPreview || '-'" type="text" readonly :class="readonlyInputClass" />
@@ -1469,22 +1566,6 @@ const selectButtonClass = (currentValue: string, expectedValue: string) =>
                                                             <option v-for="option in lastStepOptions" :key="option.value" :value="option.value">
                                                                 {{ option.label || option.value }}
                                                             </option>
-                                                        </select>
-                                                        <ChevronDown class="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
-                                                    </div>
-                                                </template>
-                                            </div>
-
-                                            <div class="space-y-2">
-                                                <label class="block text-[13px] font-black uppercase tracking-wide text-slate-700">Sub Case*</label>
-                                                <template v-if="isComplaintLinked">
-                                                    <input :value="categoryPreview || '-'" type="text" readonly :class="readonlyInputClass" />
-                                                </template>
-                                                <template v-else>
-                                                    <div class="relative">
-                                                        <select v-model="form.category" :class="controlClass('category', 'select')">
-                                                            <option value="" disabled>Pilih Category</option>
-                                                            <option v-for="item in categoryOptions" :key="item" :value="item">{{ item }}</option>
                                                         </select>
                                                         <ChevronDown class="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
                                                     </div>
@@ -1853,6 +1934,128 @@ const selectButtonClass = (currentValue: string, expectedValue: string) =>
             </div>
         </transition>
 
+        <!-- ERP status import modal -->
+        <transition name="fade">
+            <div v-if="isErpImportOpen" class="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/40 px-4 backdrop-blur-sm" @click.self="isErpImportOpen = false">
+                <div class="w-full max-w-md overflow-hidden rounded-[32px] bg-white shadow-2xl">
+                    <div class="border-b border-slate-100 px-8 py-7">
+                        <div class="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-[var(--app-primary)]">
+                            <Upload class="h-6 w-6" />
+                        </div>
+                        <h3 class="text-2xl font-black tracking-tight text-slate-900">Import ERP Status</h3>
+                        <p class="mt-1 text-[13px] font-medium text-slate-500">Update ERP Status berdasarkan order_id. Kolom status bisa memakai nama erp_status atau status.</p>
+                    </div>
+
+                    <div v-if="erpImportResult" class="mx-8 mt-6 rounded-2xl border p-4" :class="erpImportResult.failed > 0 ? 'border-amber-200 bg-amber-50' : 'border-emerald-200 bg-emerald-50'">
+                        <p class="text-[12px] font-black uppercase tracking-wider" :class="erpImportResult.failed > 0 ? 'text-amber-700' : 'text-emerald-700'">Hasil Import ERP</p>
+                        <div class="mt-2 grid gap-1 text-[13px] font-bold text-slate-700">
+                            <span class="text-blue-600">{{ erpImportResult.updated ?? 0 }} order tracking diperbarui</span>
+                            <span class="text-amber-600">{{ erpImportResult.pending ?? 0 }} order_id belum ada, tersimpan di history</span>
+                            <span v-if="erpImportResult.failed > 0" class="text-rose-600">{{ erpImportResult.failed }} baris gagal</span>
+                        </div>
+                        <ul v-if="erpImportResult.errors?.length" class="mt-2 max-h-24 space-y-0.5 overflow-y-auto text-[11px] text-rose-600">
+                            <li v-for="(err, i) in erpImportResult.errors" :key="i">{{ err }}</li>
+                        </ul>
+                    </div>
+
+                    <div class="space-y-4 px-8 py-6">
+                        <div class="rounded-2xl border border-dashed border-blue-200 bg-blue-50/50 p-4 text-[12px] font-semibold text-slate-600">
+                            File minimal berisi <span class="font-black text-slate-900">order_id</span> dan <span class="font-black text-slate-900">erp_status</span>. Jika order_id belum ada di tracking, data tetap tersimpan sebagai history dan otomatis dipakai saat order dibuat.
+                        </div>
+
+                        <div>
+                            <label class="mb-1.5 block text-[12px] font-black uppercase tracking-wider text-slate-500">File Excel / CSV</label>
+                            <input
+                                ref="erpImportFileInput"
+                                type="file"
+                                accept=".xlsx,.xls,.csv,.txt"
+                                class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-[13px] text-slate-700 file:mr-3 file:rounded-lg file:border-0 file:bg-[var(--app-primary)] file:px-3 file:py-1.5 file:text-[11px] file:font-black file:text-white"
+                                @change="onErpImportFileChange"
+                            />
+                            <p v-if="erpImportForm.errors.file" class="mt-1 text-[11px] text-rose-600">{{ erpImportForm.errors.file }}</p>
+                        </div>
+                        <a :href="route('order-trackings.erp-status-template')" class="inline-flex items-center gap-1.5 text-[12px] font-bold text-[var(--app-primary)] hover:underline">
+                            <FileText class="h-3.5 w-3.5" />
+                            Download template ERP Status
+                        </a>
+                    </div>
+
+                    <div class="flex gap-3 border-t border-slate-100 px-8 py-6">
+                        <button type="button" @click="isErpImportOpen = false" class="h-11 flex-1 rounded-2xl bg-slate-50 text-[13px] font-black text-slate-500 hover:bg-slate-100">Batal</button>
+                        <button
+                            type="button"
+                            :disabled="!erpImportFile || erpImportForm.processing"
+                            class="h-11 flex-[2] rounded-2xl bg-[var(--app-primary)] text-[13px] font-black text-white shadow-lg shadow-blue-500/20 transition-all hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50"
+                            @click="submitErpImport"
+                        >
+                            {{ erpImportForm.processing ? 'Mengimpor...' : 'Import ERP Status' }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </transition>
+
+        <!-- RGO import modal -->
+        <transition name="fade">
+            <div v-if="isRgoImportOpen" class="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/40 px-4 backdrop-blur-sm" @click.self="isRgoImportOpen = false">
+                <div class="w-full max-w-md overflow-hidden rounded-[32px] bg-white shadow-2xl">
+                    <div class="border-b border-slate-100 px-8 py-7">
+                        <div class="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600">
+                            <Upload class="h-6 w-6" />
+                        </div>
+                        <h3 class="text-2xl font-black tracking-tight text-slate-900">Import RGO</h3>
+                        <p class="mt-1 text-[13px] font-medium text-slate-500">Upload daftar order_id RGO agar automation track menjadi Sudah diRGO.</p>
+                    </div>
+
+                    <div v-if="rgoImportResult" class="mx-8 mt-6 rounded-2xl border p-4" :class="rgoImportResult.failed > 0 ? 'border-amber-200 bg-amber-50' : 'border-emerald-200 bg-emerald-50'">
+                        <p class="text-[12px] font-black uppercase tracking-wider" :class="rgoImportResult.failed > 0 ? 'text-amber-700' : 'text-emerald-700'">Hasil Import RGO</p>
+                        <div class="mt-2 grid gap-1 text-[13px] font-bold text-slate-700">
+                            <span class="text-emerald-600">{{ rgoImportResult.created ?? 0 }} order_id dibuat</span>
+                            <span class="text-blue-600">{{ rgoImportResult.updated ?? 0 }} order_id diperbarui</span>
+                            <span v-if="rgoImportResult.failed > 0" class="text-rose-600">{{ rgoImportResult.failed }} baris gagal</span>
+                        </div>
+                        <ul v-if="rgoImportResult.errors?.length" class="mt-2 max-h-24 space-y-0.5 overflow-y-auto text-[11px] text-rose-600">
+                            <li v-for="(err, i) in rgoImportResult.errors" :key="i">{{ err }}</li>
+                        </ul>
+                    </div>
+
+                    <div class="space-y-4 px-8 py-6">
+                        <div class="rounded-2xl border border-dashed border-emerald-200 bg-emerald-50/50 p-4 text-[12px] font-semibold text-slate-600">
+                            File minimal berisi <span class="font-black text-slate-900">order_id</span>. Kolom opsional: <span class="font-black text-slate-900">notes</span> dan <span class="font-black text-slate-900">is_active</span>.
+                        </div>
+
+                        <div>
+                            <label class="mb-1.5 block text-[12px] font-black uppercase tracking-wider text-slate-500">File Excel / CSV</label>
+                            <input
+                                ref="rgoImportFileInput"
+                                type="file"
+                                accept=".xlsx,.xls,.csv,.txt"
+                                class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-[13px] text-slate-700 file:mr-3 file:rounded-lg file:border-0 file:bg-emerald-600 file:px-3 file:py-1.5 file:text-[11px] file:font-black file:text-white"
+                                @change="onRgoImportFileChange"
+                            />
+                            <p v-if="rgoImportForm.errors.file" class="mt-1 text-[11px] text-rose-600">{{ rgoImportForm.errors.file }}</p>
+                        </div>
+                        <a :href="route('order-trackings.rgo-template')" class="inline-flex items-center gap-1.5 text-[12px] font-bold text-emerald-700 hover:underline">
+                            <FileText class="h-3.5 w-3.5" />
+                            Download template RGO
+                        </a>
+                    </div>
+
+                    <div class="flex gap-3 border-t border-slate-100 px-8 py-6">
+                        <button type="button" @click="isRgoImportOpen = false" class="h-11 flex-1 rounded-2xl bg-slate-50 text-[13px] font-black text-slate-500 hover:bg-slate-100">Batal</button>
+                        <button
+                            type="button"
+                            :disabled="!rgoImportFile || rgoImportForm.processing"
+                            class="h-11 flex-[2] rounded-2xl bg-emerald-600 text-[13px] font-black text-white shadow-lg shadow-emerald-500/20 transition-all hover:-translate-y-0.5 hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+                            @click="submitRgoImport"
+                        >
+                            {{ rgoImportForm.processing ? 'Mengimpor...' : 'Import RGO' }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </transition>
+
         <!-- Bulk delete confirmation modal -->
         <transition name="fade">
             <div v-if="isBulkDeleteModalOpen" class="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/40 px-4 backdrop-blur-sm" @click.self="isBulkDeleteModalOpen = false">
@@ -1894,26 +2097,26 @@ const selectButtonClass = (currentValue: string, expectedValue: string) =>
 </template>
 
 <style scoped>
-.custom-scrollbar::-webkit-scrollbar {
-    width: 4px;
-    height: 4px;
-}
-.custom-scrollbar::-webkit-scrollbar-track {
-    background: transparent;
-}
-.custom-scrollbar::-webkit-scrollbar-thumb {
-    background: #e2e8f0;
-    border-radius: 10px;
-}
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: #cbd5e1;
-}
-.fade-enter-active,
-.fade-leave-active {
-    transition: opacity 0.3s ease;
-}
-.fade-enter-from,
-.fade-leave-to {
-    opacity: 0;
-}
+    .custom-scrollbar::-webkit-scrollbar {
+        width: 4px;
+        height: 4px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #e2e8f0;
+        border-radius: 10px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: #cbd5e1;
+    }
+    .fade-enter-active,
+    .fade-leave-active {
+        transition: opacity 0.3s ease;
+    }
+    .fade-enter-from,
+    .fade-leave-to {
+        opacity: 0;
+    }
 </style>

@@ -14,6 +14,7 @@ class OrderTrackingErpImport implements OnEachRow, WithHeadingRow
     public array $results = ['updated' => 0, 'pending' => 0, 'failed' => 0, 'errors' => []];
 
     private array $validStatuses;
+    private int $nextSortOrder;
     private int $rowNum = 1;
 
     public function __construct(
@@ -21,6 +22,7 @@ class OrderTrackingErpImport implements OnEachRow, WithHeadingRow
         private readonly ?int $uploadedBy = null,
     ) {
         $this->validStatuses = OrderTrackingErpStatus::where('is_active', true)->pluck('name')->all();
+        $this->nextSortOrder = (int) OrderTrackingErpStatus::max('sort_order') + 1;
     }
 
     public function onRow(Row $row): void
@@ -29,7 +31,7 @@ class OrderTrackingErpImport implements OnEachRow, WithHeadingRow
         $rowArr = $row->toArray();
 
         $orderId   = trim((string) ($rowArr['order_id'] ?? ''));
-        $erpStatus = trim((string) ($rowArr['erp_status'] ?? ''));
+        $erpStatus = trim((string) ($rowArr['erp_status'] ?? $rowArr['status'] ?? ''));
 
         if (!$orderId) {
             $this->results['failed']++;
@@ -37,11 +39,13 @@ class OrderTrackingErpImport implements OnEachRow, WithHeadingRow
             return;
         }
 
-        if (!empty($this->validStatuses) && !in_array($erpStatus, $this->validStatuses, true)) {
+        if (!$erpStatus) {
             $this->results['failed']++;
-            $this->results['errors'][] = "Baris {$this->rowNum}: erp_status '{$erpStatus}' tidak ada di master";
+            $this->results['errors'][] = "Baris {$this->rowNum}: erp_status/status kosong";
             return;
         }
+
+        $this->ensureErpStatusExists($erpStatus);
 
         OrderTrackingErpStatusHistory::create([
             'order_id'    => $orderId,
@@ -57,5 +61,26 @@ class OrderTrackingErpImport implements OnEachRow, WithHeadingRow
         } else {
             $this->results['pending']++;
         }
+    }
+
+    private function ensureErpStatusExists(string $erpStatus): void
+    {
+        if (in_array($erpStatus, $this->validStatuses, true)) {
+            return;
+        }
+
+        $status = OrderTrackingErpStatus::firstOrCreate(
+            ['name' => $erpStatus],
+            [
+                'is_active' => true,
+                'sort_order' => $this->nextSortOrder++,
+            ],
+        );
+
+        if (!$status->is_active) {
+            $status->update(['is_active' => true]);
+        }
+
+        $this->validStatuses[] = $erpStatus;
     }
 }

@@ -3,8 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Exports\OrderTrackingExport;
+use App\Exports\OrderTrackingErpTemplateExport;
+use App\Exports\OrderTrackingRgoTemplateExport;
 use App\Exports\OrderTrackingTemplateExport;
+use App\Imports\OrderTrackingErpImport;
 use App\Imports\OrderTrackingImport;
+use App\Imports\OrderTrackingRgoImport;
 use App\Models\Brand;
 use App\Models\Complaint;
 use App\Models\JetTrackEntry;
@@ -17,6 +21,7 @@ use App\Models\Platform;
 use App\Models\ReasonLateResponse;
 use App\Models\ReasonWhitelist;
 use App\Models\SubCase;
+use App\Services\OrderTrackingAutomationService;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -514,6 +519,16 @@ class OrderTrackingController extends Controller
         return Excel::download(new OrderTrackingTemplateExport(), 'order-tracking-import-template.xlsx');
     }
 
+    public function downloadErpStatusTemplate()
+    {
+        return Excel::download(new OrderTrackingErpTemplateExport(), 'order-tracking-erp-status-template.xlsx');
+    }
+
+    public function downloadRgoTemplate()
+    {
+        return Excel::download(new OrderTrackingRgoTemplateExport(), 'order-tracking-rgo-template.xlsx');
+    }
+
     public function import(Request $request): RedirectResponse
     {
         $request->validate([
@@ -532,6 +547,54 @@ class OrderTrackingController extends Controller
         }
 
         return back()->with('import_result', $importer->results);
+    }
+
+    public function importErpStatus(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'file' => ['required', 'file', 'mimes:xlsx,xls,csv,txt', 'max:10240'],
+        ]);
+
+        $batchId = 'OT-ERP-' . now()->format('YmdHis') . '-' . Str::upper(Str::random(4));
+        $importer = new OrderTrackingErpImport($batchId, auth()->id());
+
+        try {
+            Excel::import($importer, $request->file('file'));
+        } catch (\Throwable $exception) {
+            report($exception);
+
+            return back()->with('error', 'Import ERP Status gagal diproses. Pastikan file berisi order_id dan erp_status/status.');
+        }
+
+        return back()
+            ->with('success', 'Import ERP Status selesai diproses.')
+            ->with('erp_import_result', $importer->results);
+    }
+
+    public function importRgo(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'file' => ['required', 'file', 'mimes:xlsx,xls,csv,txt', 'max:10240'],
+        ]);
+
+        $batchId = 'OT-RGO-' . now()->format('YmdHis') . '-' . Str::upper(Str::random(4));
+        $importer = new OrderTrackingRgoImport($batchId, auth()->id());
+
+        try {
+            Excel::import($importer, $request->file('file'));
+
+            if (!empty($importer->importedOrderIds)) {
+                app(OrderTrackingAutomationService::class)->recomputeByOrderIds($importer->importedOrderIds);
+            }
+        } catch (\Throwable $exception) {
+            report($exception);
+
+            return back()->with('error', 'Import RGO gagal diproses. Pastikan file berisi order_id, notes, dan is_active.');
+        }
+
+        return back()
+            ->with('success', 'Import RGO selesai diproses.')
+            ->with('rgo_import_result', $importer->results);
     }
 
     public function bulkDestroy(Request $request): RedirectResponse

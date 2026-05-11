@@ -46,6 +46,8 @@ class HandleInertiaRequests extends Middleware
                 'success' => fn() => $request->session()->get('success'),
                 'error' => fn() => $request->session()->get('error'),
                 'import_result' => fn() => $request->session()->get('import_result'),
+                'erp_import_result' => fn() => $request->session()->get('erp_import_result'),
+                'rgo_import_result' => fn() => $request->session()->get('rgo_import_result'),
             ],
             'auth' => [
                 'user' => $user ? [

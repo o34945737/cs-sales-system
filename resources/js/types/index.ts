@@ -125,6 +125,18 @@ export interface SharedData extends Record<string, unknown> {
             failed?: number;
             errors?: string[];
         };
+        erp_import_result?: {
+            updated?: number;
+            pending?: number;
+            failed?: number;
+            errors?: string[];
+        };
+        rgo_import_result?: {
+            updated?: number;
+            created?: number;
+            failed?: number;
+            errors?: string[];
+        };
     };
     ziggy: {
         location: string;
