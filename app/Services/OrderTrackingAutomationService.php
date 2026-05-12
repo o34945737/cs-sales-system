@@ -8,6 +8,7 @@ use App\Models\LastStep;
 use App\Models\OrderTracking;
 use App\Models\OrderTrackingErpStatusHistory;
 use App\Models\OrderTrackingRgoEntry;
+use App\Models\Platform;
 use Carbon\Carbon;
 
 class OrderTrackingAutomationService
@@ -17,13 +18,18 @@ class OrderTrackingAutomationService
      */
     public function applyCreatingDefaults(OrderTracking $model): void
     {
-        if ($model->order_id && !filled($model->erp_status)) {
-            $history = OrderTrackingErpStatusHistory::where('order_id', $model->order_id)
-                ->latest()
-                ->first(['erp_status']);
-            if ($history) {
-                $model->erp_status = $history->erp_status;
+        if (!filled($model->erp_status)) {
+            if ($model->order_id) {
+                $history = OrderTrackingErpStatusHistory::where('order_id', $model->order_id)
+                    ->latest()
+                    ->first(['erp_status']);
+                if ($history) {
+                    $model->erp_status = $history->erp_status;
+                    return;
+                }
             }
+            // Default to 'Done' if no erp_status and no history
+            $model->erp_status = 'Done';
         }
     }
 
@@ -32,6 +38,22 @@ class OrderTrackingAutomationService
      */
     public function compute(OrderTracking $model): void
     {
+        // Ensure erp_status is never empty - default to 'Done' if missing
+        if (!filled($model->erp_status)) {
+            if ($model->order_id) {
+                $history = OrderTrackingErpStatusHistory::where('order_id', $model->order_id)
+                    ->latest()
+                    ->first(['erp_status']);
+                if ($history) {
+                    $model->erp_status = $history->erp_status;
+                } else {
+                    $model->erp_status = 'Done';
+                }
+            } else {
+                $model->erp_status = 'Done';
+            }
+        }
+
         $model->month = $model->tanggal_input
             ? Carbon::parse($model->tanggal_input)->format('F Y')
             : null;
@@ -41,7 +63,8 @@ class OrderTrackingAutomationService
         if ($model->order_id) {
             $linkedComplaint = Complaint::query()
                 ->where('order_id', $model->order_id)
-                ->first(['sub_case', 'last_step', 'reason_whitelist', 'reason_late_respons']);
+                ->latest('id')
+                ->first(['sub_case', 'last_step', 'status', 'reason_whitelist', 'reason_late_respons']);
 
             if ($linkedComplaint) {
                 if (filled($linkedComplaint->sub_case)) {
@@ -57,21 +80,30 @@ class OrderTrackingAutomationService
             }
         }
 
-        $lastStep = $model->last_step
-            ? LastStep::query()
+        // B.1: Status — sync langsung dari complaint kalau linked, fallback ke derive dari last_step
+        if ($linkedComplaint && filled($linkedComplaint->status)) {
+            $model->status = $linkedComplaint->status;
+        } else {
+            $lastStep = $model->last_step
+                ? LastStep::query()
                 ->where('name', $model->last_step)
                 ->where('is_active', true)
                 ->first(['status_result'])
-            : null;
+                : null;
 
-        if ($lastStep?->status_result) {
-            $model->status = $lastStep->status_result;
-        } elseif (!$model->status) {
-            $model->status = 'Pending';
+            if ($lastStep?->status_result) {
+                $model->status = $lastStep->status_result;
+            } elseif (!$model->status) {
+                $model->status = 'Pending';
+            }
         }
 
-        if ($model->platform && stripos($model->platform, 'lazada') !== false && $model->tanggal_order) {
-            $model->tanggal_tts = Carbon::parse($model->tanggal_order)->addDays(24)->toDateString();
+        $ttsDays = filled($model->platform)
+            ? Platform::query()->whereRaw('LOWER(name) = ?', [strtolower($model->platform)])->value('tts_days')
+            : null;
+
+        if ($ttsDays && $model->tanggal_order) {
+            $model->tanggal_tts = Carbon::parse($model->tanggal_order)->addDays($ttsDays)->toDateString();
         } else {
             $model->tanggal_tts = null;
         }
@@ -147,28 +179,17 @@ class OrderTrackingAutomationService
     }
 
     /**
-     * Find JetTrackEntry: awb first, then fallback to order_id.
+     * Find JetTrackEntry strictly by AWB (sesuai spec B.3c).
      */
     private function findJetTrackEntry(OrderTracking $model): ?JetTrackEntry
     {
-        if (filled($model->awb)) {
-            $entry = JetTrackEntry::query()
-                ->where('awb', $model->awb)
-                ->where('is_active', true)
-                ->first(['kondisi_barang', 'video_url', 'warehouse_doc_link']);
-
-            if ($entry) {
-                return $entry;
-            }
+        if (!filled($model->awb)) {
+            return null;
         }
 
-        if (filled($model->order_id)) {
-            return JetTrackEntry::query()
-                ->where('order_id', $model->order_id)
-                ->where('is_active', true)
-                ->first(['kondisi_barang', 'video_url', 'warehouse_doc_link']);
-        }
-
-        return null;
+        return JetTrackEntry::query()
+            ->where('awb', $model->awb)
+            ->where('is_active', true)
+            ->first(['kondisi_barang', 'video_url', 'warehouse_doc_link']);
     }
 }

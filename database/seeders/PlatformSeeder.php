@@ -9,10 +9,18 @@ class PlatformSeeder extends Seeder
 {
     public function run(): void
     {
-        foreach (['SHOPEE', 'TOKOPEDIA', 'TIKTOK', 'LAZADA', 'BLIBLI'] as $name) {
+        $platforms = [
+            ['name' => 'SHOPEE',    'tts_days' => null],
+            ['name' => 'TOKOPEDIA', 'tts_days' => null],
+            ['name' => 'TIKTOK',    'tts_days' => null],
+            ['name' => 'LAZADA',    'tts_days' => 24],
+            ['name' => 'BLIBLI',    'tts_days' => null],
+        ];
+
+        foreach ($platforms as $platform) {
             Platform::query()->updateOrCreate(
-                ['name' => $name],
-                ['is_active' => true],
+                ['name' => $platform['name']],
+                ['is_active' => true, 'tts_days' => $platform['tts_days']],
             );
         }
     }

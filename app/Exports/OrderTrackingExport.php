@@ -3,6 +3,7 @@
 namespace App\Exports;
 
 use App\Models\OrderTracking;
+use App\Models\OrderTrackingErpStatus;
 use Illuminate\Database\Eloquent\Builder;
 use Maatwebsite\Excel\Concerns\FromQuery;
 use Maatwebsite\Excel\Concerns\WithColumnWidths;
@@ -35,7 +36,7 @@ class OrderTrackingExport implements FromQuery, WithHeadings, WithMapping, WithC
             $orderTracking->order_id,
             $orderTracking->value,
             $orderTracking->awb,
-            $orderTracking->erp_status,
+            $this->erpStatusLabel($orderTracking->erp_status),
             $orderTracking->payment_method,
             $orderTracking->wh_note,
             $orderTracking->cs_name,
@@ -67,10 +68,10 @@ class OrderTrackingExport implements FromQuery, WithHeadings, WithMapping, WithC
             'tanggal_order',
             'brand',
             'platform',
-            'order_id',
+            'no_pesanan',
             'value',
             'awb',
-            'erp_status',
+            'status',
             'payment_method',
             'wh_note',
             'cs_name',
@@ -85,7 +86,7 @@ class OrderTrackingExport implements FromQuery, WithHeadings, WithMapping, WithC
             'bap',
             'update_wh',
             'update_finance',
-            'status',
+            'status_pesanan',
             'month',
             'automation_track',
             'tanggal_tts',
@@ -163,5 +164,24 @@ class OrderTrackingExport implements FromQuery, WithHeadings, WithMapping, WithC
         }
 
         return date_create((string) $value)?->format('d-m-Y');
+    }
+
+    private function erpStatusLabel(?string $value): ?string
+    {
+        if (!filled($value)) {
+            return null;
+        }
+
+        static $statuses = null;
+
+        $statuses ??= OrderTrackingErpStatus::query()
+            ->get(['id', 'name'])
+            ->flatMap(fn(OrderTrackingErpStatus $status) => [
+                (string) $status->id => $status->name,
+                $status->name => $status->name,
+            ])
+            ->all();
+
+        return $statuses[(string) $value] ?? $value;
     }
 }

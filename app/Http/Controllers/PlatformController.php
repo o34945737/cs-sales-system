@@ -48,8 +48,9 @@ class PlatformController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $data = $request->validate([
-            'name' => ['required', 'string', 'max:255', 'unique:platforms,name'],
+            'name'     => ['required', 'string', 'max:255', 'unique:platforms,name'],
             'is_active' => ['required', 'boolean'],
+            'tts_days' => ['nullable', 'integer', 'min:1', 'max:999'],
         ]);
 
         Platform::create($data);
@@ -60,8 +61,9 @@ class PlatformController extends Controller
     public function update(Request $request, Platform $platform): RedirectResponse
     {
         $data = $request->validate([
-            'name' => ['required', 'string', 'max:255', Rule::unique('platforms', 'name')->ignore($platform->id)],
+            'name'     => ['required', 'string', 'max:255', Rule::unique('platforms', 'name')->ignore($platform->id)],
             'is_active' => ['required', 'boolean'],
+            'tts_days' => ['nullable', 'integer', 'min:1', 'max:999'],
         ]);
 
         $platform->update($data);
@@ -79,9 +81,10 @@ class PlatformController extends Controller
     private function transformPlatform(Platform $platform): array
     {
         return [
-            'id' => $platform->id,
-            'name' => $platform->name,
-            'is_active' => (bool) $platform->is_active,
+            'id'         => $platform->id,
+            'name'       => $platform->name,
+            'is_active'  => (bool) $platform->is_active,
+            'tts_days'   => $platform->tts_days,
             'created_at' => optional($platform->created_at)?->toDateTimeString(),
         ];
     }

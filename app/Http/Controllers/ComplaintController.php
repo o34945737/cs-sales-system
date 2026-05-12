@@ -385,6 +385,36 @@ class ComplaintController extends Controller
         ]);
     }
 
+    /**
+     * API Endpoint: check if an order_id already exists in complaints (duplicate detection)
+     */
+    public function checkOrderId(Request $request)
+    {
+        $orderId   = trim((string) $request->input('order_id', ''));
+        $excludeId = $request->input('exclude_id');
+
+        if (blank($orderId)) {
+            return response()->json(['exists' => false, 'complaint' => null]);
+        }
+
+        $complaint = Complaint::withTrashed()
+            ->whereRaw('TRIM(order_id) = ?', [$orderId])
+            ->when($excludeId, fn($q) => $q->where('id', '!=', $excludeId))
+            ->first(['id', 'username', 'tanggal_complaint', 'status', 'last_step', 'deleted_at']);
+
+        return response()->json([
+            'exists'    => !is_null($complaint),
+            'complaint' => $complaint ? [
+                'id'               => $complaint->id,
+                'username'         => $complaint->username,
+                'tanggal_complaint' => $complaint->tanggal_complaint,
+                'status'           => $complaint->status,
+                'last_step'        => $complaint->last_step,
+                'deleted'          => !is_null($complaint->deleted_at),
+            ] : null,
+        ]);
+    }
+
     public function update(Request $request, Complaint $complaint)
     {
         $rules = $this->complaintRules($request, forUpdate: true);

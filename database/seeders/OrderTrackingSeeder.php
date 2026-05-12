@@ -34,7 +34,7 @@ class OrderTrackingSeeder extends Seeder
                 'value' => 500000,
                 'cause_by' => $subCase->default_cause_by ?? 'J&T',
                 'awb' => 'AWB-TRACK-1001',
-                'erp_status' => 'Sudah diproses',
+                'erp_status' => 'Open',
                 'payment_method' => 'NON COD',
                 'wh_note' => 'Barang sudah dipacking',
                 'cs_name' => $agent->name,

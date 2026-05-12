@@ -29,14 +29,17 @@ class OrderTrackingImport implements OnEachRow, WithHeadingRow
     private array $validCategoryNames;
     private array $validCsNames;
     private array $validErpStatusNames;
+    private array $validErpStatusIds;
+    private array $erpStatusIdsByName;
     private array $validLastStepNames;
     private array $validPlatformNames;
     private array $validSourceNames;
 
     public function __construct(
-        private readonly string $batchId,
-        private readonly ?int $uploadedBy = null,
-    ) {
+        // private readonly string $batchId,
+        // private readonly ?int $uploadedBy = null,
+    )
+    {
         $this->defaultCauseByBySubCase = SubCase::query()
             ->where('is_active', true)
             ->whereNotNull('default_cause_by')
@@ -62,7 +65,12 @@ class OrderTrackingImport implements OnEachRow, WithHeadingRow
             ->where('is_active', true)
             ->pluck('name')
             ->all();
-        $this->validErpStatusNames = OrderTrackingErpStatus::query()->where('is_active', true)->pluck('name')->all();
+        $erpStatuses = OrderTrackingErpStatus::query()->where('is_active', true)->get(['id', 'name']);
+        $this->validErpStatusNames = $erpStatuses->pluck('name')->all();
+        $this->validErpStatusIds = $erpStatuses->pluck('id')->map(fn($id) => (string) $id)->all();
+        $this->erpStatusIdsByName = $erpStatuses
+            ->mapWithKeys(fn(OrderTrackingErpStatus $status) => [$status->name => (string) $status->id])
+            ->all();
         $this->validLastStepNames = LastStep::query()->where('is_active', true)->pluck('name')->all();
         $this->validPlatformNames = Platform::query()->where('is_active', true)->pluck('name')->all();
         $this->validSourceNames = OrderTrackingDataSource::query()->where('is_active', true)->pluck('name')->all();
@@ -103,7 +111,13 @@ class OrderTrackingImport implements OnEachRow, WithHeadingRow
 
         $causeBy      = $this->resolveCauseBy($category, $rowArr['cause_by'] ?? null);
         $paymentMethod = $this->nullableStr($rowArr['payment_method'] ?? null);
-        $erpStatus = $this->nullableStr($rowArr['erp_status'] ?? null);
+        $erpStatus = $this->normalizeErpStatus($this->nullableStr($rowArr['status'] ?? $rowArr['erp_status'] ?? null));
+
+        // Default to 'Done' if erp_status is empty
+        if (!filled($erpStatus)) {
+            $erpStatus = 'Done';
+        }
+
         $insuranceInfo = $this->nullableStr($rowArr['insurance_info'] ?? null);
         $reasonWhitelist = $complaintSync && filled($complaintSync['reason_whitelist'] ?? null)
             ? $complaintSync['reason_whitelist']
@@ -273,6 +287,25 @@ class OrderTrackingImport implements OnEachRow, WithHeadingRow
         return $str === '' ? null : $str;
     }
 
+    private function normalizeErpStatus(?string $value): ?string
+    {
+        if (!filled($value)) {
+            return null;
+        }
+
+        if (in_array($value, $this->validErpStatusIds, true)) {
+            return array_search($value, $this->erpStatusIdsByName, true) ?: $value;
+        }
+
+        foreach ($this->erpStatusIdsByName as $name => $id) {
+            if (strcasecmp($name, $value) === 0) {
+                return $name;
+            }
+        }
+
+        return $value;
+    }
+
     private function resolveCauseBy(string $category, mixed $excelCauseBy): string
     {
         if ($category !== '' && filled($this->defaultCauseByBySubCase[$category] ?? null)) {
@@ -297,7 +330,7 @@ class OrderTrackingImport implements OnEachRow, WithHeadingRow
         $this->validateInList($errors, 'brand', $data['brand'] ?? null, $this->validBrandNames);
         $this->validateInList($errors, 'platform', $data['platform'] ?? null, $this->validPlatformNames);
         $this->validateInList($errors, 'cause_by', $data['cause_by'] ?? null, $this->validCauseByNames);
-        $this->validateInList($errors, 'erp_status', $data['erp_status'] ?? null, $this->validErpStatusNames);
+        $this->validateInList($errors, 'erp_status', $data['erp_status'] ?? null, array_merge($this->validErpStatusNames, $this->validErpStatusIds));
         $this->validateInList($errors, 'payment_method', $data['payment_method'] ?? null, ['COD', 'NON COD']);
         $this->validateInList($errors, 'cs_name', $data['cs_name'] ?? null, $this->validCsNames);
         $this->validateInList($errors, 'category', $data['category'] ?? null, $this->validCategoryNames);

@@ -12,12 +12,14 @@ class Platform extends Model
     protected $fillable = [
         'name',
         'is_active',
+        'tts_days',
     ];
 
     protected function casts(): array
     {
         return [
             'is_active' => 'boolean',
+            'tts_days'  => 'integer',
         ];
     }
 }

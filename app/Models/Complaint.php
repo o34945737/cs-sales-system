@@ -6,6 +6,7 @@ use App\Services\OrderTrackingAutomationService;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Complaint extends Model
@@ -160,6 +161,11 @@ class Complaint extends Model
     protected static function resolveAutoSyncSlaLabel(int $sla): string
     {
         return $sla <= 0 ? 'Within 1 day' : "Above {$sla} days";
+    }
+
+    public function oosRecords(): HasMany
+    {
+        return $this->hasMany(Oos::class);
     }
 
     // 6. SLA - Dinamis menggunakan Accessor

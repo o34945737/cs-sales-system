@@ -7,6 +7,7 @@ use App\Http\Requests\StoreOrderTrackingErpStatusRequest;
 use App\Http\Requests\UpdateOrderTrackingErpStatusRequest;
 use App\Imports\OrderTrackingErpImport;
 use App\Models\OrderTrackingErpStatus;
+use App\Services\OrderTrackingAutomationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -91,6 +92,12 @@ class OrderTrackingErpStatusController extends Controller
         $importer = new OrderTrackingErpImport($batchId, auth()->id());
 
         Excel::import($importer, $request->file('file'));
+
+        // Recompute status, automation_track, dll. untuk semua order_id yang ter-update
+        if (!empty($importer->importedOrderIds)) {
+            app(OrderTrackingAutomationService::class)
+                ->recomputeByOrderIds(array_unique($importer->importedOrderIds));
+        }
 
         return back()->with('import_result', $importer->results);
     }

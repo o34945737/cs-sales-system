@@ -11,7 +11,7 @@ import debounce from 'lodash/debounce';
 import { CheckCircle2, ChevronLeft, ChevronRight, MonitorSmartphone, PencilLine, Plus, Search, Store, Trash2, XCircle } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 
-interface ManagedPlatform { id: number; name: string; is_active: boolean; created_at: string | null; }
+interface ManagedPlatform { id: number; name: string; is_active: boolean; tts_days: number | null; created_at: string | null; }
 interface PaginatorLink { active: boolean; label: string; url: string | null; }
 interface Paginator<T> { current_page: number; data: T[]; from: number | null; last_page: number; links: PaginatorLink[]; path: string; per_page: number; to: number | null; total: number; }
 
@@ -34,8 +34,8 @@ const canCreatePlatforms = computed(() => page.props.auth.can.create_platforms);
 const canUpdatePlatforms = computed(() => page.props.auth.can.update_platforms);
 const canDeletePlatforms = computed(() => page.props.auth.can.delete_platforms);
 
-const createForm = useForm({ name: '', is_active: true });
-const editForm = useForm({ name: '', is_active: true });
+const createForm = useForm({ name: '', is_active: true, tts_days: null as number | null });
+const editForm = useForm({ name: '', is_active: true, tts_days: null as number | null });
 const deleteForm = useForm({});
 
 const platformsPage = computed(() => props.platforms);
@@ -59,7 +59,7 @@ watch(search, debounce(() => visitIndex({ page: 1 }), 350));
 watch(statusFilter, () => visitIndex({ page: 1 }, false));
 
 const resetCreateForm = () => {
-    createForm.defaults({ name: '', is_active: true });
+    createForm.defaults({ name: '', is_active: true, tts_days: null });
     createForm.reset();
     createForm.clearErrors();
 };
@@ -71,7 +71,7 @@ const openCreateModal = () => {
 
 const openEditModal = (platform: ManagedPlatform) => {
     activePlatform.value = platform;
-    editForm.defaults({ name: platform.name, is_active: platform.is_active });
+    editForm.defaults({ name: platform.name, is_active: platform.is_active, tts_days: platform.tts_days ?? null });
     editForm.reset();
     editForm.clearErrors();
     isEditOpen.value = true;
@@ -172,6 +172,7 @@ const statusBadgeClass = (active: boolean) => active ? 'bg-emerald-100 text-emer
                                     <tr class="text-left text-[10px] font-black uppercase tracking-widest text-slate-400">
                                         <th class="px-4 py-3">Platform</th>
                                         <th class="px-4 py-3">Status</th>
+                                        <th class="px-4 py-3 text-center">TTS Days</th>
                                         <th class="px-4 py-3 text-right">Action</th>
                                     </tr>
                                 </thead>
@@ -193,6 +194,12 @@ const statusBadgeClass = (active: boolean) => active ? 'bg-emerald-100 text-emer
                                                 {{ platform.is_active ? 'Active' : 'Inactive' }}
                                             </span>
                                         </td>
+                                        <td class="px-4 py-3 text-center">
+                                            <span v-if="platform.tts_days" class="inline-flex rounded-full bg-blue-50 px-2.5 py-0.5 text-[11px] font-bold text-blue-700 ring-1 ring-blue-200">
+                                                +{{ platform.tts_days }} hari
+                                            </span>
+                                            <span v-else class="text-[11px] text-slate-300">—</span>
+                                        </td>
                                         <td class="px-4 py-3 text-right">
                                             <div class="flex justify-end gap-1.5">
                                                 <Button v-if="canUpdatePlatforms" type="button" variant="ghost" size="sm" class="h-8 rounded-lg text-slate-400 hover:text-[var(--app-primary)] hover:bg-blue-50" @click="openEditModal(platform)">
@@ -205,7 +212,7 @@ const statusBadgeClass = (active: boolean) => active ? 'bg-emerald-100 text-emer
                                         </td>
                                     </tr>
                                     <tr v-if="platformRows.length === 0">
-                                        <td colspan="3" class="px-4 py-10 text-center text-slate-400">
+                                        <td colspan="4" class="px-4 py-10 text-center text-slate-400">
                                             Tidak ada platform ditemukan
                                         </td>
                                     </tr>
@@ -254,6 +261,12 @@ const statusBadgeClass = (active: boolean) => active ? 'bg-emerald-100 text-emer
                             <Input id="create-name" v-model="createForm.name" placeholder="Contoh: SHOPEE" class="h-12 rounded-xl border-slate-200 bg-slate-50/50 px-4 text-sm transition focus:bg-white" />
                             <InputError :message="createForm.errors.name" />
                         </div>
+                        <div class="grid gap-2">
+                            <Label for="create-tts-days" class="text-[13px] font-bold uppercase tracking-wide text-slate-700">TTS Days <span class="font-normal normal-case text-slate-400">(opsional)</span></Label>
+                            <input id="create-tts-days" :value="createForm.tts_days ?? ''" @input="createForm.tts_days = ($event.target as HTMLInputElement).value ? Number(($event.target as HTMLInputElement).value) : null" type="number" min="1" max="999" placeholder="Contoh: 24 untuk Lazada" class="h-12 w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 text-sm outline-none transition focus:bg-white focus:border-[var(--app-primary)]" />
+                            <p class="text-[11px] text-slate-400">Jumlah hari dari tanggal order untuk otomatis mengisi Tanggal TTS di Order Tracking.</p>
+                            <InputError :message="createForm.errors.tts_days" />
+                        </div>
                         <div class="flex items-center gap-3 rounded-2xl border border-slate-100 bg-slate-50/50 px-4 py-4 transition hover:bg-slate-50">
                             <input v-model="createForm.is_active" type="checkbox" class="h-5 w-5 rounded-md border-slate-300 text-[var(--app-primary)] focus:ring-[var(--app-primary)]" />
                             <span class="text-sm font-semibold text-slate-600">Platform aktif dan siap dipakai di modul lain</span>
@@ -286,6 +299,12 @@ const statusBadgeClass = (active: boolean) => active ? 'bg-emerald-100 text-emer
                             <Label for="edit-name" class="text-[13px] font-bold uppercase tracking-wide text-slate-700">Nama Platform</Label>
                             <Input id="edit-name" v-model="editForm.name" class="h-12 rounded-xl border-slate-200 bg-slate-50/50 px-4 text-sm transition focus:bg-white" />
                             <InputError :message="editForm.errors.name" />
+                        </div>
+                        <div class="grid gap-2">
+                            <Label for="edit-tts-days" class="text-[13px] font-bold uppercase tracking-wide text-slate-700">TTS Days <span class="font-normal normal-case text-slate-400">(opsional)</span></Label>
+                            <input id="edit-tts-days" :value="editForm.tts_days ?? ''" @input="editForm.tts_days = ($event.target as HTMLInputElement).value ? Number(($event.target as HTMLInputElement).value) : null" type="number" min="1" max="999" placeholder="Contoh: 24 untuk Lazada" class="h-12 w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 text-sm outline-none transition focus:bg-white focus:border-[var(--app-primary)]" />
+                            <p class="text-[11px] text-slate-400">Jumlah hari dari tanggal order untuk otomatis mengisi Tanggal TTS di Order Tracking.</p>
+                            <InputError :message="editForm.errors.tts_days" />
                         </div>
                         <div class="flex items-center gap-3 rounded-2xl border border-slate-100 bg-slate-50/50 px-4 py-4 transition hover:bg-slate-50">
                             <input v-model="editForm.is_active" type="checkbox" class="h-5 w-5 rounded-md border-slate-300 text-[var(--app-primary)] focus:ring-[var(--app-primary)]" />

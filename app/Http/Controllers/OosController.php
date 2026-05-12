@@ -8,6 +8,7 @@ use App\Models\OosReason;
 use App\Models\OosSolution;
 use App\Models\Platform;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
@@ -62,10 +63,19 @@ class OosController extends Controller
 
         $all = (clone $query)->get();
 
+        // Count per SKU across entire table to detect riwayat OOS
+        $skuCounts = Oos::query()
+            ->whereNotNull('sku')
+            ->where('sku', '!=', '')
+            ->select('sku', DB::raw('count(*) as cnt'))
+            ->groupBy('sku')
+            ->pluck('cnt', 'sku')
+            ->all();
+
         $oosData = (clone $query)
             ->paginate(10)
             ->withQueryString()
-            ->through(fn(Oos $oos) => $this->transform($oos));
+            ->through(fn(Oos $oos) => $this->transform($oos, $skuCounts));
 
         return Inertia::render('Oos/Index', [
             'oosData'         => $oosData,
@@ -140,10 +150,15 @@ class OosController extends Controller
         return redirect()->back()->with('success', 'Semua data yang dipilih berhasil dihapus.');
     }
 
-    private function transform(Oos $oos): array
+    private function transform(Oos $oos, array $skuCounts = []): array
     {
+        $riwayatCount = ($oos->sku && isset($skuCounts[$oos->sku]))
+            ? max(0, $skuCounts[$oos->sku] - 1)
+            : 0;
+
         return [
             'id'                 => $oos->id,
+            'complaint_id'       => $oos->complaint_id,
             'tanggal_input'      => $oos->tanggal_input,
             'brand'              => $oos->brand,
             'platform'           => $oos->platform,
@@ -158,6 +173,7 @@ class OosController extends Controller
             'tanggal_blast'      => $oos->tanggal_blast,
             'feedback_customers' => $oos->feedback_customers,
             'month'              => $oos->month,
+            'riwayat_oos_count'  => $riwayatCount,
             'created_at'         => optional($oos->created_at)?->toDateTimeString(),
             'updated_at'         => optional($oos->updated_at)?->toDateTimeString(),
         ];
@@ -206,8 +222,14 @@ class OosController extends Controller
     private function coerceNullable(array $data): array
     {
         $fields = [
-            'reason', 'solusi', 'update_cs', 'product_name',
-            'sku', 'note_detail_varian', 'feedback_customers', 'tanggal_blast',
+            'reason',
+            'solusi',
+            'update_cs',
+            'product_name',
+            'sku',
+            'note_detail_varian',
+            'feedback_customers',
+            'tanggal_blast',
         ];
 
         if ($this->oosSupportsAgentAssignment()) {
@@ -236,7 +258,7 @@ class OosController extends Controller
     private function csNameOptions(): array
     {
         return User::query()
-            ->whereHas('roles', fn ($query) => $query->where('name', 'CS'))
+            ->whereHas('roles', fn($query) => $query->where('name', 'CS'))
             ->where('is_active', true)
             ->orderBy('name')
             ->pluck('name')

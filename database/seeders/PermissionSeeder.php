@@ -24,6 +24,7 @@ class PermissionSeeder extends Seeder
             'import bad reviews',
             'export bad reviews',
             'access order trackings',
+            'delete order trackings',
             'access oos',
             'view brands',
             'create brands',
@@ -111,38 +112,81 @@ class PermissionSeeder extends Seeder
         $rolePermissions = [
             'Super Admin' => $permissions,
 
+            // CS: kelola komplain & bad review, lihat order tracking sebagai referensi
             'CS' => [
                 'view dashboard',
                 'access complaints',
+                'import complaints',
+                'export complaints',
                 'access bad reviews',
-            ],
-
-            'Finance' => [
-                'view dashboard',
+                'import bad reviews',
+                'export bad reviews',
                 'access order trackings',
-            ],
-
-            'WH' => [
-                'view dashboard',
-                'access order trackings',
-            ],
-
-            'KAE' => [
-                'view dashboard',
-                'access complaints',
+                'export order trackings',
                 'access oos',
             ],
 
+            // Finance: kelola order tracking + import/export + update ERP status dari sistem ERP
+            'Finance' => [
+                'view dashboard',
+                'access order trackings',
+                'import order trackings',
+                'export order trackings',
+                'delete order trackings',
+                'import order tracking erp statuses',
+                'view order tracking erp statuses',
+            ],
+
+            // WH: kelola order tracking + ERP status + RGO + JetTrack
+            'WH' => [
+                'view dashboard',
+                'access order trackings',
+                'import order trackings',
+                'export order trackings',
+                'delete order trackings',
+                'import order tracking erp statuses',
+                'view order tracking erp statuses',
+                'view order tracking rgo entries',
+                'import order tracking rgo entries',
+                'view jet track entries',
+                'import jet track entries',
+            ],
+
+            // KAE: pantau complaint, OOS, bad review, dan lihat order tracking untuk laporan brand
+            'KAE' => [
+                'view dashboard',
+                'access complaints',
+                'export complaints',
+                'access bad reviews',
+                'export bad reviews',
+                'access oos',
+                'access order trackings',
+                'export order trackings',
+            ],
+
+            // After Sales: kelola complaint & OOS, lihat order tracking
             'After Sales' => [
                 'view dashboard',
                 'access complaints',
+                'import complaints',
+                'export complaints',
                 'access bad reviews',
+                'import bad reviews',
+                'export bad reviews',
+                'access oos',
+                'access order trackings',
+                'export order trackings',
             ],
 
+            // Brand: lihat komplain, bad review, dan order tracking brand masing-masing
             'Brand' => [
                 'view dashboard',
                 'access complaints',
+                'export complaints',
                 'access bad reviews',
+                'export bad reviews',
+                'access order trackings',
+                'export order trackings',
             ],
         ];
 

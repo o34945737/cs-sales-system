@@ -2,37 +2,62 @@
 
 namespace App\Exports;
 
-use Maatwebsite\Excel\Concerns\FromArray;
+use Illuminate\Support\Collection;
+use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithColumnWidths;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithStyles;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class OrderTrackingErpTemplateExport implements FromArray, WithColumnWidths, WithHeadings, WithStyles
+class OrderTrackingErpTemplateExport implements FromCollection, WithColumnWidths, WithHeadings, WithStyles
 {
-    public function array(): array
+    private Collection $rows;
+
+    public function __construct(?Collection $rows = null)
     {
-        return [
-            [1, 'ORD-12345', 'Pending'],
-            [2, 'ORD-12346', 'Process'],
-            [3, 'ORD-12347', 'Done'],
-        ];
+        $this->rows = $rows ?? collect();
     }
 
-    public function headings(): array
+    public function collection(): Collection
     {
-        return ['no', 'order_id', 'erp_status'];
-    }
+        return $this->rows->values()->map(function ($item, $index) {
+            return [
+                'no'       => $index + 1,
+                'order_id' => $item['order_id'] ?? '',
+                'status'   => $item['status'] ?? '',
+            ];
+            });
+            }
 
-    public function styles(Worksheet $sheet): array
-    {
-        return [
+            public function headings(): array
+            {
+            return ['no', 'order_id', 'status'];
+            }
+
+            public function styles(Worksheet $sheet): array
+            {
+            $styles = [
             1 => ['font' => ['bold' => true, 'size' => 11]],
-        ];
-    }
+            ];
 
-    public function columnWidths(): array
-    {
-        return ['A' => 8, 'B' => 28, 'C' => 22];
-    }
+            $lastRow = $this->rows->count() + 1;
+
+            if ($lastRow > 1) {
+            $sheet->getStyle("B2:C{$lastRow}")->getFill()
+                ->setFillType(Fill::FILL_SOLID)
+                ->getStartColor()->setARGB('FFFFFF99');
+            }
+
+            return $styles;
+            }
+
+            public function columnWidths(): array
+            {
+            return [
+            'A' => 6,
+            'B' => 30,
+            'C' => 20,
+            ];
+            }
 }

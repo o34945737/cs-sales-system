@@ -46,6 +46,9 @@ Route::middleware(['auth', 'active', 'password.reset.required'])->group(function
         Route::get('complaints/history/{username}', [ComplaintController::class, 'getCustomerHistory'])
             ->middleware('throttle:30,1')
             ->name('complaints.history');
+        Route::get('complaints/check-order', [ComplaintController::class, 'checkOrderId'])
+            ->middleware('throttle:60,1')
+            ->name('complaints.check-order');
         Route::post('complaints/bulk-delete', [ComplaintController::class, 'bulkDestroy'])
             ->name('complaints.bulk-delete');
         Route::get('complaints/template', [ComplaintController::class, 'downloadTemplate'])
@@ -107,7 +110,11 @@ Route::middleware(['auth', 'active', 'password.reset.required'])->group(function
             ->middleware('permission:export order trackings')
             ->name('order-trackings.export');
 
-        Route::resource('order-trackings', OrderTrackingController::class);
+        Route::delete('order-trackings/{orderTracking}', [OrderTrackingController::class, 'destroy'])
+            ->name('order-trackings.destroy');
+
+        Route::resource('order-trackings', OrderTrackingController::class)
+            ->except(['destroy']);
     });
 
     Route::middleware('permission:access oos')->group(function () {

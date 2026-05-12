@@ -53,6 +53,7 @@ export interface Auth {
         delete_order_tracking_data_sources: boolean;
         import_order_trackings: boolean;
         export_order_trackings: boolean;
+        delete_order_trackings: boolean;
         view_order_tracking_erp_statuses: boolean;
         create_order_tracking_erp_statuses: boolean;
         update_order_tracking_erp_statuses: boolean;
@@ -122,18 +123,23 @@ export interface SharedData extends Record<string, unknown> {
             updated?: number;
             created?: number;
             pending?: number;
+            skipped?: number;
             failed?: number;
             errors?: string[];
+            ordered_statuses?: string[];
         };
         erp_import_result?: {
             updated?: number;
             pending?: number;
+            skipped?: number;
             failed?: number;
             errors?: string[];
+            ordered_statuses?: string[];
         };
         rgo_import_result?: {
             updated?: number;
             created?: number;
+            skipped?: number;
             failed?: number;
             errors?: string[];
         };

@@ -74,6 +74,7 @@ const props = defineProps({
     complaintSyncMap: Object, // { [orderId]: { category, last_step, status, reason_whitelist, reason_late_respons } }
     rgoOrderIds: Array,
     jetTrackMap: Object,      // { [awb]: "KONDISI ..." }
+    platformTtsDaysMap: Object, // { [platformName]: tts_days }
 });
 
 const orderTrackingPage = computed(() => ({
@@ -98,6 +99,8 @@ const sourceOptions = computed(() =>
     Array.isArray(props.sourceOptions) && props.sourceOptions.length ? props.sourceOptions : DEFAULT_SOURCE_OPTIONS
 );
 const erpStatusOptions = computed(() => (Array.isArray(props.erpStatusOptions) ? props.erpStatusOptions : []));
+const erpStatusOptionValue = (item: any) => String(item?.name ?? item?.label ?? item ?? '');
+const erpStatusOptionLabel = (item: any) => String(item?.name ?? item?.label ?? item ?? '');
 const causeByOptions = computed(() => (Array.isArray(props.causeByOptions) ? props.causeByOptions : []));
 const paymentMethodOptions = computed(() =>
     Array.isArray(props.paymentMethodOptions) && props.paymentMethodOptions.length
@@ -196,6 +199,8 @@ const canImportOrderTrackings = computed(() => page.props.auth?.can?.import_orde
 const canImportErpStatuses = computed(() => page.props.auth?.can?.import_order_tracking_erp_statuses ?? false);
 const canImportRgoEntries = computed(() => page.props.auth?.can?.import_order_tracking_rgo_entries ?? false);
 const canExportOrderTrackings = computed(() => page.props.auth?.can?.export_order_trackings ?? false);
+const canDeleteOrderTrackings = computed(() => page.props.auth?.can?.delete_order_trackings ?? false);
+const canUseDeleteActions = computed(() => canDeleteOrderTrackings.value || (page.props.auth?.can?.access_order_trackings ?? false));
 
 const exportUrl = computed(() => {
     const params: Record<string, string | undefined> = {
@@ -330,12 +335,12 @@ const toggleSelect = (id: number) => {
 };
 
 const confirmBulkDelete = () => {
-    if (!selectedIds.value.length) return;
+    if (!canUseDeleteActions.value || !selectedIds.value.length) return;
     isBulkDeleteModalOpen.value = true;
 };
 
 const submitBulkDelete = () => {
-    if (!selectedIds.value.length) return;
+    if (!canUseDeleteActions.value || !selectedIds.value.length) return;
     bulkDeleteForm.ids = [...selectedIds.value];
     bulkDeleteForm.post(route('order-trackings.bulk-delete'), {
         preserveScroll: true,
@@ -400,7 +405,6 @@ const createInitialFormState = () => ({
     value: null as number | null,
     cause_by: '?',
     awb: '',
-    erp_status: '',
     payment_method: '',
     wh_note: '',
     cs_name: '',
@@ -429,6 +433,7 @@ const editId = ref<number | null>(null);
 const detailItem = ref<any | null>(null);
 const isDeleteModalOpen = ref(false);
 const itemToDelete = ref<any | null>(null);
+const isDeletingSingle = ref(false);
 const submitError = ref('');
 const isHydratingEditForm = ref(false);
 
@@ -471,13 +476,18 @@ const monthPreview = computed(() => {
 const tanggalTtsPreview = computed(() => {
     if (!form.tanggal_order || !form.platform) return '';
 
-    const normalizedPlatform = String(form.platform).toLowerCase();
-    if (normalizedPlatform !== 'lazada') return '';
+    const ttsDaysMap = (props.platformTtsDaysMap || {}) as Record<string, number>;
+    // Case-insensitive lookup
+    const platformKey = Object.keys(ttsDaysMap).find(
+        (k) => k.toLowerCase() === String(form.platform).toLowerCase()
+    );
+    const ttsDays = platformKey ? ttsDaysMap[platformKey] : null;
+    if (!ttsDays) return '';
 
     const baseDate = new Date(form.tanggal_order);
     if (isNaN(baseDate.getTime())) return '';
 
-    baseDate.setDate(baseDate.getDate() + 24);
+    baseDate.setDate(baseDate.getDate() + ttsDays);
     return baseDate.toISOString().split('T')[0];
 });
 
@@ -690,18 +700,24 @@ const closeDetail = () => {
 };
 
 const confirmDelete = (item: any) => {
+    if (!canUseDeleteActions.value) return;
     itemToDelete.value = item;
     isDeleteModalOpen.value = true;
 };
 
 const submitDelete = () => {
-    if (!itemToDelete.value) return;
+    if (!canUseDeleteActions.value || !itemToDelete.value || isDeletingSingle.value) return;
 
+    isDeletingSingle.value = true;
     router.delete(route('order-trackings.destroy', itemToDelete.value.id), {
         preserveScroll: true,
         onSuccess: () => {
+            selectedIds.value = selectedIds.value.filter((id) => id !== itemToDelete.value?.id);
             isDeleteModalOpen.value = false;
             itemToDelete.value = null;
+        },
+        onFinish: () => {
+            isDeletingSingle.value = false;
         },
     });
 };
@@ -993,7 +1009,7 @@ const selectButtonClass = (currentValue: string, expectedValue: string) =>
                                         </div>
 
                                         <button
-                                            v-if="selectedIds.length > 0"
+                                            v-if="canUseDeleteActions && selectedIds.length > 0"
                                             type="button"
                                             class="flex h-11 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-rose-600 px-4 text-[13px] font-black text-white shadow-[0_15px_30px_rgba(220,38,38,0.25)] transition-all hover:-translate-y-0.5 hover:bg-rose-700 active:scale-[0.98]"
                                             @click="confirmBulkDelete"
@@ -1052,10 +1068,10 @@ const selectButtonClass = (currentValue: string, expectedValue: string) =>
                                 </div>
 
                                 <div class="overflow-x-auto custom-scrollbar">
-                                    <table class="w-full min-w-[1040px] border-collapse text-left">
+                                    <table class="w-full min-w-[1160px] border-collapse text-left">
                                         <thead>
                                             <tr class="border-b border-slate-100 bg-slate-50/30 text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">
-                                                <th class="w-10 py-4 pl-4 pr-2">
+                                                <th v-if="canUseDeleteActions" class="w-10 py-4 pl-4 pr-2">
                                                     <input
                                                         type="checkbox"
                                                         class="h-4 w-4 cursor-pointer rounded border-slate-300 text-[var(--app-primary)] focus:ring-[var(--app-primary)]"
@@ -1071,6 +1087,7 @@ const selectButtonClass = (currentValue: string, expectedValue: string) =>
                                                 <th class="w-[130px] px-3 py-4">Brand / Platform</th>
                                                 <th class="w-[140px] px-3 py-4">Sub Case / By</th>
                                                 <th class="w-[150px] px-3 py-4">Agent / AWB</th>
+                                                <th class="w-[150px] px-3 py-4">ERP Status</th>
                                                 <th class="w-[95px] px-3 py-4 text-center">Status</th>
                                                 <th class="w-[110px] px-3 py-4">Track</th>
                                                 <th class="w-[110px] py-4 pl-3 pr-4 text-right">Action</th>
@@ -1083,7 +1100,7 @@ const selectButtonClass = (currentValue: string, expectedValue: string) =>
                                                 class="group align-top transition-colors hover:bg-slate-50/70"
                                                 :class="selectedIds.includes(item.id) ? 'bg-blue-50/30' : ''"
                                             >
-                                                <td class="py-4 pl-4 pr-2">
+                                                <td v-if="canUseDeleteActions" class="py-4 pl-4 pr-2">
                                                     <input
                                                         type="checkbox"
                                                         class="h-4 w-4 cursor-pointer rounded border-slate-300 text-[var(--app-primary)] focus:ring-[var(--app-primary)]"
@@ -1100,7 +1117,6 @@ const selectButtonClass = (currentValue: string, expectedValue: string) =>
                                                 <td class="px-3 py-4">
                                                     <div class="space-y-0.5">
                                                         <p class="break-words text-[12px] font-black text-slate-900">{{ item.data_source || '-' }}</p>
-                                                        <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400">{{ item.erp_status || '-' }}</p>
                                                     </div>
                                                 </td>
 
@@ -1155,6 +1171,13 @@ const selectButtonClass = (currentValue: string, expectedValue: string) =>
                                                     </div>
                                                 </td>
 
+                                                <td class="px-3 py-4">
+                                                    <span v-if="item.erp_status" class="inline-block rounded-md bg-indigo-50 px-2 py-1 text-[10px] font-black uppercase tracking-wide text-indigo-600 ring-1 ring-indigo-200">
+                                                        {{ item.erp_status }}
+                                                    </span>
+                                                    <span v-else class="text-[11px] font-bold text-slate-300">-</span>
+                                                </td>
+
                                                 <td class="px-3 py-4 text-center">
                                                     <span class="inline-flex rounded-full px-2.5 py-1 text-[9px] font-black uppercase tracking-wider" :class="statusClass(item.status)">
                                                         {{ item.status || 'Pending' }}
@@ -1182,6 +1205,7 @@ const selectButtonClass = (currentValue: string, expectedValue: string) =>
                                                             <Pencil class="h-3.5 w-3.5" />
                                                         </button>
                                                         <button
+                                                            v-if="canUseDeleteActions"
                                                             @click="confirmDelete(item)"
                                                             class="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-100 bg-white text-slate-400 shadow-sm transition-all hover:border-rose-100 hover:bg-rose-50 hover:text-rose-600"
                                                         >
@@ -1485,19 +1509,6 @@ const selectButtonClass = (currentValue: string, expectedValue: string) =>
                                                 <input v-model="form.awb" type="text" placeholder="Masukkan AWB" :class="controlClass('awb')" />
                                             </div>
 
-                                            <div class="space-y-2">
-                                                <label class="block text-[13px] font-black uppercase tracking-wide text-slate-700">ERP Status</label>
-                                                <div class="relative">
-                                                    <select v-model="form.erp_status" :class="controlClass('erp_status', 'select')">
-                                                        <option value="" disabled>Pilih ERP Status</option>
-                                                        <option v-for="item in erpStatusOptions" :key="item" :value="item">{{ item }}</option>
-                                                    </select>
-                                                    <ChevronDown class="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div class="grid gap-4 sm:grid-cols-2">
                                             <div class="space-y-2">
                                                 <label class="block text-[13px] font-black uppercase tracking-wide text-slate-700">Payment Method</label>
                                                 <div class="relative">
@@ -1839,7 +1850,7 @@ const selectButtonClass = (currentValue: string, expectedValue: string) =>
                                                     <CheckCircle2 class="h-2.5 w-2.5" />
                                                 </div>
                                                 <p class="text-[12px] font-medium leading-tight text-white/80">
-                                                    Untuk <span class="font-bold text-white">Lazada</span>, TTS selalu otomatis dari tanggal order + 24 hari.
+                                                    TTS dihitung otomatis dari tanggal order berdasarkan konfigurasi hari per platform (diatur di master Platform).
                                                 </p>
                                             </li>
                                         </ul>
@@ -1943,24 +1954,35 @@ const selectButtonClass = (currentValue: string, expectedValue: string) =>
                             <Upload class="h-6 w-6" />
                         </div>
                         <h3 class="text-2xl font-black tracking-tight text-slate-900">Import ERP Status</h3>
-                        <p class="mt-1 text-[13px] font-medium text-slate-500">Update ERP Status berdasarkan order_id. Kolom status bisa memakai nama erp_status atau status.</p>
+                        <p class="mt-1 text-[13px] font-medium text-slate-500">Upload file template berisi daftar <span class="font-bold text-slate-700">order_id</span>. Sistem akan otomatis menaikkan ERP Status ke urutan berikutnya.</p>
                     </div>
 
                     <div v-if="erpImportResult" class="mx-8 mt-6 rounded-2xl border p-4" :class="erpImportResult.failed > 0 ? 'border-amber-200 bg-amber-50' : 'border-emerald-200 bg-emerald-50'">
                         <p class="text-[12px] font-black uppercase tracking-wider" :class="erpImportResult.failed > 0 ? 'text-amber-700' : 'text-emerald-700'">Hasil Import ERP</p>
                         <div class="mt-2 grid gap-1 text-[13px] font-bold text-slate-700">
-                            <span class="text-blue-600">{{ erpImportResult.updated ?? 0 }} order tracking diperbarui</span>
-                            <span class="text-amber-600">{{ erpImportResult.pending ?? 0 }} order_id belum ada, tersimpan di history</span>
-                            <span v-if="erpImportResult.failed > 0" class="text-rose-600">{{ erpImportResult.failed }} baris gagal</span>
+                            <span class="text-blue-600">✓ {{ erpImportResult.updated ?? 0 }} order tracking diperbarui</span>
+                            <span v-if="(erpImportResult.pending ?? 0) > 0" class="text-violet-600">⏳ {{ erpImportResult.pending }} disimpan ke history (order belum ada di tracking)</span>
+                            <span v-if="(erpImportResult.skipped ?? 0) > 0" class="text-slate-500">⟳ {{ erpImportResult.skipped }} dilewati (sudah di status terakhir)</span>
+                            <span v-if="erpImportResult.failed > 0" class="text-rose-600">✕ {{ erpImportResult.failed }} baris gagal</span>
                         </div>
                         <ul v-if="erpImportResult.errors?.length" class="mt-2 max-h-24 space-y-0.5 overflow-y-auto text-[11px] text-rose-600">
                             <li v-for="(err, i) in erpImportResult.errors" :key="i">{{ err }}</li>
                         </ul>
+                        <div v-if="erpImportResult.ordered_statuses?.length" class="mt-3 border-t border-current/10 pt-3">
+                            <p class="mb-1.5 text-[11px] font-black uppercase tracking-wider text-slate-400">Urutan Status ERP</p>
+                            <div class="flex flex-wrap items-center gap-1">
+                                <template v-for="(status, idx) in erpImportResult.ordered_statuses" :key="idx">
+                                    <span class="rounded-lg bg-white px-2 py-0.5 text-[11px] font-bold text-slate-700 shadow-sm ring-1 ring-slate-200">{{ status }}</span>
+                                    <span v-if="idx < erpImportResult.ordered_statuses.length - 1" class="text-[10px] text-slate-400">→</span>
+                                </template>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="space-y-4 px-8 py-6">
                         <div class="rounded-2xl border border-dashed border-blue-200 bg-blue-50/50 p-4 text-[12px] font-semibold text-slate-600">
-                            File minimal berisi <span class="font-black text-slate-900">order_id</span> dan <span class="font-black text-slate-900">erp_status</span>. Jika order_id belum ada di tracking, data tetap tersimpan sebagai history dan otomatis dipakai saat order dibuat.
+                            Kolom input hanya <span class="font-black text-slate-900">no</span> dan
+                            <span class="font-black text-slate-900">order_id</span>. ERP Status akan otomatis maju ke status berikutnya sesuai urutan master.
                         </div>
 
                         <div>
@@ -1974,9 +1996,13 @@ const selectButtonClass = (currentValue: string, expectedValue: string) =>
                             />
                             <p v-if="erpImportForm.errors.file" class="mt-1 text-[11px] text-rose-600">{{ erpImportForm.errors.file }}</p>
                         </div>
-                        <a :href="route('order-trackings.erp-status-template')" class="inline-flex items-center gap-1.5 text-[12px] font-bold text-[var(--app-primary)] hover:underline">
+                        <a
+                            :href="route('order-trackings.erp-status-template')"
+                            class="inline-flex items-center gap-1.5 text-[12px] font-bold text-[var(--app-primary)] hover:underline"
+                        >
                             <FileText class="h-3.5 w-3.5" />
                             Download template ERP Status
+                            <span class="text-[10px] font-medium text-slate-400">(kosong)</span>
                         </a>
                     </div>
 
@@ -2080,7 +2106,7 @@ const selectButtonClass = (currentValue: string, expectedValue: string) =>
         </transition>
 
         <!-- Floating bulk action bar -->
-        <div v-if="selectedIds.length > 0" class="fixed bottom-10 left-1/2 z-40 -translate-x-1/2">
+        <div v-if="canUseDeleteActions && selectedIds.length > 0" class="fixed bottom-10 left-1/2 z-40 -translate-x-1/2">
             <div class="flex items-center gap-3 rounded-2xl bg-slate-900 px-6 py-3.5 shadow-2xl">
                 <span class="text-[13px] font-black text-white">{{ selectedIds.length }} dipilih</span>
                 <div class="h-4 w-px bg-slate-700"></div>

@@ -63,6 +63,10 @@ class OrderTrackingController extends Controller
                         ->orWhere('cause_by', 'like', "%{$search}%")
                         ->orWhere('awb', 'like', "%{$search}%")
                         ->orWhere('erp_status', 'like', "%{$search}%")
+                        ->when(
+                            $matches = $this->erpStatusEquivalentValues($search, true),
+                            fn($query) => $query->orWhereIn('erp_status', $matches)
+                        )
                         ->orWhere('cs_name', 'like', "%{$search}%")
                         ->orWhere('category', 'like', "%{$search}%")
                         ->orWhere('last_step', 'like', "%{$search}%")
@@ -132,6 +136,11 @@ class OrderTrackingController extends Controller
             'brandOptions' => $brandOptions,
             'csNameOptions' => $csNameOptions,
             'platformOptions' => $platformOptions,
+            'platformTtsDaysMap' => Platform::query()
+                ->where('is_active', true)
+                ->whereNotNull('tts_days')
+                ->pluck('tts_days', 'name')
+                ->all(),
             'sourceOptions' => $sourceOptions,
             'categoryOptions' => $categoryOptions,
             'causeByOptions' => $causeByOptions,
@@ -226,7 +235,6 @@ class OrderTrackingController extends Controller
             'value' => $orderTracking->value !== null ? (float) $orderTracking->value : null,
             'cause_by' => $orderTracking->cause_by,
             'awb' => $orderTracking->awb,
-            'erp_status' => $orderTracking->erp_status,
             'payment_method' => $orderTracking->payment_method,
             'wh_note' => $orderTracking->wh_note,
             'cs_name' => $orderTracking->cs_name,
@@ -272,7 +280,7 @@ class OrderTrackingController extends Controller
             ->filter()
             ->values()
             ->all();
-        $erpStatusOptions = $this->erpStatusOptions();
+        $erpStatusValues = $this->erpStatusValidationValues();
         $reasonWhitelistOptions = $this->reasonWhitelistOptions();
         $reasonLateResponseOptions = $this->reasonLateResponseOptions();
 
@@ -294,9 +302,6 @@ class OrderTrackingController extends Controller
                 ? [$required, 'string', 'max:255']
                 : [$required, 'string', Rule::in($causeByOptions)],
             'awb' => ['nullable', 'string', 'max:255'],
-            'erp_status' => empty($erpStatusOptions)
-                ? ['nullable', 'string', 'max:255']
-                : ['nullable', 'string', Rule::in($erpStatusOptions)],
             'payment_method' => ['nullable', 'string', Rule::in(['COD', 'NON COD'])],
             'wh_note' => ['nullable', 'string'],
             'cs_name' => empty($csNameOptions)
@@ -362,7 +367,8 @@ class OrderTrackingController extends Controller
             $payload['status'],
             $payload['month'],
             $payload['automation_track'],
-            $payload['tanggal_tts']
+            $payload['tanggal_tts'],
+            $payload['erp_status']  // erp_status will default to 'Done' via automation
         );
 
         return $payload;
@@ -393,7 +399,6 @@ class OrderTrackingController extends Controller
     private function coerceNullableFields(array $data): array
     {
         $nullable = [
-            'erp_status',
             'payment_method',
             'insurance_info',
             'reason_whitelist',
@@ -495,13 +500,93 @@ class OrderTrackingController extends Controller
 
     private function erpStatusOptions(): array
     {
-        return Cache::remember(
-            'options.erp_statuses',
-            300,
-            fn() =>
-            OrderTrackingErpStatus::query()->where('is_active', true)
-                ->orderBy('sort_order')->orderBy('name')->pluck('name')->all()
-        );
+        return OrderTrackingErpStatus::query()->where('is_active', true)
+            ->orderBy('sort_order')->orderBy('name')
+            ->get(['id', 'name'])
+            ->map(fn(OrderTrackingErpStatus $status) => [
+                'id' => (string) $status->id,
+                'name' => $status->name,
+            ])
+            ->all();
+    }
+
+    private function erpStatusValidationValues(): array
+    {
+        return collect($this->erpStatusOptions())
+            ->flatMap(fn(array $status) => [$status['id'], $status['name']])
+            ->filter(fn($value) => filled($value))
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    private function resolveErpStatus(?string $value): array
+    {
+        if (!filled($value)) {
+            return ['id' => null, 'name' => null];
+        }
+
+        $value = trim((string) $value);
+
+        foreach ($this->erpStatusOptions() as $status) {
+            if ($status['id'] === $value || strcasecmp($status['name'], $value) === 0) {
+                return $status;
+            }
+        }
+
+        return ['id' => null, 'name' => null];
+    }
+
+    private function normalizeErpStatusValue(string $value): string
+    {
+        $status = $this->resolveErpStatus($value);
+
+        return $status['name'] ?? $value;
+    }
+
+    private function erpStatusDisplayLabel(?string $value): ?string
+    {
+        if (!filled($value)) {
+            return null;
+        }
+
+        $value = trim((string) $value);
+
+        if (!is_numeric($value)) {
+            foreach ($this->erpStatusOptions() as $status) {
+                if (strcasecmp($status['name'], $value) === 0) {
+                    return $status['name'];
+                }
+            }
+
+            return $value;
+        }
+
+        return $this->resolveErpStatus($value)['name'] ?? $value;
+    }
+
+    private function erpStatusEquivalentValues(string $value, bool $search = false): array
+    {
+        if (!filled($value)) {
+            return [];
+        }
+
+        $value = trim($value);
+
+        return collect($this->erpStatusOptions())
+            ->filter(function (array $status) use ($value, $search) {
+                if ($search) {
+                    return str_contains(strtolower($status['name']), strtolower($value))
+                        || str_contains($status['id'], $value);
+                }
+
+                return $status['id'] === $value || strcasecmp($status['name'], $value) === 0;
+            })
+            ->flatMap(fn(array $status) => [$status['id'], $status['name']])
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
     }
 
     private function reasonWhitelistOptions(): array
@@ -519,9 +604,12 @@ class OrderTrackingController extends Controller
         return Excel::download(new OrderTrackingTemplateExport(), 'order-tracking-import-template.xlsx');
     }
 
-    public function downloadErpStatusTemplate()
+    public function downloadErpStatusTemplate(Request $request)
     {
-        return Excel::download(new OrderTrackingErpTemplateExport(), 'order-tracking-erp-status-template.xlsx');
+        return Excel::download(
+            new OrderTrackingErpTemplateExport(),
+            'erp-status-import-template.xlsx'
+        );
     }
 
     public function downloadRgoTemplate()
@@ -563,7 +651,13 @@ class OrderTrackingController extends Controller
         } catch (\Throwable $exception) {
             report($exception);
 
-            return back()->with('error', 'Import ERP Status gagal diproses. Pastikan file berisi order_id dan erp_status/status.');
+            return back()->with('error', 'Import ERP Status gagal diproses. Pastikan file berisi kolom order_id.');
+        }
+
+        // Recompute status, automation_track, dll. untuk semua order_id yang ter-update
+        if (!empty($importer->importedOrderIds)) {
+            app(\App\Services\OrderTrackingAutomationService::class)
+                ->recomputeByOrderIds(array_unique($importer->importedOrderIds));
         }
 
         return back()
@@ -629,6 +723,10 @@ class OrderTrackingController extends Controller
                         ->orWhere('cause_by', 'like', "%{$search}%")
                         ->orWhere('awb', 'like', "%{$search}%")
                         ->orWhere('erp_status', 'like', "%{$search}%")
+                        ->when(
+                            $matches = $this->erpStatusEquivalentValues($search, true),
+                            fn($query) => $query->orWhereIn('erp_status', $matches)
+                        )
                         ->orWhere('cs_name', 'like', "%{$search}%")
                         ->orWhere('category', 'like', "%{$search}%")
                         ->orWhere('last_step', 'like', "%{$search}%")

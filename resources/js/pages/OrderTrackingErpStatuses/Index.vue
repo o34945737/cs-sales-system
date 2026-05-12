@@ -648,7 +648,8 @@ const statusBadgeClass = (active: boolean) =>
             </div>
             <div class="space-y-1 text-xs font-semibold text-slate-600">
                 <p v-if="importResult.updated" class="text-emerald-600">✓ {{ importResult.updated }} order tracking diperbarui</p>
-                <p v-if="importResult.pending" class="text-amber-600">⏳ {{ importResult.pending }} order_id belum ada di tracking (tersimpan di history)</p>
+                <p v-if="importResult.pending" class="text-violet-600">⏳ {{ importResult.pending }} disimpan ke history (order belum ada di tracking)</p>
+                <p v-if="(importResult.skipped ?? 0) > 0" class="text-slate-500">⟳ {{ importResult.skipped }} dilewati (sudah di status terakhir)</p>
                 <p v-if="importResult.failed" class="text-rose-600">✗ {{ importResult.failed }} baris gagal</p>
             </div>
             <ul v-if="importResult.errors?.length" class="mt-2 max-h-28 overflow-y-auto space-y-0.5">
@@ -663,7 +664,7 @@ const statusBadgeClass = (active: boolean) =>
                     <DialogHeader>
                         <DialogTitle class="text-2xl font-black text-slate-900">Import ERP Status</DialogTitle>
                         <DialogDescription class="mt-1 text-sm font-medium text-slate-500">
-                            Upload file <strong>Excel (.xlsx)</strong> atau CSV berisi kolom <strong>no, order_id, erp_status</strong>.
+                            Upload file <strong>Excel (.xlsx)</strong> atau CSV berisi kolom <strong>no, order_id</strong>.
                         </DialogDescription>
                     </DialogHeader>
                 </div>

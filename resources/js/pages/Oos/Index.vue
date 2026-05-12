@@ -515,6 +515,10 @@ const updateCsClass = (v: string) =>
 
                                     <td class="px-4 py-4">
                                         <p class="text-[12px] font-black text-slate-900">#{{ item.order_id || '-' }}</p>
+                                        <a v-if="item.complaint_id" :href="`/complaints?search=${encodeURIComponent(item.order_id || '')}`" class="mt-0.5 inline-flex items-center gap-1 text-[10px] font-bold text-blue-600 hover:underline" target="_blank">
+                                            <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+                                            Lihat Complaint
+                                        </a>
                                     </td>
 
                                     <td class="px-4 py-4">
@@ -526,6 +530,10 @@ const updateCsClass = (v: string) =>
                                     <td class="px-4 py-4">
                                         <p class="text-[12px] font-bold text-slate-700">{{ item.product_name || '-' }}</p>
                                         <p class="text-[10px] font-medium text-slate-400">{{ item.sku || '-' }}</p>
+                                        <span v-if="item.riwayat_oos_count > 0" class="mt-0.5 inline-flex items-center gap-1 rounded-full bg-orange-50 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-orange-700 ring-1 ring-orange-200">
+                                            <svg class="h-2.5 w-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+                                            Riwayat OOS x{{ item.riwayat_oos_count }}
+                                        </span>
                                     </td>
 
                                     <td class="px-4 py-4">

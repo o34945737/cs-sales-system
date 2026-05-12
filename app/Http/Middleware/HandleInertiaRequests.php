@@ -106,6 +106,7 @@ class HandleInertiaRequests extends Middleware
                     'delete_order_tracking_data_sources' => $user?->can('delete order tracking data sources') ?? false,
                     'import_order_trackings' => $user?->can('import order trackings') ?? false,
                     'export_order_trackings' => $user?->can('export order trackings') ?? false,
+                    'delete_order_trackings' => $user?->can('delete order trackings') ?? false,
                     'view_order_tracking_erp_statuses' => $user?->can('view order tracking erp statuses') ?? false,
                     'create_order_tracking_erp_statuses' => $user?->can('create order tracking erp statuses') ?? false,
                     'update_order_tracking_erp_statuses' => $user?->can('update order tracking erp statuses') ?? false,

@@ -25,7 +25,7 @@ class OrderTrackingRgoImport implements OnEachRow, WithHeadingRow
         $this->rowNum++;
         $rowArr = $row->toArray();
 
-        $orderId  = trim((string) ($rowArr['order_id'] ?? ''));
+        $orderId  = ltrim(trim((string) ($rowArr['order_id'] ?? '')), '#');
         $notes    = trim((string) ($rowArr['notes'] ?? '')) ?: null;
         $isActive = isset($rowArr['is_active']) ? (bool)(int) $rowArr['is_active'] : true;
 

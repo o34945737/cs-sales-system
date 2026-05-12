@@ -11,18 +11,30 @@ use Maatwebsite\Excel\Row;
 
 class OrderTrackingErpImport implements OnEachRow, WithHeadingRow
 {
-    public array $results = ['updated' => 0, 'pending' => 0, 'failed' => 0, 'errors' => []];
+    public array $results = ['updated' => 0, 'pending' => 0, 'skipped' => 0, 'failed' => 0, 'errors' => [], 'ordered_statuses' => []];
 
-    private array $validStatuses;
-    private int $nextSortOrder;
+    /** @var string[] order_ids that were successfully updated for recompute after import */
+    public array $importedOrderIds = [];
+
+    private array $orderedStatuses;
+    private array $statusNamesById = [];
     private int $rowNum = 1;
 
     public function __construct(
         private readonly string $batchId,
         private readonly ?int $uploadedBy = null,
     ) {
-        $this->validStatuses = OrderTrackingErpStatus::where('is_active', true)->pluck('name')->all();
-        $this->nextSortOrder = (int) OrderTrackingErpStatus::max('sort_order') + 1;
+        $statuses = OrderTrackingErpStatus::where('is_active', true)
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
+        $this->orderedStatuses = $statuses->pluck('name')->all();
+        $this->statusNamesById = $statuses
+            ->mapWithKeys(fn(OrderTrackingErpStatus $status) => [(string) $status->id => $status->name])
+            ->all();
+
+        $this->results['ordered_statuses'] = $this->orderedStatuses;
     }
 
     public function onRow(Row $row): void
@@ -30,8 +42,7 @@ class OrderTrackingErpImport implements OnEachRow, WithHeadingRow
         $this->rowNum++;
         $rowArr = $row->toArray();
 
-        $orderId   = trim((string) ($rowArr['order_id'] ?? ''));
-        $erpStatus = trim((string) ($rowArr['erp_status'] ?? $rowArr['status'] ?? ''));
+        $orderId = ltrim(trim((string) ($rowArr['order_id'] ?? '')), '#');
 
         if (!$orderId) {
             $this->results['failed']++;
@@ -39,48 +50,80 @@ class OrderTrackingErpImport implements OnEachRow, WithHeadingRow
             return;
         }
 
-        if (!$erpStatus) {
+        if (empty($this->orderedStatuses)) {
             $this->results['failed']++;
-            $this->results['errors'][] = "Baris {$this->rowNum}: erp_status/status kosong";
+            $this->results['errors'][] = "Baris {$this->rowNum}: tidak ada ERP status aktif di master data";
             return;
         }
 
-        $this->ensureErpStatusExists($erpStatus);
+        $tracking = OrderTracking::where('order_id', $orderId)->first(['id', 'order_id', 'erp_status']);
+
+        // Ambil status saat ini dari order_trackings, fallback ke history
+        $historyStatus = OrderTrackingErpStatusHistory::where('order_id', $orderId)->latest()->value('erp_status');
+        $currentStatus = $this->statusNameFor($tracking?->erp_status)
+            ?? $this->statusNameFor($historyStatus)
+            ?? $historyStatus;
+
+        $newStatus = $this->resolveNextStatus($currentStatus);
+
+        if ($currentStatus === $newStatus) {
+            $this->results['skipped']++;
+            return;
+        }
 
         OrderTrackingErpStatusHistory::create([
             'order_id'    => $orderId,
-            'erp_status'  => $erpStatus,
+            'erp_status'  => $newStatus,
             'batch_id'    => $this->batchId,
             'uploaded_by' => $this->uploadedBy,
         ]);
 
-        $updated = OrderTracking::where('order_id', $orderId)->update(['erp_status' => $erpStatus]);
+        if ($tracking) {
+            $tracking->update(['erp_status' => $newStatus]);
 
-        if ($updated > 0) {
+            $this->importedOrderIds[] = $orderId;
             $this->results['updated']++;
         } else {
             $this->results['pending']++;
         }
     }
 
-    private function ensureErpStatusExists(string $erpStatus): void
+    private function statusNameFor(?string $value): ?string
     {
-        if (in_array($erpStatus, $this->validStatuses, true)) {
-            return;
+        if (!filled($value)) {
+            return null;
         }
 
-        $status = OrderTrackingErpStatus::firstOrCreate(
-            ['name' => $erpStatus],
-            [
-                'is_active' => true,
-                'sort_order' => $this->nextSortOrder++,
-            ],
-        );
+        $value = trim((string) $value);
 
-        if (!$status->is_active) {
-            $status->update(['is_active' => true]);
+        if (isset($this->statusNamesById[$value])) {
+            return $this->statusNamesById[$value];
         }
 
-        $this->validStatuses[] = $erpStatus;
+        foreach ($this->orderedStatuses as $status) {
+            if (strcasecmp($status, $value) === 0) {
+                return $status;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Auto-advance: kembalikan status berikutnya dalam urutan.
+     */
+    private function resolveNextStatus(?string $current): string
+    {
+        if (!$current || !in_array($current, $this->orderedStatuses, true)) {
+            return $this->orderedStatuses[0];
+        }
+
+        $index = array_search($current, $this->orderedStatuses, true);
+
+        if ($index >= count($this->orderedStatuses) - 1) {
+            return $current;
+        }
+
+        return $this->orderedStatuses[$index + 1];
     }
 }

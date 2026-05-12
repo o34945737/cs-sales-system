@@ -703,6 +703,7 @@ const createInitialFormState = () => ({
 
 const form = useForm(createInitialFormState());
 const complaintCount = ref(0);
+const duplicateOrderInfo = ref<{ id: number; username: string; tanggal_complaint: string; status: string; last_step: string; deleted: boolean } | null>(null);
 const existingVideoPath = ref('');
 const existingProofAttachmentPath = ref('');
 
@@ -738,6 +739,21 @@ watch(
 );
 
 // Real-time History Check from Server
+const fetchOrderDuplicate = debounce(async (orderId: string, excludeId?: number) => {
+    if (!orderId) {
+        duplicateOrderInfo.value = null;
+        return;
+    }
+    try {
+        const params: Record<string, string | number> = { order_id: orderId };
+        if (excludeId) params.exclude_id = excludeId;
+        const response = await axios.get(route('complaints.check-order'), { params });
+        duplicateOrderInfo.value = response.data?.exists ? response.data.complaint : null;
+    } catch {
+        duplicateOrderInfo.value = null;
+    }
+}, 500);
+
 const fetchCustomerHistory = debounce(async (username: string) => {
     if (!username) {
         form.history = '';
@@ -767,6 +783,17 @@ watch(
         }
 
         fetchCustomerHistory(newUsername);
+    },
+);
+
+watch(
+    () => form.order_id,
+    (newOrderId) => {
+        if (isHydratingEditForm.value) {
+            duplicateOrderInfo.value = null;
+            return;
+        }
+        fetchOrderDuplicate(newOrderId, editId.value ?? undefined);
     },
 );
 
@@ -934,6 +961,8 @@ const syncComplaintDerivedFields = () => {
 const discardForm = () => {
     submitError.value = '';
     fetchCustomerHistory.cancel();
+    fetchOrderDuplicate.cancel();
+    duplicateOrderInfo.value = null;
     isHydratingEditForm.value = false;
     currentEditItem.value = null;
     complaintCount.value = 0;
@@ -952,6 +981,8 @@ const openCreateModal = () => {
     modalMode.value = 'create';
     editId.value = null;
     fetchCustomerHistory.cancel();
+    fetchOrderDuplicate.cancel();
+    duplicateOrderInfo.value = null;
     isHydratingEditForm.value = false;
     currentEditItem.value = null;
     complaintCount.value = 0;
@@ -2354,6 +2385,14 @@ const sectionChecks = computed(() => [
                                                     <p v-if="fieldError('order_id')" class="text-xs font-medium text-rose-600">
                                                         {{ fieldError('order_id') }}
                                                     </p>
+                                                    <div v-if="duplicateOrderInfo" class="flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2">
+                                                        <svg class="mt-0.5 h-4 w-4 flex-shrink-0 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+                                                        <div class="text-[12px] text-amber-800">
+                                                            <span class="font-bold">Order ID sudah ada</span>
+                                                            <span v-if="duplicateOrderInfo.deleted" class="ml-1 text-rose-600">(dihapus)</span>
+                                                            — {{ duplicateOrderInfo.username || '-' }} · {{ duplicateOrderInfo.status }} · {{ duplicateOrderInfo.last_step }}
+                                                        </div>
+                                                    </div>
                                                 </div>
 
                                                 <div class="space-y-2">
