@@ -7,7 +7,6 @@ use App\Models\JetTrackEntry;
 use App\Models\LastStep;
 use App\Models\OrderTracking;
 use App\Models\OrderTrackingErpStatusHistory;
-use App\Models\OrderTrackingRgoEntry;
 use App\Models\Platform;
 use Carbon\Carbon;
 
@@ -119,10 +118,7 @@ class OrderTrackingAutomationService
 
         if ($model->order_id) {
             $existInComplaint = (bool) $linkedComplaint;
-            $existInRgo = OrderTrackingRgoEntry::query()
-                ->where('order_id', $model->order_id)
-                ->where('is_active', true)
-                ->exists();
+            $existInRgo = filled($model->rgo_status);
             $jetTrackEntry = $this->findJetTrackEntry($model);
 
             if ($existInComplaint) {

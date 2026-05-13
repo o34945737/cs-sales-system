@@ -73,6 +73,7 @@ const props = defineProps({
     autoCauseByMap: Object,
     complaintSyncMap: Object, // { [orderId]: { category, last_step, status, reason_whitelist, reason_late_respons } }
     rgoOrderIds: Array,
+    rgoLastSynced: String,
     jetTrackMap: Object,      // { [awb]: "KONDISI ..." }
     platformTtsDaysMap: Object, // { [platformName]: tts_days }
 });
@@ -234,6 +235,16 @@ const rgoImportFile = ref<File | null>(null);
 const rgoImportFileInput = ref<HTMLInputElement | null>(null);
 const rgoImportResult = computed(() => (page.props.flash as any)?.rgo_import_result ?? null);
 const rgoImportForm = useForm({ file: null as File | null });
+
+const isSyncRgoOpen = ref(false);
+const rgoSyncResult = computed(() => page.props.flash?.rgo_sync_result ?? null);
+const syncRgoForm = useForm({});
+
+const submitSyncRgo = () => {
+    syncRgoForm.post(route('order-trackings.sync-rgo'), {
+        preserveScroll: true,
+    });
+};
 
 const openImportModal = () => {
     importFile.value = null;
@@ -1045,6 +1056,16 @@ const selectButtonClass = (currentValue: string, expectedValue: string) =>
                                         >
                                             <Upload class="h-4 w-4" />
                                             <span>Import RGO</span>
+                                        </button>
+
+                                        <button
+                                            v-if="canImportRgoEntries"
+                                            type="button"
+                                            class="flex h-11 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-teal-200 bg-teal-50 px-4 text-[13px] font-black text-teal-700 shadow-sm transition-all hover:-translate-y-0.5 hover:border-teal-300 hover:bg-teal-100/70 active:scale-[0.98]"
+                                            @click="isSyncRgoOpen = true"
+                                        >
+                                            <RotateCcw class="h-4 w-4" />
+                                            <span>Sync RGO</span>
                                         </button>
 
                                         <a
@@ -2076,6 +2097,57 @@ const selectButtonClass = (currentValue: string, expectedValue: string) =>
                             @click="submitRgoImport"
                         >
                             {{ rgoImportForm.processing ? 'Mengimpor...' : 'Import RGO' }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </transition>
+
+        <!-- Sync RGO modal -->
+        <transition name="fade">
+            <div v-if="isSyncRgoOpen" class="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/40 px-4 backdrop-blur-sm" @click.self="isSyncRgoOpen = false">
+                <div class="w-full max-w-md overflow-hidden rounded-[32px] bg-white shadow-2xl">
+                    <div class="border-b border-slate-100 px-8 py-7">
+                        <div class="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-teal-50 text-teal-600">
+                            <RotateCcw class="h-6 w-6" />
+                        </div>
+                        <h3 class="text-2xl font-black tracking-tight text-slate-900">Sync RGO dari Google Sheet</h3>
+                        <p class="mt-1 text-[13px] font-medium text-slate-500">Tarik data RGO terbaru dari Google Sheet dan perbarui status di order tracking.</p>
+                        <p v-if="props.rgoLastSynced" class="mt-2 text-[11px] font-semibold text-slate-400">Terakhir sync: {{ props.rgoLastSynced }}</p>
+                        <p v-else class="mt-2 text-[11px] font-semibold text-slate-400">Belum pernah sync.</p>
+                    </div>
+
+                    <div v-if="rgoSyncResult" class="mx-8 mt-6 rounded-2xl border p-4" :class="rgoSyncResult.errors?.length > 0 ? 'border-amber-200 bg-amber-50' : 'border-teal-200 bg-teal-50'">
+                        <p class="text-[12px] font-black uppercase tracking-wider" :class="rgoSyncResult.errors?.length > 0 ? 'text-amber-700' : 'text-teal-700'">Hasil Sync RGO</p>
+                        <div class="mt-2 grid gap-1 text-[13px] font-bold text-slate-700">
+                            <span class="text-teal-600">{{ rgoSyncResult.updated ?? 0 }} data diperbarui</span>
+                            <span class="text-slate-500">{{ rgoSyncResult.skipped ?? 0 }} dilewati</span>
+                        </div>
+                        <ul v-if="rgoSyncResult.errors?.length" class="mt-2 max-h-24 space-y-0.5 overflow-y-auto text-[11px] text-rose-600">
+                            <li v-for="(err, i) in rgoSyncResult.errors" :key="i">{{ err }}</li>
+                        </ul>
+                    </div>
+
+                    <div class="px-8 py-6">
+                        <div class="rounded-2xl border border-dashed border-teal-200 bg-teal-50/50 p-4 text-[12px] font-semibold text-slate-600">
+                            Data akan ditarik dari Google Sheet master RGO. Pastikan sheet sudah berisi kolom
+                            <span class="font-black text-slate-900">order_id</span> dan
+                            <span class="font-black text-slate-900">rgo_status</span>.
+                        </div>
+                    </div>
+
+                    <div class="flex gap-3 border-t border-slate-100 px-8 py-6">
+                        <button type="button" @click="isSyncRgoOpen = false" class="h-11 flex-1 rounded-2xl bg-slate-50 text-[13px] font-black text-slate-500 hover:bg-slate-100">Tutup</button>
+                        <button
+                            type="button"
+                            :disabled="syncRgoForm.processing"
+                            class="h-11 flex-[2] rounded-2xl bg-teal-600 text-[13px] font-black text-white shadow-lg shadow-teal-500/20 transition-all hover:-translate-y-0.5 hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-50"
+                            @click="submitSyncRgo"
+                        >
+                            <span class="flex items-center justify-center gap-2">
+                                <RotateCcw v-if="!syncRgoForm.processing" class="h-4 w-4" />
+                                <span>{{ syncRgoForm.processing ? 'Menyinkronkan...' : 'Sync Sekarang' }}</span>
+                            </span>
                         </button>
                     </div>
                 </div>

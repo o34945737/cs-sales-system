@@ -16,11 +16,11 @@ use App\Models\LastStep;
 use App\Models\OrderTracking;
 use App\Models\OrderTrackingDataSource;
 use App\Models\OrderTrackingErpStatus;
-use App\Models\OrderTrackingRgoEntry;
 use App\Models\Platform;
 use App\Models\ReasonLateResponse;
 use App\Models\ReasonWhitelist;
 use App\Models\SubCase;
+use App\Services\GoogleSheetsRgoService;
 use App\Services\OrderTrackingAutomationService;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
@@ -37,6 +37,15 @@ class OrderTrackingController extends Controller
 {
     public function index(Request $request): Response
     {
+        $rgoService = app(GoogleSheetsRgoService::class);
+        if ($rgoService->isConfigured() && !Cache::has('rgo_last_sync')) {
+            try {
+                $rgoService->sync();
+            } catch (\Throwable) {
+                // don't break page load on sync failure
+            }
+        }
+
         $sourceOptions = $this->sourceOptions();
         $brandOptions = $this->brandOptions();
         $platformOptions = $this->platformOptions();
@@ -169,13 +178,14 @@ class OrderTrackingController extends Controller
                     ],
                 ])
                 ->all(),
-            'rgoOrderIds' => OrderTrackingRgoEntry::query()
-                ->where('is_active', true)
+            'rgoOrderIds' => OrderTracking::query()
+                ->whereNotNull('rgo_status')
+                ->whereNotNull('order_id')
                 ->pluck('order_id')
-                ->filter(fn($orderId) => filled($orderId))
                 ->unique()
                 ->values()
                 ->all(),
+            'rgoLastSynced' => $rgoService->lastSyncedAt(),
             'jetTrackMap' => JetTrackEntry::query()
                 ->where('is_active', true)
                 ->get(['awb', 'kondisi_barang', 'video_url', 'warehouse_doc_link'])
@@ -261,6 +271,8 @@ class OrderTrackingController extends Controller
             'tanggal_tts' => $orderTracking->tanggal_tts,
             'reason_whitelist' => $orderTracking->reason_whitelist,
             'reason_late_respons' => $orderTracking->reason_late_respons,
+            'rgo_status' => $orderTracking->rgo_status,
+            'rgo_synced_at' => optional($orderTracking->rgo_synced_at)?->toDateTimeString(),
             'created_at' => optional($orderTracking->created_at)?->toDateTimeString(),
             'updated_at' => optional($orderTracking->updated_at)?->toDateTimeString(),
         ];
@@ -689,6 +701,26 @@ class OrderTrackingController extends Controller
         return back()
             ->with('success', 'Import RGO selesai diproses.')
             ->with('rgo_import_result', $importer->results);
+    }
+
+    public function syncRgo(): RedirectResponse
+    {
+        $service = app(GoogleSheetsRgoService::class);
+
+        if (!$service->isConfigured()) {
+            return back()->with('error', 'Sync RGO belum dikonfigurasi. Pastikan RGO_SHEET_ID dan GOOGLE_SERVICE_ENABLED sudah diset.');
+        }
+
+        try {
+            $results = $service->sync();
+        } catch (\Throwable $exception) {
+            report($exception);
+            return back()->with('error', 'Sync RGO gagal: ' . $exception->getMessage());
+        }
+
+        return back()
+            ->with('success', "Sync RGO selesai. {$results['updated']} data diperbarui, {$results['skipped']} dilewati.")
+            ->with('rgo_sync_result', $results);
     }
 
     public function bulkDestroy(Request $request): RedirectResponse

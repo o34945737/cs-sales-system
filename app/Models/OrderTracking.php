@@ -17,6 +17,7 @@ class OrderTracking extends Model
         'value_receive', 'insurance_info', 'video_unboxing_wh', 'bap_wh',
         'update_wh', 'update_finance', 'status', 'month', 'automation_track',
         'tanggal_tts', 'reason_whitelist', 'reason_late_respons', 'kondisi_barang',
+        'rgo_status', 'rgo_synced_at',
     ];
 
     protected static function boot()

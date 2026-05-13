@@ -10,7 +10,6 @@ return new class extends Migration
     {
         Schema::create('order_trackings', function (Blueprint $table) {
             $table->id();
-            
             // --- A. Field Input 1-29 ---
             $table->string('data_source')->nullable(); // WH, Finance, Reject Return
             $table->date('tanggal_input')->nullable();
@@ -31,18 +30,16 @@ return new class extends Migration
             $table->dateTime('tanggal_update')->nullable();
             $table->decimal('value_receive', 15, 2)->nullable();
             $table->string('insurance_info')->nullable(); // Y/N
-            $table->string('video_unboxing_wh')->nullable(); 
+            $table->string('video_unboxing_wh')->nullable();
             $table->string('bap_wh')->nullable();
             $table->longText('update_wh')->nullable();
             $table->longText('update_finance')->nullable();
-            
             $table->string('status')->nullable();
             $table->string('month')->nullable();
             $table->string('automation_track')->nullable();
             $table->date('tanggal_tts')->nullable();
             $table->string('reason_whitelist')->nullable();
             $table->string('reason_late_respons')->nullable();
-
             $table->timestamps();
         });
     }

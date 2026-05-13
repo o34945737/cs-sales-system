@@ -143,6 +143,11 @@ export interface SharedData extends Record<string, unknown> {
             failed?: number;
             errors?: string[];
         };
+        rgo_sync_result?: {
+            updated?: number;
+            skipped?: number;
+            errors?: string[];
+        };
     };
     ziggy: {
         location: string;

@@ -106,6 +106,10 @@ Route::middleware(['auth', 'active', 'password.reset.required'])->group(function
             ->middleware('permission:import order tracking rgo entries')
             ->name('order-trackings.import-rgo');
 
+        Route::post('order-trackings/sync-rgo', [OrderTrackingController::class, 'syncRgo'])
+            ->middleware('permission:import order tracking rgo entries')
+            ->name('order-trackings.sync-rgo');
+
         Route::get('order-trackings/export', [OrderTrackingController::class, 'export'])
             ->middleware('permission:export order trackings')
             ->name('order-trackings.export');
@@ -224,7 +228,6 @@ Route::middleware(['auth', 'active', 'password.reset.required'])->group(function
             ->middleware('permission:delete sku codes')
             ->name('destroy');
     });
-
 
     Route::prefix('sub-cases')->name('sub-cases.')->group(function () {
         Route::get('/', [SubCaseController::class, 'index'])
