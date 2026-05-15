@@ -139,7 +139,43 @@ test('complaint create redirects back with a toast success message', function ()
         'username' => 'customer.test',
         'status' => 'Pending',
         'priority' => 'P1',
+        'history' => 'complaint ke 1',
         'oos' => null,
+    ]);
+});
+
+test('complaint history starts from complaint ke 1 and increments by username', function () {
+    $user = User::factory()->create(['name' => 'CS Test']);
+    $user->assignRole('CS');
+
+    $this
+        ->actingAs($user)
+        ->from('/complaints')
+        ->post('/complaints', complaintPayload([
+            'order_id' => 'ORD-HISTORY-1',
+            'resi' => 'RESI-HISTORY-1',
+            'username' => 'repeat.customer',
+        ]))
+        ->assertRedirect('/complaints');
+
+    $this
+        ->actingAs($user)
+        ->from('/complaints')
+        ->post('/complaints', complaintPayload([
+            'order_id' => 'ORD-HISTORY-2',
+            'resi' => 'RESI-HISTORY-2',
+            'username' => 'repeat.customer',
+        ]))
+        ->assertRedirect('/complaints');
+
+    $this->assertDatabaseHas('complaints', [
+        'order_id' => 'ORD-HISTORY-1',
+        'history' => 'complaint ke 1',
+    ]);
+
+    $this->assertDatabaseHas('complaints', [
+        'order_id' => 'ORD-HISTORY-2',
+        'history' => 'complaint ke 2',
     ]);
 });
 

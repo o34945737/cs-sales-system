@@ -620,6 +620,8 @@ const bapLabel = computed(() => form.bap_wh?.name || 'Upload BAP image');
 
 const videoPreviewUrl = ref<string | null>(null);
 const bapPreviewUrl = ref<string | null>(null);
+const existingVideoUrl = ref<string | null>(null);
+const existingBapUrl = ref<string | null>(null);
 
 const setVideoFile = (event: Event) => {
     const [file] = (event.target as HTMLInputElement).files || [];
@@ -644,6 +646,8 @@ const discardForm = () => {
     editId.value = null;
     if (videoPreviewUrl.value) { URL.revokeObjectURL(videoPreviewUrl.value); videoPreviewUrl.value = null; }
     if (bapPreviewUrl.value) { URL.revokeObjectURL(bapPreviewUrl.value); bapPreviewUrl.value = null; }
+    existingVideoUrl.value = null;
+    existingBapUrl.value = null;
     isModalOpen.value = false;
     modalMode.value = 'create';
 };
@@ -658,6 +662,8 @@ const openCreateModal = () => {
     form.clearErrors();
     if (videoPreviewUrl.value) { URL.revokeObjectURL(videoPreviewUrl.value); videoPreviewUrl.value = null; }
     if (bapPreviewUrl.value) { URL.revokeObjectURL(bapPreviewUrl.value); bapPreviewUrl.value = null; }
+    existingVideoUrl.value = null;
+    existingBapUrl.value = null;
     isModalOpen.value = true;
 };
 
@@ -666,6 +672,8 @@ const openEditModal = (item: any) => {
     editId.value = item.id;
     submitError.value = '';
     detailItem.value = null;
+    existingVideoUrl.value = item.video_unboxing_url || null;
+    existingBapUrl.value = item.bap_url || null;
     isHydratingEditForm.value = true;
     isModalOpen.value = true;
 
@@ -1766,6 +1774,20 @@ const selectButtonClass = (currentValue: string, expectedValue: string) =>
                                                 <div v-if="videoPreviewUrl" class="mt-2 overflow-hidden rounded-xl border border-slate-200">
                                                     <video :src="videoPreviewUrl" controls class="max-h-40 w-full" />
                                                 </div>
+                                                <div
+                                                    v-if="modalMode === 'edit' && existingVideoUrl && !form.video_unboxing_wh"
+                                                    class="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2"
+                                                >
+                                                    <span class="truncate text-[11px] font-semibold text-slate-600">File tersimpan</span>
+                                                    <a
+                                                        :href="existingVideoUrl"
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        class="shrink-0 text-[11px] font-black uppercase tracking-wide text-[var(--app-primary)] hover:underline"
+                                                    >
+                                                        Lihat
+                                                    </a>
+                                                </div>
                                             </div>
 
                                             <div class="space-y-2">
@@ -1784,6 +1806,20 @@ const selectButtonClass = (currentValue: string, expectedValue: string) =>
                                                 </label>
                                                 <div v-if="bapPreviewUrl" class="mt-2 overflow-hidden rounded-xl border border-slate-200">
                                                     <img :src="bapPreviewUrl" class="max-h-40 w-full object-cover" alt="BAP preview" />
+                                                </div>
+                                                <div
+                                                    v-if="modalMode === 'edit' && existingBapUrl && !form.bap_wh"
+                                                    class="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2"
+                                                >
+                                                    <span class="truncate text-[11px] font-semibold text-slate-600">Gambar tersimpan</span>
+                                                    <a
+                                                        :href="existingBapUrl"
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        class="shrink-0 text-[11px] font-black uppercase tracking-wide text-[var(--app-primary)] hover:underline"
+                                                    >
+                                                        Lihat
+                                                    </a>
                                                 </div>
                                             </div>
                                         </div>

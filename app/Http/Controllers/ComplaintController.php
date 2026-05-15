@@ -38,30 +38,54 @@ class ComplaintController extends Controller
 
         $ttl = 300; // 5 menit
 
-        $sourceOptions = Cache::remember('options.complaint_sources', $ttl, fn() =>
+        $sourceOptions = Cache::remember(
+            'options.complaint_sources',
+            $ttl,
+            fn() =>
             ComplaintSource::query()->where('is_active', true)->orderBy('name')->pluck('name')->all()
         );
-        $complaintPowerOptions = Cache::remember('options.complaint_powers', $ttl, fn() =>
+        $complaintPowerOptions = Cache::remember(
+            'options.complaint_powers',
+            $ttl,
+            fn() =>
             ComplaintPower::query()->where('is_active', true)->orderBy('name')->pluck('name')->all()
         );
-        $brandOptions = Cache::remember('options.brands', $ttl, fn() =>
+        $brandOptions = Cache::remember(
+            'options.brands',
+            $ttl,
+            fn() =>
             Brand::query()->where('is_active', true)->orderBy('name')->pluck('name')->all()
         );
-        $platformOptions = Cache::remember('options.platforms', $ttl, fn() =>
+        $platformOptions = Cache::remember(
+            'options.platforms',
+            $ttl,
+            fn() =>
             Platform::query()->where('is_active', true)->orderBy('name')->pluck('name')->all()
         );
-        $subCaseOptions = Cache::remember('options.sub_cases', $ttl, fn() =>
+        $subCaseOptions = Cache::remember(
+            'options.sub_cases',
+            $ttl,
+            fn() =>
             SubCase::query()->where('is_active', true)->orderBy('name')->pluck('name')->all()
         );
-        $skuCodeOptions = Cache::remember('options.sku_codes', $ttl, fn() =>
+        $skuCodeOptions = Cache::remember(
+            'options.sku_codes',
+            $ttl,
+            fn() =>
             SkuCode::query()->orderBy('sku')->get(['sku', 'product_name'])
                 ->map(fn(SkuCode $s) => ['sku' => $s->sku, 'product_name' => $s->product_name])
                 ->all()
         );
-        $causeByNames = Cache::remember('options.cause_bys', $ttl, fn() =>
+        $causeByNames = Cache::remember(
+            'options.cause_bys',
+            $ttl,
+            fn() =>
             CauseBy::query()->where('is_active', true)->orderBy('name')->pluck('name')->all()
         );
-        $lastStepOptions = Cache::remember('options.last_steps', $ttl, fn() =>
+        $lastStepOptions = Cache::remember(
+            'options.last_steps',
+            $ttl,
+            fn() =>
             LastStep::query()->where('is_active', true)->orderBy('name')
                 ->get(['name', 'status_result', 'priority_level'])
                 ->map(fn(LastStep $ls) => [
@@ -71,13 +95,22 @@ class ComplaintController extends Controller
                     'priority_level' => $ls->priority_level,
                 ])->all()
         );
-        $reasonWhitelistOptions = Cache::remember('options.reason_whitelists', $ttl, fn() =>
+        $reasonWhitelistOptions = Cache::remember(
+            'options.reason_whitelists',
+            $ttl,
+            fn() =>
             ReasonWhitelist::query()->where('is_active', true)->orderBy('name')->pluck('name')->all()
         );
-        $reasonLateResponseOptions = Cache::remember('options.reason_late_responses', $ttl, fn() =>
+        $reasonLateResponseOptions = Cache::remember(
+            'options.reason_late_responses',
+            $ttl,
+            fn() =>
             ReasonLateResponse::query()->where('is_active', true)->orderBy('name')->pluck('name')->all()
         );
-        $csNameOptions = Cache::remember('options.cs_names', $ttl, fn() =>
+        $csNameOptions = Cache::remember(
+            'options.cs_names',
+            $ttl,
+            fn() =>
             User::query()->whereHas('roles', fn($q) => $q->where('name', 'CS'))
                 ->where('is_active', true)->orderBy('name')->pluck('name')->all()
         );
@@ -362,18 +395,12 @@ class ComplaintController extends Controller
     public function getCustomerHistory($username)
     {
         $count = Complaint::where('username', $username)->count();
-
-        $label = '';
-        if ($count === 1) {
-            $label = 'Customer ini complaint ke 2';
-        } elseif ($count >= 2) {
-            $newCount = $count + 1;
-            $label = "Customer ini complaint ke {$newCount}x";
-        }
+        $label = Complaint::resolveHistoryLabel($count);
 
         return response()->json([
             'username' => $username,
             'count' => $count,
+            'next_count' => $count + 1,
             'label' => $label,
         ]);
     }

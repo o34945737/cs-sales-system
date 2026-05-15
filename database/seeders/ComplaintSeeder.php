@@ -280,8 +280,6 @@ class ComplaintSeeder extends Seeder
 
         $count = $position + 1;
 
-        return $count === 2
-            ? 'Customer ini complaint ke 2'
-            : "Customer ini complaint ke {$count}x";
+        return "complaint ke {$count}";
     }
 }

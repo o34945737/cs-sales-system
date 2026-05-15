@@ -14,16 +14,52 @@ class Complaint extends Model
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
-        'source', 'tanggal_complaint', 'tanggal_order', 'jam_customer_complaint',
-        'brand_id', 'brand', 'platform_id', 'platform',
-        'sku_code_id', 'sub_case_id', 'last_step_id', 'cs_user_id',
-        'complaint_source_id', 'complaint_power_id', 'part_of_bad_id',
-        'order_id', 'username', 'resi',
-        'sku', 'product_name', 'value_of_product', 'qty', 'sub_case', 'cause_by', 'proof', 'proof_attachment',
-        'summary_case', 'update_long_text', 'part_of_bad', 'cs_name',
-        'last_step', 'step_cs_selesai', 'tanggal_step_cs_selesai', 'tanggal_update',
-        'reason_whitelist', 'reason_late_respons', 'video_unboxing', 'complaint_power',
-        'cycle', 'status', 'priority', 'history', 'oos', 'report_category', 'auto_sync_sla', 'sla',
+        'source',
+        'tanggal_complaint',
+        'tanggal_order',
+        'jam_customer_complaint',
+        'brand_id',
+        'brand',
+        'platform_id',
+        'platform',
+        'sku_code_id',
+        'sub_case_id',
+        'last_step_id',
+        'cs_user_id',
+        'complaint_source_id',
+        'complaint_power_id',
+        'part_of_bad_id',
+        'order_id',
+        'username',
+        'resi',
+        'sku',
+        'product_name',
+        'value_of_product',
+        'qty',
+        'sub_case',
+        'cause_by',
+        'proof',
+        'proof_attachment',
+        'summary_case',
+        'update_long_text',
+        'part_of_bad',
+        'cs_name',
+        'last_step',
+        'step_cs_selesai',
+        'tanggal_step_cs_selesai',
+        'tanggal_update',
+        'reason_whitelist',
+        'reason_late_respons',
+        'video_unboxing',
+        'complaint_power',
+        'cycle',
+        'status',
+        'priority',
+        'history',
+        'oos',
+        'report_category',
+        'auto_sync_sla',
+        'sla',
     ];
 
     protected static function boot()
@@ -34,8 +70,8 @@ class Complaint extends Model
             // 0. SKU master -> autofill product name bila tersedia.
             $skuCode = $model->sku
                 ? SkuCode::query()
-                    ->where('sku', $model->sku)
-                    ->first(['product_name'])
+                ->where('sku', $model->sku)
+                ->first(['product_name'])
                 : null;
 
             if ($skuCode) {
@@ -58,8 +94,8 @@ class Complaint extends Model
             // 3. Sub Cases -> Cause By Logic berbasis master data.
             $defaultCauseBy = $model->sub_case
                 ? SubCase::query()
-                    ->where('name', $model->sub_case)
-                    ->value('default_cause_by')
+                ->where('name', $model->sub_case)
+                ->value('default_cause_by')
                 : null;
 
             if ($defaultCauseBy) {
@@ -72,8 +108,8 @@ class Complaint extends Model
             // 4-5. Status dan priority mengacu ke master Last Step aktif.
             $lastStep = $model->last_step
                 ? LastStep::query()
-                    ->where('name', $model->last_step)
-                    ->first(['status_result', 'priority_level'])
+                ->where('name', $model->last_step)
+                ->first(['status_result', 'priority_level'])
                 : null;
 
             if ($lastStep) {
@@ -98,13 +134,7 @@ class Complaint extends Model
             if (empty($model->history) && $model->username) {
                 if (! $model->exists) {
                     $count = self::where('username', $model->username)->count();
-                    if ($count === 0) {
-                        $model->history = null;
-                    } elseif ($count === 1) {
-                        $model->history = 'Customer ini complaint ke 2';
-                    } else {
-                        $model->history = 'Customer ini complaint ke '.($count + 1).'x';
-                    }
+                    $model->history = self::resolveHistoryLabel($count);
                 }
             }
 
@@ -161,6 +191,11 @@ class Complaint extends Model
     protected static function resolveAutoSyncSlaLabel(int $sla): string
     {
         return $sla <= 0 ? 'Within 1 day' : "Above {$sla} days";
+    }
+
+    public static function resolveHistoryLabel(int $existingComplaintCount): string
+    {
+        return 'complaint ke ' . ($existingComplaintCount + 1);
     }
 
     public function oosRecords(): HasMany

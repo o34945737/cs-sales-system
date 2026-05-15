@@ -885,9 +885,8 @@ const historyLabelPreview = computed(() => {
     // Edit mode: complaintCount tidak di-fetch, pakai form.history langsung
     if (complaintCount.value === 0 && form.history) return form.history;
     const count = complaintCount.value || 0;
-    if (count === 0) return '';
-    if (count === 1) return 'Customer ini complaint ke 2';
-    return `Customer ini complaint ke ${count + 1}x`;
+    const next = count + 1;
+    return `complaint ke ${next}`;
 });
 
 const oosPreview = computed(() => {
@@ -1017,6 +1016,9 @@ const openEditModal = (item) => {
     editId.value = item.id;
     fetchCustomerHistory.cancel();
     detailItem.value = null;
+    if (videoPreviewUrl.value) { URL.revokeObjectURL(videoPreviewUrl.value); videoPreviewUrl.value = null; }
+    if (proofAttachmentPreviewUrl.value) { URL.revokeObjectURL(proofAttachmentPreviewUrl.value); proofAttachmentPreviewUrl.value = null; }
+    proofAttachmentFileType.value = null;
 
     // Use flag to prevent watchers from firing during hydration
     isHydratingEditForm.value = true;
@@ -2760,7 +2762,7 @@ const sectionChecks = computed(() => [
                                                         <video :src="videoPreviewUrl" controls class="max-h-40 w-full" />
                                                     </div>
                                                     <div
-                                                        v-if="modalMode === 'edit' && currentVideoUrl && !form.video_unboxing"
+                                                        v-if="modalMode === 'edit' && currentVideoUrl"
                                                         class="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2"
                                                     >
                                                         <span class="truncate text-[11px] font-semibold text-slate-600">
@@ -2807,7 +2809,7 @@ const sectionChecks = computed(() => [
                                                         </div>
                                                     </div>
                                                     <div
-                                                        v-if="modalMode === 'edit' && currentProofAttachmentUrl && !form.proof_attachment"
+                                                        v-if="modalMode === 'edit' && currentProofAttachmentUrl"
                                                         class="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2"
                                                     >
                                                         <span class="truncate text-[11px] font-semibold text-slate-600">

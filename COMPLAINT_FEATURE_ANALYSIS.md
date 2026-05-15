@@ -208,8 +208,8 @@ public function getSlaAttribute() {
 **Requirement:**
 
 - Komplain ke 1: null/kosong
-- Komplain ke 2: "Customer ini complaint ke 2"
-- Komplain ke 3+: "Customer ini complaint ke 3x" dst.
+- Komplain ke 2: "complaint ke 2"
+- Komplain ke 3+: "complaint ke 3x" dst.
 
 **Implementasi:**
 
@@ -218,10 +218,10 @@ if (!$model->exists) {  // Hanya untuk record baru
     $count = self::where('username', $model->username)->count();
 
     if ($count == 1) {
-        $model->category_customer = "Customer ini complaint ke 2";
+        $model->category_customer = "complaint ke 2";
     } elseif ($count >= 2) {
         $c = $count + 1;
-        $model->category_customer = "Customer ini complaint ke {$c}x";
+        $model->category_customer = "complaint ke {$c}x";
     } else {
         $model->category_customer = null;
     }
