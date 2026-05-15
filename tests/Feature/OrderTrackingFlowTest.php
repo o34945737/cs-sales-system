@@ -7,7 +7,6 @@ use App\Models\LastStep;
 use App\Models\Logistic;
 use App\Models\OrderTracking;
 use App\Models\OrderTrackingDataSource;
-use App\Models\OrderTrackingRgoEntry;
 use App\Models\Platform;
 use App\Models\ReasonLateResponse;
 use App\Models\ReasonWhitelist;
@@ -208,25 +207,14 @@ test('order tracking stores mapped source and automation fields from the flow', 
     ]);
 });
 
-test('order tracking stores rgo automation when order id exists in rgo list', function () {
-    OrderTrackingRgoEntry::create([
+test('order tracking stores rgo automation when rgo_status column is filled', function () {
+    OrderTracking::create(orderTrackingPayload([
         'order_id' => 'OT-RGO-1',
-        'is_active' => true,
-    ]);
-
-    $response = $this
-        ->actingAs($this->warehouseUser)
-        ->from('/order-trackings')
-        ->post('/order-trackings', orderTrackingPayload([
-            'order_id' => 'OT-RGO-1',
-            'last_step' => 'Waiting Claim',
-            'reason_whitelist' => null,
-            'reason_late_respons' => null,
-        ]));
-
-    $response
-        ->assertRedirect('/order-trackings')
-        ->assertSessionHas('success', 'Order Tracking berhasil disimpan.');
+        'last_step' => 'Waiting Claim',
+        'reason_whitelist' => null,
+        'reason_late_respons' => null,
+        'rgo_status' => 'Approved',
+    ]));
 
     $this->assertDatabaseHas('order_trackings', [
         'order_id' => 'OT-RGO-1',

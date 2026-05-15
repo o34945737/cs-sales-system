@@ -198,7 +198,7 @@ const activeFilterCount = computed(() =>
 const page = usePage<SharedData>();
 const canImportOrderTrackings = computed(() => page.props.auth?.can?.import_order_trackings ?? false);
 const canImportErpStatuses = computed(() => page.props.auth?.can?.import_order_tracking_erp_statuses ?? false);
-const canImportRgoEntries = computed(() => page.props.auth?.can?.import_order_tracking_rgo_entries ?? false);
+const canImportRgoEntries = computed(() => page.props.auth?.can?.import_order_trackings ?? false);
 const canExportOrderTrackings = computed(() => page.props.auth?.can?.export_order_trackings ?? false);
 const canDeleteOrderTrackings = computed(() => page.props.auth?.can?.delete_order_trackings ?? false);
 const canUseDeleteActions = computed(() => canDeleteOrderTrackings.value || (page.props.auth?.can?.access_order_trackings ?? false));
@@ -238,6 +238,7 @@ const rgoImportForm = useForm({ file: null as File | null });
 
 const isSyncRgoOpen = ref(false);
 const rgoSyncResult = computed(() => page.props.flash?.rgo_sync_result ?? null);
+const rgoSyncFilter = ref<'all' | 'matched' | 'updated' | 'not_in_system'>('all');
 const syncRgoForm = useForm({});
 
 const submitSyncRgo = () => {
@@ -245,6 +246,12 @@ const submitSyncRgo = () => {
         preserveScroll: true,
     });
 };
+
+const filteredSyncEntries = computed(() => {
+    const entries = rgoSyncResult.value?.entries ?? [];
+    if (rgoSyncFilter.value === 'all') return entries;
+    return entries.filter((e: any) => e.reason === rgoSyncFilter.value);
+});
 
 const openImportModal = () => {
     importFile.value = null;
@@ -1065,7 +1072,7 @@ const selectButtonClass = (currentValue: string, expectedValue: string) =>
                                             @click="isSyncRgoOpen = true"
                                         >
                                             <RotateCcw class="h-4 w-4" />
-                                            <span>Sync RGO</span>
+                                            <span>Sync</span>
                                         </button>
 
                                         <a
@@ -1109,6 +1116,7 @@ const selectButtonClass = (currentValue: string, expectedValue: string) =>
                                                 <th class="w-[140px] px-3 py-4">Sub Case / By</th>
                                                 <th class="w-[150px] px-3 py-4">Agent / AWB</th>
                                                 <th class="w-[150px] px-3 py-4">ERP Status</th>
+                                                <th class="w-[120px] px-3 py-4">RGO Status</th>
                                                 <th class="w-[95px] px-3 py-4 text-center">Status</th>
                                                 <th class="w-[110px] px-3 py-4">Track</th>
                                                 <th class="w-[110px] py-4 pl-3 pr-4 text-right">Action</th>
@@ -1196,6 +1204,16 @@ const selectButtonClass = (currentValue: string, expectedValue: string) =>
                                                     <span v-if="item.erp_status" class="inline-block rounded-md bg-indigo-50 px-2 py-1 text-[10px] font-black uppercase tracking-wide text-indigo-600 ring-1 ring-indigo-200">
                                                         {{ item.erp_status }}
                                                     </span>
+                                                    <span v-else class="text-[11px] font-bold text-slate-300">-</span>
+                                                </td>
+
+                                                <td class="px-3 py-4">
+                                                    <div v-if="item.rgo_status" class="space-y-0.5">
+                                                        <span class="inline-block rounded-md bg-teal-50 px-2 py-1 text-[10px] font-black uppercase tracking-wide text-teal-700 ring-1 ring-teal-200">
+                                                            {{ item.rgo_status }}
+                                                        </span>
+                                                        <p v-if="item.rgo_synced_at" class="text-[9px] font-medium text-slate-400">{{ formatDate(item.rgo_synced_at) }}</p>
+                                                    </div>
                                                     <span v-else class="text-[11px] font-bold text-slate-300">-</span>
                                                 </td>
 
@@ -2057,8 +2075,8 @@ const selectButtonClass = (currentValue: string, expectedValue: string) =>
                     <div v-if="rgoImportResult" class="mx-8 mt-6 rounded-2xl border p-4" :class="rgoImportResult.failed > 0 ? 'border-amber-200 bg-amber-50' : 'border-emerald-200 bg-emerald-50'">
                         <p class="text-[12px] font-black uppercase tracking-wider" :class="rgoImportResult.failed > 0 ? 'text-amber-700' : 'text-emerald-700'">Hasil Import RGO</p>
                         <div class="mt-2 grid gap-1 text-[13px] font-bold text-slate-700">
-                            <span class="text-emerald-600">{{ rgoImportResult.created ?? 0 }} order_id dibuat</span>
                             <span class="text-blue-600">{{ rgoImportResult.updated ?? 0 }} order_id diperbarui</span>
+                            <span v-if="rgoImportResult.skipped > 0" class="text-amber-600">{{ rgoImportResult.skipped }} dilewati (order_id tidak ditemukan)</span>
                             <span v-if="rgoImportResult.failed > 0" class="text-rose-600">{{ rgoImportResult.failed }} baris gagal</span>
                         </div>
                         <ul v-if="rgoImportResult.errors?.length" class="mt-2 max-h-24 space-y-0.5 overflow-y-auto text-[11px] text-rose-600">
@@ -2068,7 +2086,7 @@ const selectButtonClass = (currentValue: string, expectedValue: string) =>
 
                     <div class="space-y-4 px-8 py-6">
                         <div class="rounded-2xl border border-dashed border-emerald-200 bg-emerald-50/50 p-4 text-[12px] font-semibold text-slate-600">
-                            File minimal berisi <span class="font-black text-slate-900">order_id</span>. Kolom opsional: <span class="font-black text-slate-900">notes</span> dan <span class="font-black text-slate-900">is_active</span>.
+                            File harus berisi kolom <span class="font-black text-slate-900">order_id</span> dan <span class="font-black text-slate-900">rgo_status</span>. Sistem akan memperbarui kolom rgo_status di order tracking yang sesuai.
                         </div>
 
                         <div>
@@ -2106,33 +2124,77 @@ const selectButtonClass = (currentValue: string, expectedValue: string) =>
         <!-- Sync RGO modal -->
         <transition name="fade">
             <div v-if="isSyncRgoOpen" class="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/40 px-4 backdrop-blur-sm" @click.self="isSyncRgoOpen = false">
-                <div class="w-full max-w-md overflow-hidden rounded-[32px] bg-white shadow-2xl">
+                <div class="w-full max-w-2xl overflow-hidden rounded-[32px] bg-white shadow-2xl">
                     <div class="border-b border-slate-100 px-8 py-7">
                         <div class="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-teal-50 text-teal-600">
                             <RotateCcw class="h-6 w-6" />
                         </div>
-                        <h3 class="text-2xl font-black tracking-tight text-slate-900">Sync RGO dari Google Sheet</h3>
-                        <p class="mt-1 text-[13px] font-medium text-slate-500">Tarik data RGO terbaru dari Google Sheet dan perbarui status di order tracking.</p>
+                        <h3 class="text-2xl font-black tracking-tight text-slate-900">Sync RGO dengan Google Sheet</h3>
+                        <p class="mt-1 text-[13px] font-medium text-slate-500">Tarik data <span class="font-black">rgo_status</span> terbaru dari Google Sheet, cocokkan berdasarkan <span class="font-black">order_id</span>, lalu update sistem mengikuti sheet (sheet sebagai source of truth).</p>
                         <p v-if="props.rgoLastSynced" class="mt-2 text-[11px] font-semibold text-slate-400">Terakhir sync: {{ props.rgoLastSynced }}</p>
                         <p v-else class="mt-2 text-[11px] font-semibold text-slate-400">Belum pernah sync.</p>
                     </div>
 
-                    <div v-if="rgoSyncResult" class="mx-8 mt-6 rounded-2xl border p-4" :class="rgoSyncResult.errors?.length > 0 ? 'border-amber-200 bg-amber-50' : 'border-teal-200 bg-teal-50'">
-                        <p class="text-[12px] font-black uppercase tracking-wider" :class="rgoSyncResult.errors?.length > 0 ? 'text-amber-700' : 'text-teal-700'">Hasil Sync RGO</p>
-                        <div class="mt-2 grid gap-1 text-[13px] font-bold text-slate-700">
-                            <span class="text-teal-600">{{ rgoSyncResult.updated ?? 0 }} data diperbarui</span>
-                            <span class="text-slate-500">{{ rgoSyncResult.skipped ?? 0 }} dilewati</span>
+                    <div v-if="rgoSyncResult" class="px-8 pt-6">
+                        <div class="grid grid-cols-3 gap-3">
+                            <button type="button" @click="rgoSyncFilter = 'updated'" class="rounded-2xl border p-3 text-left transition" :class="rgoSyncFilter === 'updated' ? 'border-blue-300 bg-blue-50 ring-2 ring-blue-200' : 'border-blue-200 bg-blue-50/60 hover:border-blue-300'">
+                                <p class="text-[10px] font-black uppercase tracking-wider text-blue-700">Diperbarui</p>
+                                <p class="mt-1 text-2xl font-black text-blue-700">{{ rgoSyncResult.summary?.updated ?? 0 }}</p>
+                            </button>
+                            <button type="button" @click="rgoSyncFilter = 'matched'" class="rounded-2xl border p-3 text-left transition" :class="rgoSyncFilter === 'matched' ? 'border-emerald-300 bg-emerald-50 ring-2 ring-emerald-200' : 'border-emerald-200 bg-emerald-50/60 hover:border-emerald-300'">
+                                <p class="text-[10px] font-black uppercase tracking-wider text-emerald-700">Sudah Cocok</p>
+                                <p class="mt-1 text-2xl font-black text-emerald-700">{{ rgoSyncResult.summary?.matched ?? 0 }}</p>
+                            </button>
+                            <button type="button" @click="rgoSyncFilter = 'not_in_system'" class="rounded-2xl border p-3 text-left transition" :class="rgoSyncFilter === 'not_in_system' ? 'border-amber-300 bg-amber-50 ring-2 ring-amber-200' : 'border-amber-200 bg-amber-50/60 hover:border-amber-300'">
+                                <p class="text-[10px] font-black uppercase tracking-wider text-amber-700">Tidak Ada di Sistem</p>
+                                <p class="mt-1 text-2xl font-black text-amber-700">{{ rgoSyncResult.summary?.not_in_system ?? 0 }}</p>
+                            </button>
                         </div>
-                        <ul v-if="rgoSyncResult.errors?.length" class="mt-2 max-h-24 space-y-0.5 overflow-y-auto text-[11px] text-rose-600">
+
+                        <div class="mt-4 flex items-center justify-between">
+                            <button type="button" @click="rgoSyncFilter = 'all'" class="text-[11px] font-black uppercase tracking-wider text-slate-500 hover:text-slate-700">
+                                {{ rgoSyncFilter === 'all' ? 'Semua' : 'Tampilkan semua' }} ({{ rgoSyncResult.summary?.total ?? 0 }})
+                            </button>
+                        </div>
+
+                        <div class="mt-3 max-h-72 overflow-y-auto rounded-2xl border border-slate-200">
+                            <table class="w-full text-[12px]">
+                                <thead class="sticky top-0 bg-slate-50 text-[10px] font-black uppercase tracking-wider text-slate-500">
+                                    <tr>
+                                        <th class="px-3 py-2 text-left">Order ID</th>
+                                        <th class="px-3 py-2 text-left">Sebelum</th>
+                                        <th class="px-3 py-2 text-left">Sesudah / Sheet</th>
+                                        <th class="px-3 py-2 text-left">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="(entry, i) in filteredSyncEntries" :key="i" class="border-t border-slate-100">
+                                        <td class="px-3 py-2 font-bold text-slate-800">{{ entry.order_id }}</td>
+                                        <td class="px-3 py-2 text-slate-600">{{ entry.before ?? '—' }}</td>
+                                        <td class="px-3 py-2 text-slate-600">{{ entry.after ?? entry.sheet ?? '—' }}</td>
+                                        <td class="px-3 py-2">
+                                            <span v-if="entry.reason === 'updated'" class="inline-flex rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-blue-700">Diperbarui</span>
+                                            <span v-else-if="entry.reason === 'matched'" class="inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-emerald-700">Sudah cocok</span>
+                                            <span v-else class="inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-amber-700">Tidak ada di sistem</span>
+                                        </td>
+                                    </tr>
+                                    <tr v-if="filteredSyncEntries.length === 0">
+                                        <td colspan="4" class="px-3 py-6 text-center text-[12px] font-semibold text-slate-400">Tidak ada data pada kategori ini.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <ul v-if="rgoSyncResult.errors?.length" class="mt-3 max-h-24 space-y-0.5 overflow-y-auto rounded-2xl bg-rose-50 p-3 text-[11px] text-rose-600">
                             <li v-for="(err, i) in rgoSyncResult.errors" :key="i">{{ err }}</li>
                         </ul>
                     </div>
 
-                    <div class="px-8 py-6">
+                    <div v-else class="px-8 py-6">
                         <div class="rounded-2xl border border-dashed border-teal-200 bg-teal-50/50 p-4 text-[12px] font-semibold text-slate-600">
                             Data akan ditarik dari Google Sheet master RGO. Pastikan sheet sudah berisi kolom
                             <span class="font-black text-slate-900">order_id</span> dan
-                            <span class="font-black text-slate-900">rgo_status</span>.
+                            <span class="font-black text-slate-900">rgo_status</span>. Sistem akan diperbarui mengikuti sheet.
                         </div>
                     </div>
 

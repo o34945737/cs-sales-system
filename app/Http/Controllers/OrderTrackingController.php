@@ -38,13 +38,6 @@ class OrderTrackingController extends Controller
     public function index(Request $request): Response
     {
         $rgoService = app(GoogleSheetsRgoService::class);
-        if ($rgoService->isConfigured() && !Cache::has('rgo_last_sync')) {
-            try {
-                $rgoService->sync();
-            } catch (\Throwable) {
-                // don't break page load on sync failure
-            }
-        }
 
         $sourceOptions = $this->sourceOptions();
         $brandOptions = $this->brandOptions();
@@ -683,8 +676,7 @@ class OrderTrackingController extends Controller
             'file' => ['required', 'file', 'mimes:xlsx,xls,csv,txt', 'max:10240'],
         ]);
 
-        $batchId = 'OT-RGO-' . now()->format('YmdHis') . '-' . Str::upper(Str::random(4));
-        $importer = new OrderTrackingRgoImport($batchId, auth()->id());
+        $importer = new OrderTrackingRgoImport();
 
         try {
             Excel::import($importer, $request->file('file'));
@@ -695,7 +687,7 @@ class OrderTrackingController extends Controller
         } catch (\Throwable $exception) {
             report($exception);
 
-            return back()->with('error', 'Import RGO gagal diproses. Pastikan file berisi order_id, notes, dan is_active.');
+            return back()->with('error', 'Import RGO gagal diproses. Pastikan file berisi kolom order_id dan rgo_status.');
         }
 
         return back()
@@ -718,8 +710,10 @@ class OrderTrackingController extends Controller
             return back()->with('error', 'Sync RGO gagal: ' . $exception->getMessage());
         }
 
+        $summary = $results['summary'];
+
         return back()
-            ->with('success', "Sync RGO selesai. {$results['updated']} data diperbarui, {$results['skipped']} dilewati.")
+            ->with('success', "Sync RGO selesai. {$summary['updated']} diperbarui, {$summary['matched']} sudah cocok, {$summary['not_in_system']} tidak ada di sistem.")
             ->with('rgo_sync_result', $results);
     }
 

@@ -13,15 +13,15 @@ class OrderTrackingRgoTemplateExport implements FromArray, WithColumnWidths, Wit
     public function array(): array
     {
         return [
-            [1, 'ORD-12345', '', 1],
-            [2, 'ORD-12346', 'Refund processed', 1],
-            [3, 'ORD-12347', 'Return approved', 0],
+            [1, 'ORD-12345', 'Approved'],
+            [2, 'ORD-12346', 'Pending'],
+            [3, 'ORD-12347', 'Rejected'],
         ];
     }
 
     public function headings(): array
     {
-        return ['no', 'order_id', 'notes', 'is_active'];
+        return ['no', 'order_id', 'rgo_status'];
     }
 
     public function styles(Worksheet $sheet): array
@@ -33,6 +33,6 @@ class OrderTrackingRgoTemplateExport implements FromArray, WithColumnWidths, Wit
 
     public function columnWidths(): array
     {
-        return ['A' => 8, 'B' => 28, 'C' => 32, 'D' => 12];
+        return ['A' => 8, 'B' => 28, 'C' => 24];
     }
 }

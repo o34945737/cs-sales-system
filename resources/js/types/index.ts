@@ -59,11 +59,6 @@ export interface Auth {
         update_order_tracking_erp_statuses: boolean;
         delete_order_tracking_erp_statuses: boolean;
         import_order_tracking_erp_statuses: boolean;
-        view_order_tracking_rgo_entries: boolean;
-        create_order_tracking_rgo_entries: boolean;
-        update_order_tracking_rgo_entries: boolean;
-        delete_order_tracking_rgo_entries: boolean;
-        import_order_tracking_rgo_entries: boolean;
         view_jet_track_entries: boolean;
         create_jet_track_entries: boolean;
         update_jet_track_entries: boolean;
@@ -144,8 +139,19 @@ export interface SharedData extends Record<string, unknown> {
             errors?: string[];
         };
         rgo_sync_result?: {
-            updated?: number;
-            skipped?: number;
+            entries?: Array<{
+                order_id: string;
+                before: string | null;
+                after: string | null;
+                sheet: string | null;
+                reason: 'matched' | 'updated' | 'not_in_system';
+            }>;
+            summary?: {
+                matched: number;
+                updated: number;
+                not_in_system: number;
+                total: number;
+            };
             errors?: string[];
         };
     };

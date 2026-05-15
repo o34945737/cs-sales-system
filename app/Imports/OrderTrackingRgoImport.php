@@ -2,32 +2,25 @@
 
 namespace App\Imports;
 
-use App\Models\OrderTrackingRgoEntry;
-use App\Models\OrderTrackingRgoImportBatch;
+use App\Models\OrderTracking;
 use Maatwebsite\Excel\Concerns\OnEachRow;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
 use Maatwebsite\Excel\Row;
 
 class OrderTrackingRgoImport implements OnEachRow, WithHeadingRow
 {
-    public array $results = ['created' => 0, 'updated' => 0, 'failed' => 0, 'errors' => []];
+    public array $results = ['updated' => 0, 'skipped' => 0, 'failed' => 0, 'errors' => []];
     public array $importedOrderIds = [];
 
     private int $rowNum = 1;
-
-    public function __construct(
-        private readonly string $batchId,
-        private readonly ?int $uploadedBy = null,
-    ) {}
 
     public function onRow(Row $row): void
     {
         $this->rowNum++;
         $rowArr = $row->toArray();
 
-        $orderId  = ltrim(trim((string) ($rowArr['order_id'] ?? '')), '#');
-        $notes    = trim((string) ($rowArr['notes'] ?? '')) ?: null;
-        $isActive = isset($rowArr['is_active']) ? (bool)(int) $rowArr['is_active'] : true;
+        $orderId   = ltrim(trim((string) ($rowArr['order_id'] ?? '')), '#');
+        $rgoStatus = trim((string) ($rowArr['rgo_status'] ?? ''));
 
         if (!$orderId) {
             $this->results['failed']++;
@@ -35,31 +28,18 @@ class OrderTrackingRgoImport implements OnEachRow, WithHeadingRow
             return;
         }
 
-        OrderTrackingRgoImportBatch::create([
-            'batch_id'    => $this->batchId,
-            'order_id'    => $orderId,
-            'notes'       => $notes,
-            'is_active'   => $isActive,
-            'uploaded_by' => $this->uploadedBy,
-        ]);
-
-        $existing = OrderTrackingRgoEntry::where('order_id', $orderId)->first();
-
-        if ($existing) {
-            $existing->update([
-                'notes'     => $notes ?: $existing->notes,
-                'is_active' => $isActive,
+        $affected = OrderTracking::where('order_id', $orderId)
+            ->update([
+                'rgo_status'    => $rgoStatus !== '' ? $rgoStatus : null,
+                'rgo_synced_at' => now(),
             ]);
-            $this->results['updated']++;
+
+        if ($affected > 0) {
+            $this->results['updated'] += $affected;
+            $this->importedOrderIds[] = $orderId;
         } else {
-            OrderTrackingRgoEntry::create([
-                'order_id'  => $orderId,
-                'notes'     => $notes,
-                'is_active' => $isActive,
-            ]);
-            $this->results['created']++;
+            $this->results['skipped']++;
+            $this->results['errors'][] = "Baris {$this->rowNum}: order_id {$orderId} tidak ditemukan di sistem";
         }
-
-        $this->importedOrderIds[] = $orderId;
     }
 }

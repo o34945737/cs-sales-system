@@ -15,7 +15,6 @@ use App\Http\Controllers\OosSolutionController;
 use App\Http\Controllers\OrderTrackingController;
 use App\Http\Controllers\OrderTrackingDataSourceController;
 use App\Http\Controllers\OrderTrackingErpStatusController;
-use App\Http\Controllers\OrderTrackingRgoEntryController;
 use App\Http\Controllers\PlatformController;
 use App\Http\Controllers\ReasonLateResponseController;
 use App\Http\Controllers\ReasonWhitelistController;
@@ -99,15 +98,15 @@ Route::middleware(['auth', 'active', 'password.reset.required'])->group(function
             ->name('order-trackings.import-erp-status');
 
         Route::get('order-trackings/rgo-template', [OrderTrackingController::class, 'downloadRgoTemplate'])
-            ->middleware('permission:import order tracking rgo entries')
+            ->middleware('permission:import order trackings')
             ->name('order-trackings.rgo-template');
 
         Route::post('order-trackings/import-rgo', [OrderTrackingController::class, 'importRgo'])
-            ->middleware('permission:import order tracking rgo entries')
+            ->middleware('permission:import order trackings')
             ->name('order-trackings.import-rgo');
 
         Route::post('order-trackings/sync-rgo', [OrderTrackingController::class, 'syncRgo'])
-            ->middleware('permission:import order tracking rgo entries')
+            ->middleware('permission:import order trackings')
             ->name('order-trackings.sync-rgo');
 
         Route::get('order-trackings/export', [OrderTrackingController::class, 'export'])
@@ -301,27 +300,6 @@ Route::middleware(['auth', 'active', 'password.reset.required'])->group(function
             ->name('update');
         Route::delete('/{orderTrackingDataSource}', [OrderTrackingDataSourceController::class, 'destroy'])
             ->middleware('permission:delete order tracking data sources')
-            ->name('destroy');
-    });
-
-    Route::prefix('order-tracking-rgo-entries')->name('order-tracking-rgo-entries.')->group(function () {
-        Route::get('/', [OrderTrackingRgoEntryController::class, 'index'])
-            ->middleware('permission:view order tracking rgo entries')
-            ->name('index');
-        Route::post('/', [OrderTrackingRgoEntryController::class, 'store'])
-            ->middleware('permission:create order tracking rgo entries')
-            ->name('store');
-        Route::get('/template', [OrderTrackingRgoEntryController::class, 'downloadTemplate'])
-            ->middleware('permission:import order tracking rgo entries')
-            ->name('template');
-        Route::post('/import', [OrderTrackingRgoEntryController::class, 'import'])
-            ->middleware('permission:import order tracking rgo entries')
-            ->name('import');
-        Route::put('/{orderTrackingRgoEntry}', [OrderTrackingRgoEntryController::class, 'update'])
-            ->middleware('permission:update order tracking rgo entries')
-            ->name('update');
-        Route::delete('/{orderTrackingRgoEntry}', [OrderTrackingRgoEntryController::class, 'destroy'])
-            ->middleware('permission:delete order tracking rgo entries')
             ->name('destroy');
     });
 

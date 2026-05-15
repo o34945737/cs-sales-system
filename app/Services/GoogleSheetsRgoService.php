@@ -24,50 +24,109 @@ class GoogleSheetsRgoService
     }
 
     /**
-     * Pull RGO data from Google Sheet and update order_trackings.
-     * Sheet must have heading row with at least: order_id, rgo_status
+     * Pull from Google Sheet, match by order_id, and update system rgo_status
+     * to follow the sheet (sheet is source of truth).
      *
-     * @return array{updated: int, skipped: int, errors: string[]}
+     * Returns per-order entries with status:
+     *   - matched     : sheet == system, no update needed
+     *   - updated     : was different, system updated to match sheet
+     *   - not_in_system: order_id from sheet not found in order_trackings
+     *
+     * @return array{
+     *     entries: array<int, array{order_id:string, before:?string, after:?string, sheet:?string, reason:string}>,
+     *     summary: array{matched:int, updated:int, not_in_system:int, total:int},
+     *     errors: string[]
+     * }
      */
     public function sync(): array
     {
-        $results = ['updated' => 0, 'skipped' => 0, 'errors' => []];
+        $entries = [];
+        $errors  = [];
 
         $rows = Sheets::spreadsheet($this->spreadsheetId)
             ->sheet($this->sheetName)
             ->get();
 
         if ($rows->isEmpty()) {
-            $results['errors'][] = 'Sheet kosong atau tidak ditemukan.';
-            return $results;
+            $errors[] = 'Sheet kosong atau tidak ditemukan.';
+            return [
+                'entries' => [],
+                'summary' => ['matched' => 0, 'updated' => 0, 'not_in_system' => 0, 'total' => 0],
+                'errors'  => $errors,
+            ];
         }
 
         $header = $rows->first();
         $data   = Sheets::collection($header, $rows->skip(1));
 
-        $updatedOrderIds = [];
-
-        foreach ($data as $i => $row) {
+        $sheetMap = [];
+        foreach ($data as $row) {
             $orderId   = ltrim(trim((string) ($row->get('order_id') ?? '')), '#');
             $rgoStatus = trim((string) ($row->get('rgo_status') ?? ''));
-
             if (!$orderId) {
-                $results['skipped']++;
+                continue;
+            }
+            $sheetMap[$orderId] = $rgoStatus !== '' ? $rgoStatus : null;
+        }
+
+        if (empty($sheetMap)) {
+            $errors[] = 'Tidak ada order_id valid di sheet.';
+            return [
+                'entries' => [],
+                'summary' => ['matched' => 0, 'updated' => 0, 'not_in_system' => 0, 'total' => 0],
+                'errors'  => $errors,
+            ];
+        }
+
+        $systemMap = OrderTracking::query()
+            ->whereIn('order_id', array_keys($sheetMap))
+            ->pluck('rgo_status', 'order_id')
+            ->all();
+
+        $matched = $updated = $notInSystem = 0;
+        $updatedOrderIds = [];
+
+        foreach ($sheetMap as $orderId => $sheetStatus) {
+            if (!array_key_exists($orderId, $systemMap)) {
+                $entries[] = [
+                    'order_id' => $orderId,
+                    'before'   => null,
+                    'after'    => null,
+                    'sheet'    => $sheetStatus,
+                    'reason'   => 'not_in_system',
+                ];
+                $notInSystem++;
                 continue;
             }
 
-            $affected = OrderTracking::where('order_id', $orderId)
-                ->update([
-                    'rgo_status'    => $rgoStatus ?: null,
-                    'rgo_synced_at' => now(),
-                ]);
+            $systemStatus = $systemMap[$orderId] !== null ? trim((string) $systemMap[$orderId]) : null;
 
-            if ($affected > 0) {
-                $results['updated'] += $affected;
-                $updatedOrderIds[]   = $orderId;
-            } else {
-                $results['skipped']++;
+            if ($this->statusEquals($systemStatus, $sheetStatus)) {
+                $entries[] = [
+                    'order_id' => $orderId,
+                    'before'   => $systemStatus,
+                    'after'    => $systemStatus,
+                    'sheet'    => $sheetStatus,
+                    'reason'   => 'matched',
+                ];
+                $matched++;
+                continue;
             }
+
+            OrderTracking::where('order_id', $orderId)->update([
+                'rgo_status'    => $sheetStatus,
+                'rgo_synced_at' => now(),
+            ]);
+
+            $entries[] = [
+                'order_id' => $orderId,
+                'before'   => $systemStatus,
+                'after'    => $sheetStatus,
+                'sheet'    => $sheetStatus,
+                'reason'   => 'updated',
+            ];
+            $updated++;
+            $updatedOrderIds[] = $orderId;
         }
 
         if (!empty($updatedOrderIds)) {
@@ -77,12 +136,27 @@ class GoogleSheetsRgoService
 
         Cache::put('rgo_last_sync', now(), now()->addHour());
 
-        return $results;
+        return [
+            'entries' => $entries,
+            'summary' => [
+                'matched'       => $matched,
+                'updated'       => $updated,
+                'not_in_system' => $notInSystem,
+                'total'         => count($entries),
+            ],
+            'errors' => $errors,
+        ];
     }
 
     public function lastSyncedAt(): ?string
     {
         $time = Cache::get('rgo_last_sync');
         return $time?->diffForHumans();
+    }
+
+    private function statusEquals(?string $a, ?string $b): bool
+    {
+        $normalize = fn(?string $v) => $v === null ? '' : strtolower(trim($v));
+        return $normalize($a) === $normalize($b);
     }
 }
