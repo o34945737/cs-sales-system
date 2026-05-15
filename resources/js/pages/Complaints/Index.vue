@@ -919,9 +919,15 @@ const videoLabel = computed(() => form.video_unboxing?.name || fileNameFromPath(
 const modalMode = ref('create'); // 'create' or 'edit'
 const editId = ref(null);
 
+const videoPreviewUrl = ref<string | null>(null);
+const proofAttachmentPreviewUrl = ref<string | null>(null);
+const proofAttachmentFileType = ref<'image' | 'video' | 'pdf' | null>(null);
+
 const setVideoFile = (event) => {
     const [file] = event.target.files || [];
     form.video_unboxing = file || null;
+    if (videoPreviewUrl.value) URL.revokeObjectURL(videoPreviewUrl.value);
+    videoPreviewUrl.value = file ? URL.createObjectURL(file) : null;
 };
 
 const proofAttachmentLabel = computed(
@@ -931,6 +937,11 @@ const proofAttachmentLabel = computed(
 const setProofAttachmentFile = (event) => {
     const [file] = event.target.files || [];
     form.proof_attachment = file || null;
+    if (proofAttachmentPreviewUrl.value) URL.revokeObjectURL(proofAttachmentPreviewUrl.value);
+    proofAttachmentPreviewUrl.value = file ? URL.createObjectURL(file) : null;
+    proofAttachmentFileType.value = file
+        ? file.type.startsWith('image/') ? 'image' : file.type.startsWith('video/') ? 'video' : 'pdf'
+        : null;
 };
 
 const syncComplaintDerivedFields = () => {
@@ -971,6 +982,9 @@ const discardForm = () => {
     form.defaults(createInitialFormState());
     form.reset();
     form.clearErrors();
+    if (videoPreviewUrl.value) { URL.revokeObjectURL(videoPreviewUrl.value); videoPreviewUrl.value = null; }
+    if (proofAttachmentPreviewUrl.value) { URL.revokeObjectURL(proofAttachmentPreviewUrl.value); proofAttachmentPreviewUrl.value = null; }
+    proofAttachmentFileType.value = null;
     isModalOpen.value = false;
     editId.value = null;
     modalMode.value = 'create';
@@ -991,6 +1005,9 @@ const openCreateModal = () => {
     form.defaults(createInitialFormState());
     form.reset();
     form.clearErrors();
+    if (videoPreviewUrl.value) { URL.revokeObjectURL(videoPreviewUrl.value); videoPreviewUrl.value = null; }
+    if (proofAttachmentPreviewUrl.value) { URL.revokeObjectURL(proofAttachmentPreviewUrl.value); proofAttachmentPreviewUrl.value = null; }
+    proofAttachmentFileType.value = null;
     isModalOpen.value = true;
 };
 
@@ -2739,6 +2756,9 @@ const sectionChecks = computed(() => [
                                                         }}</span>
                                                         <input type="file" class="hidden" accept="video/*" @change="setVideoFile" />
                                                     </label>
+                                                    <div v-if="videoPreviewUrl" class="mt-2 overflow-hidden rounded-xl border border-slate-200">
+                                                        <video :src="videoPreviewUrl" controls class="max-h-40 w-full" />
+                                                    </div>
                                                     <div
                                                         v-if="modalMode === 'edit' && currentVideoUrl && !form.video_unboxing"
                                                         class="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2"
@@ -2778,6 +2798,14 @@ const sectionChecks = computed(() => [
                                                             @change="setProofAttachmentFile"
                                                         />
                                                     </label>
+                                                    <div v-if="proofAttachmentPreviewUrl" class="mt-2 overflow-hidden rounded-xl border border-slate-200">
+                                                        <video v-if="proofAttachmentFileType === 'video'" :src="proofAttachmentPreviewUrl" controls class="max-h-40 w-full" />
+                                                        <img v-else-if="proofAttachmentFileType === 'image'" :src="proofAttachmentPreviewUrl" class="max-h-40 w-full object-cover" alt="Attachment preview" />
+                                                        <div v-else class="flex items-center gap-2 px-3 py-2 text-[12px] font-medium text-slate-600">
+                                                            <FileText class="h-4 w-4 shrink-0 text-slate-400" />
+                                                            <span class="truncate">{{ form.proof_attachment?.name }}</span>
+                                                        </div>
+                                                    </div>
                                                     <div
                                                         v-if="modalMode === 'edit' && currentProofAttachmentUrl && !form.proof_attachment"
                                                         class="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2"

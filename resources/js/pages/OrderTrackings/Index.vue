@@ -618,14 +618,21 @@ watch(
 const videoLabel = computed(() => form.video_unboxing_wh?.name || 'Upload video unboxing');
 const bapLabel = computed(() => form.bap_wh?.name || 'Upload BAP image');
 
+const videoPreviewUrl = ref<string | null>(null);
+const bapPreviewUrl = ref<string | null>(null);
+
 const setVideoFile = (event: Event) => {
     const [file] = (event.target as HTMLInputElement).files || [];
     form.video_unboxing_wh = file || null;
+    if (videoPreviewUrl.value) URL.revokeObjectURL(videoPreviewUrl.value);
+    videoPreviewUrl.value = file ? URL.createObjectURL(file) : null;
 };
 
 const setBapFile = (event: Event) => {
     const [file] = (event.target as HTMLInputElement).files || [];
     form.bap_wh = file || null;
+    if (bapPreviewUrl.value) URL.revokeObjectURL(bapPreviewUrl.value);
+    bapPreviewUrl.value = file ? URL.createObjectURL(file) : null;
 };
 
 const discardForm = () => {
@@ -635,6 +642,8 @@ const discardForm = () => {
     form.reset();
     form.clearErrors();
     editId.value = null;
+    if (videoPreviewUrl.value) { URL.revokeObjectURL(videoPreviewUrl.value); videoPreviewUrl.value = null; }
+    if (bapPreviewUrl.value) { URL.revokeObjectURL(bapPreviewUrl.value); bapPreviewUrl.value = null; }
     isModalOpen.value = false;
     modalMode.value = 'create';
 };
@@ -647,6 +656,8 @@ const openCreateModal = () => {
     form.defaults(createInitialFormState());
     form.reset();
     form.clearErrors();
+    if (videoPreviewUrl.value) { URL.revokeObjectURL(videoPreviewUrl.value); videoPreviewUrl.value = null; }
+    if (bapPreviewUrl.value) { URL.revokeObjectURL(bapPreviewUrl.value); bapPreviewUrl.value = null; }
     isModalOpen.value = true;
 };
 
@@ -673,6 +684,8 @@ const openEditModal = (item: any) => {
         form.clearErrors();
         form.video_unboxing_wh = null;
         form.bap_wh = null;
+        if (videoPreviewUrl.value) { URL.revokeObjectURL(videoPreviewUrl.value); videoPreviewUrl.value = null; }
+        if (bapPreviewUrl.value) { URL.revokeObjectURL(bapPreviewUrl.value); bapPreviewUrl.value = null; }
 
         nextTick(() => {
             isHydratingEditForm.value = false;
@@ -1750,6 +1763,9 @@ const selectButtonClass = (currentValue: string, expectedValue: string) =>
                                                     </div>
                                                     <input type="file" class="hidden" accept="video/*" @change="setVideoFile" />
                                                 </label>
+                                                <div v-if="videoPreviewUrl" class="mt-2 overflow-hidden rounded-xl border border-slate-200">
+                                                    <video :src="videoPreviewUrl" controls class="max-h-40 w-full" />
+                                                </div>
                                             </div>
 
                                             <div class="space-y-2">
@@ -1766,6 +1782,9 @@ const selectButtonClass = (currentValue: string, expectedValue: string) =>
                                                     </div>
                                                     <input type="file" class="hidden" accept="image/*" @change="setBapFile" />
                                                 </label>
+                                                <div v-if="bapPreviewUrl" class="mt-2 overflow-hidden rounded-xl border border-slate-200">
+                                                    <img :src="bapPreviewUrl" class="max-h-40 w-full object-cover" alt="BAP preview" />
+                                                </div>
                                             </div>
                                         </div>
 
